@@ -1,15 +1,9 @@
 const assert = require('assert');
-const md = require('markdown-it')({ html: true,});
+const md = require('markdown-it')();
 const sc = require('../index.js');
 md.use(sc);
 
 const ms = [
- /*
-  [
-  'A paragraph.\n\n* * *\n\nNotice. A notice.\n\n* * *\n\nA paragraph.',
-  '<p>A paragraph.</p>\n<section class="notice">\n<p>Notice. A notice.</p>\n</section>\n<p>A paragraph.</p>\n'
-  ],
-  */
   [
     'A paragraph.\n\n* * *\n\nNotice. A notice.\n\n* * *\n\nA paragraph.',
     '<p>A paragraph.</p>\n<section class="notice" role="doc-notice">\n<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>\n</section>\n<p>A paragraph.</p>\n'
