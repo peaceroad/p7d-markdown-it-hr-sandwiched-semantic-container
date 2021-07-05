@@ -1,1 +1,1 @@
-# p7d-markdown-it-hr-separeted-semantic-container
+# p7d-markdown-it-hr-separated-semantic-container
