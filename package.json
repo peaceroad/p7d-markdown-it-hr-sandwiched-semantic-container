@@ -1,0 +1,14 @@
+{
+  "name": "p7d-markdown-it-semantic-container",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "author": "peaceroad <peaceroad@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "markdown-it": "^12.0.6"
+  }
+}
