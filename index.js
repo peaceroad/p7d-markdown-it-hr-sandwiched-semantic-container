@@ -1,7 +1,5 @@
 'use strict';
 
-const { has } = require('markdown-it/lib/common/utils');
-
 module.exports = function semantic_container_plugin(md) {
 
   const semantics = require('./semantics.json');
