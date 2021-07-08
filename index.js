@@ -35,6 +35,8 @@ module.exports = function semantic_container_plugin(md) {
       }
       if(!actualSemantics) { n++; continue; }
 
+      const actualSemanticsJoint = actualSemantics[0].match(new RegExp(semanticsJoint + '$'));
+
       let en = n;
       let hasEndSemanticsHr = false;
       while (en < state.tokens.length) {
@@ -49,12 +51,18 @@ module.exports = function semantic_container_plugin(md) {
       if(!hasEndSemanticsHr) { n++; continue; }
 
 
+
+      let moveToAriaLabel = false;
       const t_start = new state.Token('html_block', '', 0);
       t_start.content = '<' + semantics[sn].tag.trim();
       t_start.content += ' class="' + semantics[sn].name + '"';
       if (semantics[sn].attrs.length > 0) {
         let ai = 0;
         while (ai < semantics[sn].attrs.length) {
+          if( semantics[sn].attrs[ai][0]=== "aria-label" && semantics[sn].attrs[ai][1]=== "NAME") {
+            semantics[sn].attrs[ai][1] = actualSemantics[0].replace(new RegExp('\\' + actualSemanticsJoint[0] + '$'), '');
+            moveToAriaLabel = true;
+          }
           t_start.content += ' ' + semantics[sn].attrs[ai][0] + '="' + semantics[sn].attrs[ai][1] + '"';
           ai++;
         }
@@ -70,6 +78,13 @@ module.exports = function semantic_container_plugin(md) {
 
       state.tokens.splice(n-1, 1)// starting hr delete.
 
+
+      if(moveToAriaLabel) {
+        n++;
+        nextToken.content = nextToken.content.replace(new RegExp('^' + actualSemantics[0] + ' *'), '');
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + actualSemantics[0] + ' *'), '');
+        continue;
+      }
 
       if (/^[*_]{1,2}/.test(nextToken.content)) {
         nextToken.children[1].attrJoin("class", semantics[sn].name + '-label');
@@ -142,7 +157,6 @@ module.exports = function semantic_container_plugin(md) {
       }
 
       // Add label joint span.
-      const actualSemanticsJoint = actualSemantics[0].match(new RegExp(semanticsJoint + '$'));
       nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(actualSemanticsJoint[0] + '$'), '');
 
       const ljt_span_open = {

@@ -13,6 +13,9 @@ const ms = [
   ], [
     '# Title\n\nA paragraph.\n\n- - -\n\n## Column: Title\n\nA column.\n\n- - -\n\nA paragraph.',
     '<h1>Title</h1>\n<p>A paragraph.</p>\n<aside class="column">\n<h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>\n<p>A column.</p>\n</aside>\n<p>A paragraph.</p>\n'
+  ], [
+    '# A heading.\n\n* * *\n\nLead. A lead.\n\n* * *\n\nA paragraph.',
+    '<h1>A heading.</h1>\n<section class="lead" aria-label="Lead">\n<p>A lead.</p>\n</section>\n<p>A paragraph.</p>\n'
   ]
 ];
 

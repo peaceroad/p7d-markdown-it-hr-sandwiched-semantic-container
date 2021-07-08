@@ -177,11 +177,17 @@
     "name": "lead",
     "as": "リード(文)?,導入(文)?",
     "tag": "section",
-    "attrs": []
+    "attrs": [["aria-label", "NAME"]]
+  },
+  {
+    "name": "memo",
+    "as": "メモ",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "note",
-    "as": "メモ,ノート",
+    "as": "ノート",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
