@@ -23,20 +23,11 @@ module.exports = function semantic_container_plugin(md) {
       let actualSemantics = null;
       while (sn < semantics.length) {
         let semanticsAltRegStr = '';
-        if(semantics[sn].translation) {
-          const ts = semantics[sn].translation.split(',');
+        if(semantics[sn].as) {
+          const ts = semantics[sn].as.split(',');
           ts.forEach(x => {
             semanticsAltRegStr += '|' + x.trim();
           });
-        }
-        if(semantics[sn].alias.length > 0) {
-          for(let ai in semantics[sn].alias) {
-            semanticsAltRegStr += '|' + semantics[sn].alias[ai].name.trim();
-            const ts = semantics[sn].alias[ai].translation.trim().split(',');
-            ts.forEach(x => {
-              semanticsAltRegStr += '|' + x.trim();
-            });
-          }
         }
         actualSemantics = nextToken.content.match(new RegExp('(?:' + semantics[sn].name + semanticsAltRegStr + ')' + semanticsJoint, 'i'));
         if(actualSemantics) break;

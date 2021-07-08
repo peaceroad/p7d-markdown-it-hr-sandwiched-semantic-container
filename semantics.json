@@ -1,191 +1,271 @@
 [
   {
     "name": "abstract",
-    "translation": "摘要,要旨,要約",
+    "as": "要旨,抄録",
     "tag": "section",
-    "attrs": [["role", "doc-abstract"]],
-    "alias": []
+    "attrs": [["role", "doc-abstract"]]
   },
   {
     "name": "acknowledgments",
-    "translation": "謝辞",
+    "as": "謝辞",
     "tag": "section",
-    "attrs": [["role", "doc-acknowledgments"]],
-    "alias": []
+    "attrs": [["role", "doc-acknowledgments"]]
   },
   {
     "name": "afterword",
-    "translation": "後書き,あとがき",
+    "as": "後書き,あとがき,跋文",
     "tag": "section",
-    "attrs": [["role", "doc-afterword"]],
-    "alias": []
+    "attrs": [["role", "doc-afterword"]]
+  },
+  {
+    "name": "annotation",
+    "as": "注釈",
+    "tag": "aside",
+    "attrs": []
+  },
+  {
+    "name": "answers",
+    "as": "回答,答え",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "appendix",
+    "as": "(付録|付属)[0-9A-Z]{1,2}",
+    "tag": "section",
+    "attrs": [["role", "doc-appendix"]]
+  },
+  {
+    "name": "assessments",
+    "as": "評価,採点",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "bibliography",
-    "translation": "参考文献(一覧)?,文献(一覧)?",
+    "as": "(参考)?文献(一覧)?",
     "tag": "section",
-    "attrs": [["role", "doc-colophon"]],
-    "alias": []
+    "attrs": [["role", "doc-bibliography"]]
+  },
+  {
+    "name": "chapter-toc",
+    "as": "chapter toc,章目次",
+    "tag": "nav",
+    "attrs": [["role", "doc-nav"]]
+  },
+  {
+    "name": "caution",
+    "as": "注意(事項)?",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "colophon",
-    "translation": "奥付",
+    "as": "奥付",
     "tag": "section",
-    "attrs": [["role", "doc-colophon"]],
-    "alias": []
+    "attrs": [["role", "doc-colophon"]]
   },
   {
     "name": "column",
-    "translation": "コラム",
+    "as": "コラム",
     "tag": "aside",
-    "attrs": [],
-    "alias": []
+    "attrs": []
   },
   {
     "name": "conclusion",
-    "translation": "終わりに,おわりに,結び,結論",
+    "as": "終わりに,おわりに,結び,結論",
     "tag": "section",
-    "attrs": [["role", "doc-conclusion"]],
-    "alias": []
+    "attrs": [["role", "doc-conclusion"]]
   },
   {
     "name": "credits",
-    "translation": "帰属,提供",
+    "as": "帰属",
     "tag": "section",
-    "attrs": [["role", "doc-credits"]],
-    "alias": []
+    "attrs": [["role", "doc-credits"]]
+  },
+  {
+    "name": "danger",
+    "as": "危険",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "dedication",
-    "translation": "献呈",
+    "as": "献呈",
     "tag": "section",
-    "attrs": [["role", "doc-dedication"]],
-    "alias": []
+    "attrs": [["role", "doc-dedication"]]
   },
   {
     "name": "endnotes",
-    "translation": "後注",
+    "as": "後注,章末注,巻末注",
     "tag": "section",
-    "attrs": [["role", "doc-endnotes"]],
-    "alias": []
+    "attrs": [["role", "doc-endnotes"]]
   },
   {
     "name": "epigraph",
-    "translation": "題辞,題言,碑文",
+    "as": "題辞,題句,題言",
     "tag": "section",
-    "attrs": [["role", "doc-epigraph"]],
-    "alias": []
+    "attrs": [["role", "doc-epigraph"]]
   },
   {
     "name": "epilogue",
-    "translation": "エピローグ,終幕,跋文",
+    "as": "エピローグ,終幕,終章",
     "tag": "section",
-    "attrs": [["role", "doc-epilogue"]],
-    "alias": []
+    "attrs": [["role", "doc-epilogue"]]
   },
   {
     "name": "errata",
-    "translation": "正誤,正誤表",
+    "as": "正誤表",
     "tag": "section",
-    "attrs": [["role", "doc-example"]],
-    "alias": []
+    "attrs": [["role", "doc-example"]]
   },
   {
     "name": "example",
-    "translation": "例",
+    "as": "例",
     "tag": "figure",
-    "attrs": [["role", "doc-example"]],
-    "alias": []
+    "attrs": [["role", "doc-example"]]
+  },
+  {
+    "name": "faq",
+    "as": "ＦＡＱ,よくある(質問|問い合わせ)",
+    "tag": "section",
+    "attrs": [["role", "doc-qna"]]
+  },
+  {
+    "name": "feedback",
+    "as": "フィードバック",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "foreword",
+    "as": "(本書|日本語版)?(の)?(刊行|発行|発刊)?に寄せて",
+    "tag": "section",
+    "attrs": [["role", "doc-foreword"]]
+  },
+  {
+    "name": "hint",
+    "as": "ヒント",
+    "tag": "section",
+    "attrs": [["role", "doc-tip"]]
   },
   {
     "name": "index",
-    "translation": "索引",
+    "as": "索引",
     "tag": "section",
-    "attrs": [["role", "doc-index"]],
-    "alias": []
+    "attrs": [["role", "doc-index"]]
+  },
+  {
+    "name": "interview",
+    "as": "インタビュー",
+    "tag": "section",
+    "attrs": [["role", "doc-qna"]]
   },
   {
     "name": "introduction",
-    "translation": "序,序論,序説,はじめに,始めに",
+    "as": "序論,序説,はじめに,始めに",
     "tag": "section",
-    "attrs": [["role", "doc-introduction"]],
-    "alias": []
+    "attrs": [["role", "doc-introduction"]]
+  },
+  {
+    "name": "keywords",
+    "as": "キーワード,手がかり語",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "lead",
+    "as": "リード(文)?,導入(文)?",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "note",
+    "as": "メモ,ノート",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "notice",
-    "translation": "注意,注",
+    "as": "通知,お知らせ",
     "tag": "section",
-    "attrs": [["role", "doc-notice"]],
-    "alias": [
-      {
-        "name": "note",
-        "translation": "ノート"
-      }
-    ]
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "outline",
+    "as": "アウトライン",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "overview",
+    "as": "概観,大要,あらまし",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "point",
+    "as": "ポイント",
+    "tag": "section",
+    "attrs": [["role", "doc-tip"]]
+  },
+  {
+    "name": "preamble",
+    "as": "序,序文",
+    "tag": "section",
+    "attrs": [["role", "doc-introduction"]]
   },
   {
     "name": "preface",
-    "translation": "序文,前書き,まえがき",
+    "as": "前書き,まえがき",
     "tag": "section",
-    "attrs": [["role", "doc-preface"]],
-    "alias": []
+    "attrs": [["role", "doc-preface"]]
+  },
+  {
+    "name": "problem",
+    "as": "問(題)?[0-1A-Z]{0,6}",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "prologue",
-    "translation": "プロローグ,序幕",
+    "as": "プロローグ,序幕,序章",
     "tag": "section",
-    "attrs": [["role", "doc-prologue"]],
-    "alias": []
+    "attrs": [["role", "doc-prologue"]]
   },
   {
     "name": "pullquote",
-    "translation": "プル(・)?ク[オォ]ート,抜粋",
+    "as": "プル(・)?ク[オォ]ート,抜粋",
     "tag": "aside",
-    "attrs": [["role", "doc-pullquote"], ["aria-hidden", "true"]],
-    "ariaHidden": "true",
-    "alias": []
+    "attrs": [["role", "doc-pullquote"], ["aria-hidden", "true"]]
   },
   {
     "name": "qna",
-    "translation": "ＦＡＱ,よくある(質問|問い合わせ)",
-    "tag": "section",
-    "attrs": [["role", "doc-qna"]],
-    "alias": [
-      {
-        "name": "q&a",
-        "translation": "Ｑ＆Ａ,一問一答,質問と答え"
-      },
-      {
-        "name": "interview",
-        "translation": "インタビュー,面接"
-      }
-    ]
+    "as": "Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)",
+    "attrs": [["role", "doc-qna"]]
   },
   {
-    "name": "tips",
-    "translation": "コツ",
+    "name": "summary",
+    "as": "要約,要点,まとめ",
     "tag": "section",
-    "attrs": [["role", "doc-notice"]],
-    "alias": [
-      {
-        "name": "help",
-        "translation": "ヘルプ"
-      },
-      {
-        "name": "hint",
-        "translation": "ヒント"
-      },
-      {
-        "name": "point",
-        "translation": "ポイント"
-      }
-    ]
+    "attrs": [["role", "doc-conclusion"]]
+  },
+  {
+    "name": "tip",
+    "as": "コツ",
+    "tag": "section",
+    "attrs": [["role", "doc-tip"]]
   },
   {
     "name": "toc",
-    "translation": "目次",
+    "as": "目次",
     "tag": "nav",
-    "attrs": [["role", "doc-nav"]],
-    "alias": []
+    "attrs": [["role", "doc-nav"]]
+  },
+  {
+    "name": "warning",
+    "as": "警告",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   }
- ]
+]
