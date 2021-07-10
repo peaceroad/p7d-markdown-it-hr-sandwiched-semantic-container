@@ -44,7 +44,7 @@ A paragraph inside the container.
 ---
 ```
 
-The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [settings.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
+The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [semantics.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
 
 ```
 abstract (要旨,抄録)
@@ -85,7 +85,7 @@ overview (概観,大要,あらまし)
 point (ポイント)
 preamble (序,序文)
 preface (前書き,まえがき)
-problem (問(題)?[0-1A-Z]{0,6})
+problem (問(題)?[0-9A-Z]{0,6})
 prologue (プロローグ,序幕,序章)
 pullquote (プル(・)?ク[オォ]ート,抜粋)
 qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
