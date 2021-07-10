@@ -46,9 +46,10 @@ A paragraph inside the container.
 
 The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [settings.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
 
-```plain
-abstract (要旨,抄録), acknowledgments (謝辞), afterword (後書き,あとがき,跋文), annotation (注釈), answers (回答,答え), appendix ((付録|付属)[0-9A-Z]{1,2}), assessments (評価,採点), bibliography ((参考)?文献(一覧)?), chapter-toc (chapter toc,章目次), caution (注意(事項)?), colophon (奥付), column (コラム), conclusion (終わりに,おわりに,結び,結論), credits (帰属), danger (危険), dedication (献呈), endnotes (後注,章末注,巻末注), epigraph (題辞,題句,題言), epilogue (エピローグ,終幕,終章), errata (正誤表), example (例), faq (ＦＡＱ,よくある(質問|問い合わせ)), feedback (フィードバック), foreword ((本書|日本語版)?(の)?(刊行|発行|発刊)?に 寄せて), hint (ヒント), index (索引), interview (インタビュー), introduction (序論,序説,はじめに,始めに), keywords (キーワード,手がかり語), lead (リード(文)?,導 入(文)?), memo (メモ), note (ノート), notice (通知,お知らせ), outline (アウトライン), overview (概観,大要,あらまし), point (ポイント), preamble (序,序文), preface (前書き,まえがき), problem (問(題)?[0-1A-Z]{0,6}), prologue (プロローグ,序幕,序章), pullquote (プル(・)?ク[オォ]ート,抜粋), qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)), summary (要約,要点,まとめ), tip (コツ), toc (目次), warning (警告)
-```
+| Semantics |
+| --------- |
+| abstract (要旨,抄録), acknowledgments (謝辞), afterword (後書き,あとがき,跋文), annotation (注釈), answers (回答,答え), appendix ((付録|付属)[0-9A-Z]{1,2}), assessments (評価,採点), bibliography ((参考)?文献(一覧)?), chapter-toc (chapter toc,章目次), caution (注意(事項)?), colophon (奥付), column (コラム), conclusion (終わりに,おわりに,結び,結論), credits (帰属), danger (危険), dedication (献呈), endnotes (後注,章末注,巻末注), epigraph (題辞,題句,題言), epilogue (エピローグ,終幕,終章), errata (正誤表), example (例), faq (ＦＡＱ,よくある(質問|問い合わせ)), feedback (フィードバック), foreword ((本書|日本語版)?(の)?(刊行|発行|発刊)?に 寄せて), hint (ヒント), index (索引), interview (インタビュー), introduction (序論,序説,はじめに,始めに), keywords (キーワード,手がかり語), lead (リード(文)?,導 入(文)?), memo (メモ), note (ノート), notice (通知,お知らせ), outline (アウトライン), overview (概観,大要,あらまし), point (ポイント), preamble (序,序文), preface (前書き,まえがき), problem (問(題)?[0-1A-Z]{0,6}), prologue (プロローグ,序幕,序章), pullquote (プル(・)?ク[オォ]ート,抜粋), qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)), summary (要約,要点,まとめ), tip (コツ), toc (目次), warning (警告) |
+
 
 ---
 
