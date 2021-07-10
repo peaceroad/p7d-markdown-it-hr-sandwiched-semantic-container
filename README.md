@@ -22,7 +22,7 @@ Then it will be converted to the following HTML.
 <p>A paragraph 1.</p>
 <section class="notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A paragraph 2.</p>
-<section>
+</section>
 <p>A paragraph 3.</p>
 ```
 
@@ -44,15 +44,11 @@ A paragraph inside the container.
 ---
 ```
 
-The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) See settings.json for details.
+The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [settings.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
 
-| Semantics |           |
-|-----------|-----------|
-| **abstract**, 摘要,要旨,要約,概要
-| **conclusion**, 
-| **summary**
-| **notice**
-| **column**
+```plain
+abstract (要旨,抄録), acknowledgments (謝辞), afterword (後書き,あとがき,跋文), annotation (注釈), answers (回答,答え), appendix ((付録|付属)[0-9A-Z]{1,2}), assessments (評価,採点), bibliography ((参考)?文献(一覧)?), chapter-toc (chapter toc,章目次), caution (注意(事項)?), colophon (奥付), column (コラム), conclusion (終わりに,おわりに,結び,結論), credits (帰属), danger (危険), dedication (献呈), endnotes (後注,章末注,巻末注), epigraph (題辞,題句,題言), epilogue (エピローグ,終幕,終章), errata (正誤表), example (例), faq (ＦＡＱ,よくある(質問|問い合わせ)), feedback (フィードバック), foreword ((本書|日本語版)?(の)?(刊行|発行|発刊)?に 寄せて), hint (ヒント), index (索引), interview (インタビュー), introduction (序論,序説,はじめに,始めに), keywords (キーワード,手がかり語), lead (リード(文)?,導 入(文)?), memo (メモ), note (ノート), notice (通知,お知らせ), outline (アウトライン), overview (概観,大要,あらまし), point (ポイント), preamble (序,序文), preface (前書き,まえがき), problem (問(題)?[0-1A-Z]{0,6}), prologue (プロローグ,序幕,序章), pullquote (プル(・)?ク[オォ]ート,抜粋), qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)), summary (要約,要点,まとめ), tip (コツ), toc (目次), warning (警告)
+```
 
 ---
 
@@ -94,9 +90,9 @@ I think it would be better to use the symbols themselves for different purposes,
 
 ------
 
-Also, when the semantic containers are continuous, the symbols indicating the two hr elements indicating the end and the start may be one.
+Also, when the semantic containers are continuous, you may have one of the front end horizon marks and the back start horizon mark between the two semantic containers.
 
-The following description: 
+For example, the following description:
 
 ```md
 A paragraph 1.
@@ -132,4 +128,19 @@ Notice. A paragraph 3.
 ---
 
 A paragraph 4.
+```
+
+## Use
+
+```js
+const md = require('markdown-it')()
+            .use(require('@peaceroad/markdown-it-hr-sandwiched-semantic-container'));
+
+md.render(/*...*/) // See examples above
+```
+
+## Install
+
+```bash
+npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
 ```
