@@ -72,7 +72,7 @@ A paragraph inside the container.
 ---
 ```
 
-In addition, there are times when you want to add a heading in a column or the like. Therefore, the following description is also acceptable.
+Also, there are times when you want to add a heading in a column or the like. Therefore, the following description is also acceptable.
 
 ```md
 ---
@@ -86,6 +86,50 @@ A paragraph inside the container.
 ---
 ```
 
-This semantic containers can be nested up to three by using different horizontal line symbol types.
+------
+
+Notice. This semantic containers can be nested up to three by using different horizontal line symbol types.
 
 I think it would be better to use the symbols themselves for different purposes, with `*` as the horizontal line, `-` as the semantic container, and `_` as the semantic container inside the semantic container.
+
+------
+
+Also, when the semantic containers are continuous, the symbols indicating the two hr elements indicating the end and the start may be one.
+
+The following description: 
+
+```md
+A paragraph 1.
+
+---
+
+Notice. A paragraph 2.
+
+---
+
+---
+
+Notice. A paragraph 3.
+
+---
+
+A paragraph 4.
+```
+
+is the same as below.
+
+```md
+A paragraph 1.
+
+---
+
+Notice. A paragraph 2.
+
+---
+
+Notice. A paragraph 3.
+
+---
+
+A paragraph 4.
+```
