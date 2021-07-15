@@ -31,7 +31,7 @@
   },
   {
     "name": "appendix",
-    "as": "(付録|付属)[0-9A-Z]{1,2}",
+    "as": "(付録|付属)",
     "tag": "section",
     "attrs": [["role", "doc-appendix"]]
   },
@@ -54,8 +54,8 @@
     "attrs": [["role", "doc-nav"]]
   },
   {
-    "name": "caution",
-    "as": "注意(事項)?",
+    "name": "check",
+    "as": "チェック,確認事項",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -139,7 +139,7 @@
   },
   {
     "name": "foreword",
-    "as": "(本書|日本語版)?(の)?(刊行|発行|発刊)?に寄せて",
+    "as": "((本書|日本語版)?の)?(刊行|発行|発刊)?に寄せて",
     "tag": "section",
     "attrs": [["role", "doc-foreword"]]
   },
@@ -193,7 +193,7 @@
   },
   {
     "name": "notice",
-    "as": "通知,お知らせ",
+    "as": "通知,掲示,注目,注意",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -211,7 +211,7 @@
   },
   {
     "name": "point",
-    "as": "ポイント",
+    "as": "ポイント,要点",
     "tag": "section",
     "attrs": [["role", "doc-tip"]]
   },
@@ -229,7 +229,7 @@
   },
   {
     "name": "problem",
-    "as": "問(題)?[0-9A-Z]{0,6}",
+    "as": "問[い題]?",
     "tag": "section",
     "attrs": []
   },
@@ -248,17 +248,18 @@
   {
     "name": "qna",
     "as": "Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)",
+    "tag": "section",
     "attrs": [["role", "doc-qna"]]
   },
   {
     "name": "summary",
-    "as": "要約,要点,まとめ",
+    "as": "要約,まとめ",
     "tag": "section",
     "attrs": [["role", "doc-conclusion"]]
   },
   {
     "name": "tip",
-    "as": "コツ",
+    "as": "コツ,秘訣,助言",
     "tag": "section",
     "attrs": [["role", "doc-tip"]]
   },

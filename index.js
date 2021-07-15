@@ -4,6 +4,7 @@ module.exports = function semantic_container_plugin(md) {
 
   const semantics = require('./semantics.json');
   const semanticsJoint = '[:.　：。．]';
+  const sNumber = '(?: *?[0-9A-Z]{1,6}(?:[.-][0-9A-Z]{1,6}){0,6})?';
 
   const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
 
@@ -19,7 +20,8 @@ module.exports = function semantic_container_plugin(md) {
           semanticsAltRegStr += '|' + x.trim();
         });
       }
-      actualName = nextToken.content.match(new RegExp('(?:' + semantics[sn].name + semanticsAltRegStr + ')' + semanticsJoint, 'i'));
+      actualName = nextToken.content.match(new RegExp('(?:(?:^|[*_]{1,2})' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint, 'i'));
+      //console.log(semantics[sn].name + ' /nextToken.content: ' + nextToken.content, ' /actualName: ' + actualName);
       if(actualName) break;
       sn++;
     }
@@ -106,12 +108,14 @@ module.exports = function semantic_container_plugin(md) {
       state.tokens.splice(rs-1, 1)// starting hr delete.
     }
 
+
     if(moveToAriaLabel) {
       //sn++;
       nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualName + ' *'), '');
       nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualName + ' *'), '');
       return;
     }
+
 
     if (/^[*_]{1,2}/.test(nextToken.content)) {
       nextToken.children[1].attrJoin("class", semantics[sn].name + '-label');
@@ -183,6 +187,7 @@ module.exports = function semantic_container_plugin(md) {
       nextToken.children.unshift(lt_first);
     }
 
+
     // Add label joint span.
     nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(sc.actualNameJoint + '$'), '');
 
@@ -240,7 +245,6 @@ module.exports = function semantic_container_plugin(md) {
 
 
   function semanticContainer (state, startLine, endLine, silent) {
-
     let n = 1;
     while (n < state.tokens.length -1) {
       //console.log(n + ": " + state.tokens[n].type + ": ==================================");
@@ -255,7 +259,7 @@ module.exports = function semantic_container_plugin(md) {
       if(/_/.test(prevToken.markup)) hrType = '_';
 
       if (!checkSemanticContainer(state, n, hrType, sc)) { n++; continue; }
-      // console.log('set sc: '+ JSON.stringify(sc));
+      //console.log('set sc: '+ JSON.stringify(sc));
 
       let sci = 0;
       while (sci < sc.length) {

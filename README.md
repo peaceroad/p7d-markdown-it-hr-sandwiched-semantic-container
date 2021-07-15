@@ -46,17 +46,17 @@ A paragraph inside the container.
 
 The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [semantics.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
 
-```
+```plain
 abstract (要旨,抄録)
 acknowledgments (謝辞)
 afterword (後書き,あとがき,跋文)
 annotation (注釈)
 answers (回答,答え)
-appendix ((付録|付属)[0-9A-Z]{1,2})
+appendix ((付録|付属))
 assessments (評価,採点)
 bibliography ((参考)?文献(一覧)?)
 chapter-toc (chapter toc,章目次)
-caution (注意(事項)?)
+check (チェック,確認事項)
 colophon (奥付)
 column (コラム)
 conclusion (終わりに,おわりに,結び,結論)
@@ -70,27 +70,27 @@ errata (正誤表)
 example (例)
 faq (ＦＡＱ,よくある(質問|問い合わせ))
 feedback (フィードバック)
-foreword ((本書|日本語版)?(の)?(刊行|発行|発刊)?に 寄せて)
+foreword (((本書|日本語版)?の)?(刊行|発行|発刊)?に寄せて)
 hint (ヒント)
 index (索引)
 interview (インタビュー)
 introduction (序論,序説,はじめに,始めに)
 keywords (キーワード,手がかり語)
-lead (リード(文)?,導 入(文)?)
+lead (リード(文)?,導入(文)?)
 memo (メモ)
 note (ノート)
-notice (通知,お知らせ)
+notice (通知,掲示,注目,注意)
 outline (アウトライン)
 overview (概観,大要,あらまし)
-point (ポイント)
+point (ポイント,要点)
 preamble (序,序文)
 preface (前書き,まえがき)
-problem (問(題)?[0-9A-Z]{0,6})
+problem (問[い題]?)
 prologue (プロローグ,序幕,序章)
 pullquote (プル(・)?ク[オォ]ート,抜粋)
 qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
-summary (要約,要点,まとめ)
-tip (コツ)
+summary (要約,まとめ)
+tip (コツ,秘訣,助言)
 toc (目次)
 warning (警告)
 ```
@@ -190,3 +190,211 @@ md.render(/*...*/) // See examples above
 ```bash
 npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
 ```
+
+## Example
+
+```
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice 1. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+**Notice.** A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><strong class="notice-label">Notice<span class="notice-label-joint">.</span></strong> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+# Title
+
+A paragraph.
+
+- - -
+
+## Column: Title
+
+A column.
+
+- - -
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<p>A paragraph.</p>
+<aside class="column">
+<h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
+<p>A column.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+
+[Markdown]
+# A heading.
+
+* * *
+
+Lead. A lead.
+
+* * *
+
+A paragraph.
+[HTML]
+<h1>A heading.</h1>
+<section class="lead" aria-label="Lead">
+<p>A lead.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+# Title
+
+A paragraph.
+
+- - -
+
+## Column: Title
+
+A column.
+
+___
+
+Notice. A column notice.
+
+___
+
+A column.
+
+- - -
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<p>A paragraph.</p>
+<aside class="column">
+<h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
+<p>A column.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A column notice.</p>
+</section>
+<p>A column.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice 1. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="notice" role="doc-notice">
+<p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+```
+
+
