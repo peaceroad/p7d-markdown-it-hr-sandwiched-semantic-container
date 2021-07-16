@@ -84,7 +84,7 @@ module.exports = function semantic_container_plugin(md) {
 
     const sToken = new state.Token('html_block', '', 0);
     sToken.content = '<' + semantics[sn].tag;
-    sToken.content += ' class="' + semantics[sn].name + '"';
+    sToken.content += ' class="sc ' + semantics[sn].name + '"';
     if (semantics[sn].attrs.length > 0) {
       let ai = 0;
       while (ai < semantics[sn].attrs.length) {

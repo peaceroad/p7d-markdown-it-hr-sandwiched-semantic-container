@@ -193,7 +193,7 @@ npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
 
 ## Example
 
-```
+```plain
 [Markdown]
 A paragraph.
 
@@ -206,7 +206,7 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
@@ -224,7 +224,7 @@ Notice 1. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
@@ -242,7 +242,7 @@ A paragraph.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><strong class="notice-label">Notice<span class="notice-label-joint">.</span></strong> A notice.</p>
 </section>
 <p>A paragraph.</p>
@@ -265,7 +265,7 @@ A paragraph.
 [HTML]
 <h1>Title</h1>
 <p>A paragraph.</p>
-<aside class="column">
+<aside class="sc column">
 <h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
 <p>A column.</p>
 </aside>
@@ -285,7 +285,7 @@ Lead. A lead.
 A paragraph.
 [HTML]
 <h1>A heading.</h1>
-<section class="lead" aria-label="Lead">
+<section class="sc lead" aria-label="Lead">
 <p>A lead.</p>
 </section>
 <p>A paragraph.</p>
@@ -316,10 +316,10 @@ A paragraph.
 [HTML]
 <h1>Title</h1>
 <p>A paragraph.</p>
-<aside class="column">
+<aside class="sc column">
 <h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
 <p>A column.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A column notice.</p>
 </section>
 <p>A column.</p>
@@ -343,10 +343,10 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
@@ -370,10 +370,10 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
@@ -391,10 +391,9 @@ Notice 1. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="notice" role="doc-notice">
+<section class="sc notice" role="doc-notice">
 <p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
+
 ```
-
-
