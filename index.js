@@ -84,7 +84,7 @@ module.exports = function semantic_container_plugin(md) {
 
     const sToken = new state.Token('html_block', '', 0);
     sToken.content = '<' + semantics[sn].tag;
-    sToken.content += ' class="sc ' + semantics[sn].name + '"';
+    sToken.content += ' class="sc-' + semantics[sn].name + '"';
     if (semantics[sn].attrs.length > 0) {
       let ai = 0;
       while (ai < semantics[sn].attrs.length) {
@@ -118,7 +118,7 @@ module.exports = function semantic_container_plugin(md) {
 
 
     if (/^[*_]{1,2}/.test(nextToken.content)) {
-      nextToken.children[1].attrJoin("class", semantics[sn].name + '-label');
+      nextToken.children[1].attrJoin("class", "sc-" + semantics[sn].name + '-label');
     } else {
       const lt_first = {
         type: 'text',
@@ -138,7 +138,7 @@ module.exports = function semantic_container_plugin(md) {
       const lt_span_open = {
         type: 'span_open',
         tag: 'span',
-        attrs: [["class", semantics[sn].name + "-label"]],
+        attrs: [["class", "sc-" + semantics[sn].name + "-label"]],
         map: null,
         nesting: 1,
         level: 0,
@@ -194,7 +194,7 @@ module.exports = function semantic_container_plugin(md) {
     const ljt_span_open = {
       type: 'span_open',
       tag: 'span',
-      attrs: [["class", semantics[sn].name + "-label-joint"]],
+      attrs: [["class", "sc-" + semantics[sn].name + "-label-joint"]],
       map: null,
       nesting: 1,
       level: 0,

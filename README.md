@@ -20,8 +20,8 @@ Then it will be converted to the following HTML.
 
 ```html
 <p>A paragraph 1.</p>
-<section class="notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A paragraph 2.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A paragraph 2.</p>
 </section>
 <p>A paragraph 3.</p>
 ```
@@ -206,8 +206,8 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -224,8 +224,8 @@ Notice 1. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -242,8 +242,8 @@ A paragraph.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><strong class="notice-label">Notice<span class="notice-label-joint">.</span></strong> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -265,8 +265,8 @@ A paragraph.
 [HTML]
 <h1>Title</h1>
 <p>A paragraph.</p>
-<aside class="sc column">
-<h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>
 <p>A column.</p>
 </aside>
 <p>A paragraph.</p>
@@ -285,7 +285,7 @@ Lead. A lead.
 A paragraph.
 [HTML]
 <h1>A heading.</h1>
-<section class="sc lead" aria-label="Lead">
+<section class="sc-lead" aria-label="Lead">
 <p>A lead.</p>
 </section>
 <p>A paragraph.</p>
@@ -316,11 +316,11 @@ A paragraph.
 [HTML]
 <h1>Title</h1>
 <p>A paragraph.</p>
-<aside class="sc column">
-<h2><span class="column-label">Column<span class="column-label-joint">:</span></span> Title</h2>
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>
 <p>A column.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A column notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A column notice.</p>
 </section>
 <p>A column.</p>
 </aside>
@@ -343,11 +343,11 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -370,11 +370,11 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -391,8 +391,8 @@ Notice 1. A notice.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc notice" role="doc-notice">
-<p><span class="notice-label">Notice 1<span class="notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
