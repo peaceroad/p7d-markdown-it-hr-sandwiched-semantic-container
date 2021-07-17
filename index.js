@@ -87,7 +87,7 @@ module.exports = function semantic_container_plugin(md) {
       re++;
     }
     const nextToken = state.tokens[rs+1];
-    console.log(nextToken.type,);
+    //console.log(nextToken.type,);
 
 
     const sToken = new state.Token('html_block', '', 0);
@@ -113,7 +113,6 @@ module.exports = function semantic_container_plugin(md) {
     eToken.block = true;
     state.tokens.splice(re+1, 1, eToken); // ending hr delete too.
     if (!sc.continued) {
-      console.log('hr delate');
       state.tokens.splice(rs-1, 1)// starting hr delete.
     }
 
@@ -268,12 +267,11 @@ module.exports = function semantic_container_plugin(md) {
       if(/_/.test(prevToken.markup)) hrType = '_';
 
       if (!checkSemanticContainer(state, n, hrType, sc)) { n++; continue; }
-      console.log('set sc: '+ JSON.stringify(sc));
-      console.log(n);
+      //console.log('set sc: '+ JSON.stringify(sc));
 
       let sci = 0;
       while (sci < sc.length) {
-        console.log('sci: ' + sci + '--------------');
+        //console.log('sci: ' + sci + '--------------');
         setSemanticContainer(state, n, hrType, sc[sci], sci);
         sci++;
       }
