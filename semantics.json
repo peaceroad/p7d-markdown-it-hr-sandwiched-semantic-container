@@ -18,6 +18,18 @@
     "attrs": [["role", "doc-afterword"]]
   },
   {
+    "name": "agenda",
+    "as": "議題,検討課題,アジェンダ",
+    "tag": "section",
+    "attrs": [["role", "doc-afterword"]]
+  },
+  {
+    "name": "alert",
+    "as": "警報,アラート",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
     "name": "annotation",
     "as": "注釈",
     "tag": "aside",
@@ -150,6 +162,24 @@
     "attrs": [["role", "doc-tip"]]
   },
   {
+    "name": "hint",
+    "as": "ヒント",
+    "tag": "section",
+    "attrs": [["role", "doc-tip"]]
+  },
+  {
+    "name": "importance",
+    "as": "important, (重要|重大)(情報|なこと)?",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "information",
+    "as": "info, 案内,情報,インフォメーション",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
     "name": "index",
     "as": "索引",
     "tag": "section",
@@ -169,7 +199,7 @@
   },
   {
     "name": "keywords",
-    "as": "キーワード,手がかり語",
+    "as": "キーワード,手がかり(語)?",
     "tag": "section",
     "attrs": []
   },
@@ -198,8 +228,14 @@
     "attrs": [["role", "doc-notice"]]
   },
   {
+    "name": "opinion",
+    "as": "意見,見解,オピニオン",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "outline",
-    "as": "アウトライン",
+    "as": "概略,アウトライン",
     "tag": "section",
     "attrs": []
   },
@@ -210,8 +246,14 @@
     "attrs": []
   },
   {
+    "name": "planning",
+    "as": "plan,計画,案",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "point",
-    "as": "ポイント,要点",
+    "as": "ポイント,要点,論点",
     "tag": "section",
     "attrs": [["role", "doc-tip"]]
   },
@@ -240,8 +282,14 @@
     "attrs": [["role", "doc-prologue"]]
   },
   {
-    "name": "pullquote",
-    "as": "プル(・)?ク[オォ]ート,抜粋",
+    "name": "proposal",
+    "as": "提言",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "pull-quote",
+    "as": "pull quote, プル(・)?ク[オォ]ート,抜粋",
     "tag": "aside",
     "attrs": [["role", "doc-pullquote"], ["aria-hidden", "true"]]
   },
@@ -252,14 +300,32 @@
     "attrs": [["role", "doc-qna"]]
   },
   {
+    "name": "relation",
+    "as": "related,関連",
+    "tag": "section",
+    "attrs": []
+  },
+  {
+    "name": "recommendation",
+    "as": "recommend(ed)?,勧告,勧め,推薦,リコメンド",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "suggestion",
+    "as": "suggest,提案,サジェスト",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
     "name": "summary",
-    "as": "要約,まとめ",
+    "as": "要約,まとめ,あらすじ",
     "tag": "section",
     "attrs": [["role", "doc-conclusion"]]
   },
   {
     "name": "tip",
-    "as": "コツ,秘訣,助言",
+    "as": "tips,コツ,秘訣,助言",
     "tag": "section",
     "attrs": [["role", "doc-tip"]]
   },
@@ -271,7 +337,7 @@
   },
   {
     "name": "warning",
-    "as": "警告",
+    "as": "warn,警告",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   }
