@@ -19,13 +19,15 @@ while(n < ms0.length) {
 
 n = 1;
 while(n < ms.length) {
-  if (n !== 8) { n++; continue };
+  console.log('Test: ' + n);
+  //if (n !== 9) { n++; continue };
+  //console.log(ms[n].markdown);
   const h = md.render(ms[n].markdown);
   try {
     assert.strictEqual(h, ms[n].html);
   } catch(e) {
-    console.log('Incorrect: ');
-    console.log('M: ' + ms[n].markdown + '\nH: ' + h +'C: ' + ms[n].html);
+    console.log(' incorrect: ');
+    console.log('H: ' + h +'C: ' + ms[n].html);
   };
   n++;
 }

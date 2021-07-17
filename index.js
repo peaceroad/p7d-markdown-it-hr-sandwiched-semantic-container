@@ -82,13 +82,18 @@ module.exports = function semantic_container_plugin(md) {
     let rs = sc.range[0];
     let re = sc.range[1];
     const sn = sc.sn;
+
+    // for continued semantic container.
     if(sci > 1) {
-      rs++;
-      re++;
+      let s = 1;
+      while (s < sci) {
+        rs++;
+        re++;
+        s++;
+      }
     }
     const nextToken = state.tokens[rs+1];
     //console.log(nextToken.type,);
-
 
     const sToken = new state.Token('html_block', '', 0);
     sToken.content = '<' + semantics[sn].tag;
@@ -96,9 +101,12 @@ module.exports = function semantic_container_plugin(md) {
     if (semantics[sn].attrs.length > 0) {
       let ai = 0;
       while (ai < semantics[sn].attrs.length) {
-        if( semantics[sn].attrs[ai][0]=== "aria-label" && semantics[sn].attrs[ai][1]=== "NAME") {
-          semantics[sn].attrs[ai][1] = sc.actualName.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '');
-          moveToAriaLabel = true;
+        if(!moveToAriaLabel) {
+          moveToAriaLabel = semantics[sn].attrs[ai][0]=== "aria-label";
+          if(moveToAriaLabel) {
+            semantics[sn].attrs[ai][1] = sc.actualName.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '');
+            moveToAriaLabel = true;
+          }
         }
         sToken.content += ' ' + semantics[sn].attrs[ai][0] + '="' + semantics[sn].attrs[ai][1] + '"';
         ai++;
@@ -118,7 +126,6 @@ module.exports = function semantic_container_plugin(md) {
 
 
     if(moveToAriaLabel) {
-      //sn++;
       nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualName + ' *'), '');
       nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualName + ' *'), '');
       return;

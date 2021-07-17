@@ -315,3 +315,28 @@ A paragraph.
 <p><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
+
+
+[Markdown]
+# Title
+
+---
+
+Lead. A lead text.
+
+---
+
+Notice. A notice.
+
+---
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<section class="sc-lead" aria-label="Lead">
+<p>A lead text.</p>
+</section>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
