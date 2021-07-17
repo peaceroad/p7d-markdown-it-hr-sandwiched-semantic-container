@@ -47,7 +47,6 @@ A paragraph inside the container.
 The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [semantics.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
 
 ```plain
-
 abstract (要旨,抄録)
 acknowledgments (謝辞)
 afterword (後書き,あとがき,跋文)
