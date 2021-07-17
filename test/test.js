@@ -19,7 +19,7 @@ while(n < ms0.length) {
 
 n = 1;
 while(n < ms.length) {
-  // if (n !== 3) { n++; continue };
+  if (n !== 8) { n++; continue };
   const h = md.render(ms[n].markdown);
   try {
     assert.strictEqual(h, ms[n].html);

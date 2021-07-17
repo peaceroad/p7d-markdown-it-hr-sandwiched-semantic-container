@@ -6,9 +6,10 @@ module.exports = function semantic_container_plugin(md) {
   const semanticsJoint = '[:.　：。．]';
   const sNumber = '(?: *?[0-9A-Z]{1,6}(?:[.-][0-9A-Z]{1,6}){0,6})?';
 
-  const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
+  const checkSematicContainerCore = (state, n, hrType, sc, checked, ct) => {
 
     const nextToken = state.tokens[n+1];
+    //console.log(n + ': ' + nextToken.type, nextToken.content);
 
     let sn = 0;
     let actualName = null;
@@ -56,31 +57,38 @@ module.exports = function semantic_container_plugin(md) {
 
 
   const checkSemanticContainer = (state, n, hrType, sc) => {
-    let continued = false;
+    let continued = 0;
     if (!checkSematicContainerCore(state, n, hrType, sc, continued)) { 
       return false;
     }
-    //console.log(sc[sc.length - 1].range[1] + 1);
-    let cn = sc[sc.length - 1].range[1] + 1; // <hr>:2, </p>:1
+    let cn = sc[sc.length - 1].range[1] + 1;
     while (cn < state.tokens.length -1) {
       //console.log('next cn: ' + cn);
       continued = true;
       if (!checkSematicContainerCore(state, cn, hrType, sc, continued)) {
         return true;
       }
-      cn = sc[sc.length - 1].range[1];
+      cn = sc[sc.length - 1].range[1] + 1;
+      continued++;
+      //if (cn == 2) { ct++; }
+//      if (cn == 2) { ct += 2; } //for semantic container element end tag.
     }
-
     return true;
   };
 
 
-  const setSemanticContainer = (state, n, hrType, sc) => {
+  const setSemanticContainer = (state, n, hrType, sc, sci) => {
     let moveToAriaLabel = false;
-    const rs = sc.range[0];
-    const re = sc.range[1];
+    let rs = sc.range[0];
+    let re = sc.range[1];
     const sn = sc.sn;
+    if(sci > 1) {
+      rs++;
+      re++;
+    }
     const nextToken = state.tokens[rs+1];
+    console.log(nextToken.type,);
+
 
     const sToken = new state.Token('html_block', '', 0);
     sToken.content = '<' + semantics[sn].tag;
@@ -105,6 +113,7 @@ module.exports = function semantic_container_plugin(md) {
     eToken.block = true;
     state.tokens.splice(re+1, 1, eToken); // ending hr delete too.
     if (!sc.continued) {
+      console.log('hr delate');
       state.tokens.splice(rs-1, 1)// starting hr delete.
     }
 
@@ -259,11 +268,13 @@ module.exports = function semantic_container_plugin(md) {
       if(/_/.test(prevToken.markup)) hrType = '_';
 
       if (!checkSemanticContainer(state, n, hrType, sc)) { n++; continue; }
-      //console.log('set sc: '+ JSON.stringify(sc));
+      console.log('set sc: '+ JSON.stringify(sc));
+      console.log(n);
 
       let sci = 0;
       while (sci < sc.length) {
-        setSemanticContainer(state, n, hrType, sc[sci]);
+        console.log('sci: ' + sci + '--------------');
+        setSemanticContainer(state, n, hrType, sc[sci], sci);
         sci++;
       }
       n++; //if "n = sc[sc.length - 1].range[1] + 1;", the inner semantic container is not processed.
