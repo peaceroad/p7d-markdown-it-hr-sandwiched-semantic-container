@@ -151,15 +151,9 @@
   },
   {
     "name": "foreword",
-    "as": "((本書|日本語版)?の)?(刊行|発行|発刊)?に寄せて",
+    "as": "((本書|日本語版)?の)?(刊行|発行|発刊)に寄せて",
     "tag": "section",
     "attrs": [["role", "doc-foreword"]]
-  },
-  {
-    "name": "hint",
-    "as": "ヒント",
-    "tag": "section",
-    "attrs": [["role", "doc-tip"]]
   },
   {
     "name": "hint",
@@ -223,7 +217,7 @@
   },
   {
     "name": "notice",
-    "as": "通知,掲示,注目,注意",
+    "as": "通知,掲示,注目,注意,お知らせ",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },

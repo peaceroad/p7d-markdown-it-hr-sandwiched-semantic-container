@@ -87,6 +87,36 @@ Lead. A lead.
 * * *
 
 A paragraph.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<h1>A heading.</h1>
+<section class="sc-lead" aria-label="Lead">
+<p>A lead.</p>
+</section>
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+# A heading.
+
+* * *
+
+Lead. A lead.
+
+* * *
+
+A paragraph.
 [HTML]
 <h1>A heading.</h1>
 <section class="sc-lead" aria-label="Lead">
@@ -129,6 +159,58 @@ A paragraph.
 <p>A column.</p>
 </aside>
 <p>A paragraph.</p>
+
+
+[Markdown]
+# Title
+
+A paragraph.
+
+- - -
+
+## Column: Title
+
+A column.
+
+___
+
+Notice. A column notice.
+
+* * *
+
+Important. A column notice important.
+
+A column notice important.
+
+* * *
+
+A column notice.
+
+___
+
+A column.
+
+- - -
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<p>A paragraph.</p>
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>
+<p>A column.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A column notice.</p>
+<section class="sc-importance" role="doc-notice">
+<p><span class="sc-importance-label">Important<span class="sc-importance-label-joint">.</span></span> A column notice important.</p>
+<p>A column notice important.</p>
+</section>
+<p>A column notice.</p>
+</section>
+<p>A column.</p>
+</aside>
+<p>A paragraph.</p>
+
 
 
 [Markdown]
@@ -340,3 +422,122 @@ A paragraph.
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+Notice. A notice.
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+Notice. A notice.
+
+
+A paragraph.
+
+---
+
+Lead. A lead text.
+
+---
+
+Notice. A notice.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+<section class="sc-lead" aria-label="Lead">
+<p>A lead text.</p>
+</section>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+* * *
+
+Notice. A notice.
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+
+Notice. A notice.
+
+A paragraph.
+
+* * *
+
+Notice. A notice.
+
+* * *
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+</section>
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+<p>Notice. A notice.</p>
+</section>
+<p>A paragraph.</p>
+<p>Notice. A notice.</p>
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+[Markdown]
+Notice. A notice.
+
+Notice. A notice.
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+[HTML:noHassle]
+<p>Notice. A notice.</p>
+<p>Notice. A notice.</p>

@@ -186,13 +186,52 @@ Notice. A paragraph 3.
 A paragraph 4.
 ```
 
+[Version 0.2+]
+
+If the semantics container consists of one line of paragraphs, are you cumbersome to sandwich with two hr elements?
+Yes, you can omit them. (There is also an option that cannot be omitted.)
+
+```md
+A paragraph.
+
+---
+
+Notice. A notice.
+
+---
+
+
+A paragraph.
+
+```
+
+is the same as below.
+
+```md
+A paragraph.
+
+Notice. A notice.
+
+A paragraph.
+```
+
 ## Use
 
 ```js
 const md = require('markdown-it')()
             .use(require('@peaceroad/markdown-it-hr-sandwiched-semantic-container'));
 
-md.render(/*...*/) // See examples above
+md.render(/*...*/); // See examples above
+```
+
+The hr element can be omitted in a one-paragraph semantics container, but if not, specify the following option.
+
+```js
+const md = require('markdown-it')();
+const sc = require('@peaceroad/markdown-it-hr-sandwiched-semantic-container');
+md.use(sc, {"hassleHrIfOneLine": false});
+
+md.render(/*...*/); // See examples above
 ```
 
 ## Install

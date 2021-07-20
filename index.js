@@ -1,15 +1,24 @@
 'use strict';
 
-module.exports = function semantic_container_plugin(md) {
+module.exports = function semantic_container_plugin(md, option) {
+
+  let opt = {
+    'hassleHrIfOneLine': true
+  };
+  if (option !== undefined) {
+    if (option.hassleHrIfOneLine !== undefined) {
+      opt.hassleHrIfOneLine = option.hassleHrIfOneLine;
+    }
+  }
 
   const semantics = require('./semantics.json');
   const semanticsJoint = '[:.　：。．]';
-  const sNumber = '(?: *?[0-9A-Z]{1,6}(?:[.-][0-9A-Z]{1,6}){0,6})?';
+  const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?';
 
-  const checkSematicContainerCore = (state, n, hrType, sc, checked, ct) => {
+  const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
 
     const nextToken = state.tokens[n+1];
-    //console.log(n + ': ' + nextToken.type, nextToken.content);
+    //console.log(n + ', type: ' + nextToken.type, ', content: ' + nextToken.content);
 
     let sn = 0;
     let actualName = null;
@@ -21,7 +30,7 @@ module.exports = function semantic_container_plugin(md) {
           semanticsAltRegStr += '|' + x.trim();
         });
       }
-      actualName = nextToken.content.match(new RegExp('(?:(?:^|[*_]{1,2})' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint, 'i'));
+      actualName = nextToken.content.match(new RegExp('^(?:(?:[*_]{1,2})?' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint, 'i'));
       //console.log(semantics[sn].name + ' /nextToken.content: ' + nextToken.content, ' /actualName: ' + actualName);
       if(actualName) break;
       sn++;
@@ -32,25 +41,38 @@ module.exports = function semantic_container_plugin(md) {
 
     let en = n;
     let hasEndSemanticsHr = false;
+    let pCloseN = -1;
     while (en < state.tokens.length) {
       const eToken = state.tokens[en];
-      if (eToken.type !== 'hr') { en++; continue; }
-      if (new RegExp('\\' + hrType).test(eToken.markup)) {
-        hasEndSemanticsHr = true;
-        break;
+      if (eToken.type !== 'hr') {
+        if (eToken.type === 'paragraph_close' && pCloseN == -1) {
+          pCloseN = en;
+        }
+        en++;
+        continue;
+      }
+
+      if(hrType !== '') {
+        if (new RegExp('\\' + hrType).test(eToken.markup)) {
+          hasEndSemanticsHr = true;
+          break;
+        }
       }
       en++;
     }
-    if(!hasEndSemanticsHr) { return false; }
+    if (hrType !== '' && !hasEndSemanticsHr) { return false; }
 
     sc.push({
       "range": [n, en],
       "continued": checked,
       "sn": sn,
+      "hrType": hrType,
       "actualName": actualName[0],
       "actualNameJoint": actualNameJoint[0]
     });
-
+    if(hrType === '' && pCloseN !== -1) {
+      sc[sc.length - 1].range[1] = pCloseN + 1;
+    }
 
     return true;
   };
@@ -70,14 +92,13 @@ module.exports = function semantic_container_plugin(md) {
       }
       cn = sc[sc.length - 1].range[1] + 1;
       continued++;
-      //if (cn == 2) { ct++; }
-//      if (cn == 2) { ct += 2; } //for semantic container element end tag.
     }
     return true;
   };
 
 
   const setSemanticContainer = (state, n, hrType, sc, sci) => {
+    let nJump = 0;
     let moveToAriaLabel = false;
     let rs = sc.range[0];
     let re = sc.range[1];
@@ -119,21 +140,31 @@ module.exports = function semantic_container_plugin(md) {
     const eToken = new state.Token('html_block', '', 0);
     eToken.content = '</' + semantics[sn].tag + '>\n';
     eToken.block = true;
-    state.tokens.splice(re+1, 1, eToken); // ending hr delete too.
-    if (!sc.continued) {
-      state.tokens.splice(rs-1, 1)// starting hr delete.
+
+
+    if(sci !== -1) {
+      state.tokens.splice(re+1, 1, eToken); // ending hr delete too.
+      if (!sc.continued) {
+        state.tokens.splice(rs-1, 1)// starting hr delete.
+      }
+    } else {
+      state.tokens.splice(re+1, 0, eToken);
     }
+
 
 
     if(moveToAriaLabel) {
       nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualName + ' *'), '');
       nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualName + ' *'), '');
-      return;
+      return nJump;
     }
 
-
+    if (/^#+/.test(nextToken.content)) {
+      nJump += 2;
+    }
     if (/^[*_]{1,2}/.test(nextToken.content)) {
       nextToken.children[1].attrJoin("class", "sc-" + semantics[sn].name + '-label');
+      nJump += 3;
     } else {
       const lt_first = {
         type: 'text',
@@ -200,6 +231,7 @@ module.exports = function semantic_container_plugin(md) {
       nextToken.children.unshift(lt_span_content);
       nextToken.children.unshift(lt_span_open);
       nextToken.children.unshift(lt_first);
+      nJump += 3;
     }
 
 
@@ -255,20 +287,56 @@ module.exports = function semantic_container_plugin(md) {
     nextToken.children.splice(3, 0, ljt_span_content);
     nextToken.children.splice(3, 0, ljt_span_open);
 
-    return;
+    return nJump;
   };
 
 
   function semanticContainer (state, startLine, endLine, silent) {
-    let n = 1;
-    while (n < state.tokens.length -1) {
-      //console.log(n + ": " + state.tokens[n].type + ": ==================================");
+    let n = 0;
+    let cn = [];
+
+    while (n < state.tokens.length) {
+      //console.log(n + ": " + state.tokens[n].type + ": ==========");
       let sc = [];
+      let sci = 0;
       let hrType = '';
+      let alreadyChecked = false;
+      let nJumps = [];
 
       const prevToken = state.tokens[n-1];
+      const token = state.tokens[n];
 
-      if (prevToken.type !== 'hr') { n++; continue; }
+      if (n === 0 || n === state.tokens.length -1) {
+        if (opt.hassleHrIfOneLine && token.type === 'paragraph_open') {
+          if(checkSematicContainerCore(state, n, hrType, sc, false)) {
+            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
+            n += nJumps[0];
+            continue;
+          }
+        }
+        n++;
+        continue;
+       }
+      if (prevToken.type !== 'hr') {
+        if (opt.hassleHrIfOneLine && token.type === 'paragraph_open') {
+          cn.forEach(cni => {
+            if (n === cni + 1) { alreadyChecked = true; }
+          });
+          if (alreadyChecked) { n++; continue; }
+        //console.log('n:' + n + ', cn: ' + cn);
+
+          if(checkSematicContainerCore(state, n, hrType, sc, false)) {
+            //console.log('set sc(noHr): '+ JSON.stringify(sc));
+            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
+            n += nJumps[0];
+            continue;
+          }
+        }
+
+        n++;
+        continue;
+      }
+
       if(/\*/.test(prevToken.markup)) hrType = '*';
       if(/-/.test(prevToken.markup)) hrType = '-';
       if(/_/.test(prevToken.markup)) hrType = '_';
@@ -276,13 +344,14 @@ module.exports = function semantic_container_plugin(md) {
       if (!checkSemanticContainer(state, n, hrType, sc)) { n++; continue; }
       //console.log('set sc: '+ JSON.stringify(sc));
 
-      let sci = 0;
+      sci = 0;
       while (sci < sc.length) {
-        //console.log('sci: ' + sci + '--------------');
-        setSemanticContainer(state, n, hrType, sc[sci], sci);
+        //console.log('sci: ' + sci + ' ---------');
+        nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci));
+        cn.push(sc[sci].range[1] + sci + 1);
         sci++;
       }
-      n++; //if "n = sc[sc.length - 1].range[1] + 1;", the inner semantic container is not processed.
+      n = n + nJumps[0];
     }
     return true;
   }
