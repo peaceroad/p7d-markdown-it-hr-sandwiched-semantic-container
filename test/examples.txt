@@ -538,6 +538,39 @@ Notice. A notice.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
-[HTML:noHassle]
-<p>Notice. A notice.</p>
-<p>Notice. A notice.</p>
+
+
+[Markdown]
+---
+
+Notice. A notice.
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+[HTML:requireHrAtOneParagraph]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+[HTML:skipFirstLine]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+
+
+[Markdown]
+---
+
+Notice. A notice.
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+[HTML:requireHrAtOneParagraph]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>

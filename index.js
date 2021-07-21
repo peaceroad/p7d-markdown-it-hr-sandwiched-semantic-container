@@ -3,11 +3,11 @@
 module.exports = function semantic_container_plugin(md, option) {
 
   let opt = {
-    'hassleHrIfOneLine': true
+    'requireHrAtOneParagraph': false,
   };
   if (option !== undefined) {
-    if (option.hassleHrIfOneLine !== undefined) {
-      opt.hassleHrIfOneLine = option.hassleHrIfOneLine;
+    if (option.requireHrAtOneParagraph !== undefined) {
+      opt.requireHrAtOneParagraph = option.requireHrAtOneParagraph;
     }
   }
 
@@ -307,7 +307,7 @@ module.exports = function semantic_container_plugin(md, option) {
       const token = state.tokens[n];
 
       if (n === 0 || n === state.tokens.length -1) {
-        if (opt.hassleHrIfOneLine && token.type === 'paragraph_open') {
+        if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
             nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
             n += nJumps[0];
@@ -318,7 +318,7 @@ module.exports = function semantic_container_plugin(md, option) {
         continue;
        }
       if (prevToken.type !== 'hr') {
-        if (opt.hassleHrIfOneLine && token.type === 'paragraph_open') {
+        if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
           cn.forEach(cni => {
             if (n === cni + 1) { alreadyChecked = true; }
           });
