@@ -1,7 +1,5 @@
 'use strict';
 
-const Token = require('markdown-it/lib/token');
-
 module.exports = function semantic_container_plugin(md, option) {
 
   let opt = {
