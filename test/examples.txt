@@ -574,3 +574,41 @@ Notice. A notice.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+通知：A notice.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></span>A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+**通知：**A notice.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></strong>A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+

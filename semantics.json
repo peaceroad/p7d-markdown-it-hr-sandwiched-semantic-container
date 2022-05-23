@@ -36,8 +36,8 @@
     "attrs": []
   },
   {
-    "name": "answers",
-    "as": "回答,答え",
+    "name": "answer",
+    "as": "answers,回答,答え",
     "tag": "section",
     "attrs": []
   },
@@ -58,6 +58,12 @@
     "as": "(参考)?文献(一覧)?",
     "tag": "section",
     "attrs": [["role", "doc-bibliography"]]
+  },
+  {
+    "name": "caution",
+    "as": "注意",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "chapter-toc",
@@ -91,7 +97,7 @@
   },
   {
     "name": "credits",
-    "as": "帰属",
+    "as": "クレジット",
     "tag": "section",
     "attrs": [["role", "doc-credits"]]
   },
@@ -217,7 +223,7 @@
   },
   {
     "name": "notice",
-    "as": "通知,掲示,注目,注意,お知らせ",
+    "as": "通知,通告,注目,(お)?(し|知)らせ",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -304,6 +310,12 @@
     "as": "recommend(ed)?,勧告,勧め,推薦,リコメンド",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "source",
+    "as": "出典",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "suggestion",

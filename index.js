@@ -1,5 +1,7 @@
 'use strict';
 
+const Token = require('markdown-it/lib/token');
+
 module.exports = function semantic_container_plugin(md, option) {
 
   let opt = {
@@ -30,14 +32,16 @@ module.exports = function semantic_container_plugin(md, option) {
           semanticsAltRegStr += '|' + x.trim();
         });
       }
-      actualName = nextToken.content.match(new RegExp('^(?:(?:[*_]{1,2})?' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint, 'i'));
+      //console.log('^(?:(?:[*_]{1,2})?' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint);
+      actualName = nextToken.content.match(new RegExp('^(?:[*_]{2})?(?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint + ' *?(?:[*_]{2})?', 'i'));
       //console.log(semantics[sn].name + ' /nextToken.content: ' + nextToken.content, ' /actualName: ' + actualName);
       if(actualName) break;
       sn++;
     }
     if(!actualName) { return false; }
+    actualName[0] = actualName[0].replace(/^[*_]{2}/, '').replace(/[*_]{2}$/, '');
 
-    const actualNameJoint = actualName[0].match(new RegExp(semanticsJoint + '$'));
+    const actualNameJoint = actualName[0].match(new RegExp('('+ semanticsJoint + ')(?: *?[*_]{2})?$'));
 
     let en = n;
     let hasEndSemanticsHr = false;
@@ -68,7 +72,7 @@ module.exports = function semantic_container_plugin(md, option) {
       "sn": sn,
       "hrType": hrType,
       "actualName": actualName[0],
-      "actualNameJoint": actualNameJoint[0]
+      "actualNameJoint": actualNameJoint[1]
     });
     if(hrType === '' && pCloseN !== -1) {
       sc[sc.length - 1].range[1] = pCloseN + 1;
@@ -162,70 +166,34 @@ module.exports = function semantic_container_plugin(md, option) {
     if (/^#+/.test(nextToken.content)) {
       nJump += 2;
     }
-    if (/^[*_]{1,2}/.test(nextToken.content)) {
-      nextToken.children[1].attrJoin("class", "sc-" + semantics[sn].name + '-label');
+    if (/^[*_]{2}/.test(nextToken.content)) {
+      //Passed the test, but...
+      if (nextToken.children[1]) {
+        if (nextToken.children[1].type === 'strong_open') {
+          nextToken.children[1].attrJoin('class', 'sc-' + semantics[sn].name + '-label');
+        } 
+      } else {
+        const strongBefore = new state.Token('text', '', 0);
+        const strongOpen = new state.Token('strong_oepn', 'strong', 1);
+        const strongContent = new state.Token('text', '', 0);
+        strongContent.content =sc.actualName;
+        const strongClose = new state.Token('strong_close', 'strong', -1);
+        strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
+  
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+        nextToken.children.unshift(strongClose);
+        nextToken.children.unshift(strongContent);
+        nextToken.children.unshift(strongOpen);
+        nextToken.children.unshift(strongBefore);
+      }
       nJump += 3;
     } else {
-      const lt_first = {
-        type: 'text',
-        tag: '',
-        attrs: null,
-        map: null,
-        nesting: 0,
-        level: 0,
-        children: null,
-        content: '',
-        markup: '',
-        info: '',
-        meta: null,
-        block: false,
-        hidden: false
-      };
-      const lt_span_open = {
-        type: 'span_open',
-        tag: 'span',
-        attrs: [["class", "sc-" + semantics[sn].name + "-label"]],
-        map: null,
-        nesting: 1,
-        level: 0,
-        children: null,
-        content: '',
-        markup: '',
-        info: '',
-        meta: null,
-        block: false,
-        hidden: false
-      };
-      const lt_span_content = {
-        type: 'text',
-        tag: '',
-        attrs: null,
-        map: null,
-        nesting: 0,
-        level: 1,
-        children: null,
-        content: sc.actualName,
-        markup: '',
-        info: '',
-        meta: null,
-        block: false,
-        hidden: false
-      };
-      const lt_span_close = {
-        type: 'span_close',
-        tag: 'span',
-        attrs: null,
-        map: null,
-        nesting: -1,
-        level: 0,
-        children: null,
-        content: '',
-        markup: '',
-        info: '',
-        meta: null,
-        block: false,
-        hidden: false
-      };
+      const lt_first = new state.Token('text', '', 0);
+      const lt_span_open = new state.Token('span_open', 'span', 1);
+      lt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label");
+      const lt_span_content = new state.Token('text', '', 0);
+      lt_span_content.content = sc.actualName;
+      const lt_span_close = new state.Token('span_close', 'span', -1);
       nextToken.children[0].content = nextToken.children[0].content.replace(sc.actualName, '');
       nextToken.children.unshift(lt_span_close);
       nextToken.children.unshift(lt_span_content);
@@ -238,51 +206,12 @@ module.exports = function semantic_container_plugin(md, option) {
     // Add label joint span.
     nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(sc.actualNameJoint + '$'), '');
 
-    const ljt_span_open = {
-      type: 'span_open',
-      tag: 'span',
-      attrs: [["class", "sc-" + semantics[sn].name + "-label-joint"]],
-      map: null,
-      nesting: 1,
-      level: 0,
-      children: null,
-      content: '',
-      markup: '',
-      info: '',
-      meta: null,
-      block: false,
-      hidden: false
-    };
-    const ljt_span_content = {
-      type: 'text',
-      tag: '',
-      attrs: null,
-      map: null,
-      nesting: 0,
-      level: 1,
-      children: null,
-      content: sc.actualNameJoint,
-      markup: '',
-      info: '',
-      meta: null,
-      block: false,
-      hidden: false
-    };
-    const ljt_span_close = {
-      type: 'span_close',
-      tag: 'span',
-      attrs: null,
-      map: null,
-      nesting: -1,
-      level: 0,
-      children: null,
-      content: '',
-      markup: '',
-      info: '',
-      meta: null,
-      block: false,
-      hidden: false
-    };
+    const ljt_span_open = new state.Token('span_open', 'span', 1);
+    ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
+    const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
+    ljt_span_content.content = sc.actualNameJoint;
+    const ljt_span_close = new state.Token('span_close', 'span', -1);
+
     nextToken.children.splice(3, 0, ljt_span_close);
     nextToken.children.splice(3, 0, ljt_span_content);
     nextToken.children.splice(3, 0, ljt_span_open);
