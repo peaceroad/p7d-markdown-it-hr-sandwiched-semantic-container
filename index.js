@@ -169,8 +169,22 @@ module.exports = function semantic_container_plugin(md, option) {
       if (nextToken.children[1]) {
         if (nextToken.children[1].type === 'strong_open') {
           nextToken.children[1].attrJoin('class', 'sc-' + semantics[sn].name + '-label');
-        } 
+        } else {
+          const strongBefore = new state.Token('text', '', 0);
+          const strongOpen = new state.Token('strong_oepn', 'strong', 1);
+          const strongContent = new state.Token('text', '', 0);
+          strongContent.content =sc.actualName;
+          const strongClose = new state.Token('strong_close', 'strong', -1);
+          strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
+    
+          nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+          nextToken.children.unshift(strongClose);
+          nextToken.children.unshift(strongContent);
+          nextToken.children.unshift(strongOpen);
+          nextToken.children.unshift(strongBefore);
+        }
       } else {
+
         const strongBefore = new state.Token('text', '', 0);
         const strongOpen = new state.Token('strong_oepn', 'strong', 1);
         const strongContent = new state.Token('text', '', 0);

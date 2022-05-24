@@ -612,3 +612,10 @@ A paragraph.
 <p>A paragraph.</p>
 
 
+[Markdown]
+**メモ：**Markdownファイルに限らず，テキストファイルは特定の[文字コード](#)と[改行コード](#)を使うべきです。
+
+[HTML]
+<section class="sc-memo" role="doc-notice">
+<p><strong class="sc-memo-label">メモ<span class="sc-memo-label-joint">：</span></strong>Markdownファイルに限らず，テキストファイルは特定の<a href="#">文字コード</a>と<a href="#">改行コード</a>を使うべきです。</p>
+</section>
