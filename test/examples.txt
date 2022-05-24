@@ -619,3 +619,12 @@ A paragraph.
 <section class="sc-memo" role="doc-notice">
 <p><strong class="sc-memo-label">メモ<span class="sc-memo-label-joint">：</span></strong>Markdownファイルに限らず，テキストファイルは特定の<a href="#">文字コード</a>と<a href="#">改行コード</a>を使うべきです。</p>
 </section>
+
+
+[Markdown]
+**Note: ** [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label">Note<span class="sc-note-label-joint">:</span></strong> <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
