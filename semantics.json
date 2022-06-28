@@ -156,6 +156,12 @@
     "attrs": []
   },
   {
+    "name": "first-published",
+    "as": "first (published|publication),初出",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "foreword",
     "as": "((本書|日本語版)?の)?(刊行|発行|発刊)に寄せて",
     "tag": "section",
@@ -306,16 +312,16 @@
     "attrs": []
   },
   {
+    "name": "related-book",
+    "as": "related book,関連(した)?(本|書籍)",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "recommendation",
     "as": "recommend(ed)?,勧告,勧め,推薦,リコメンド",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
-  },
-  {
-    "name": "source",
-    "as": "出典",
-    "tag": "section",
-    "attrs": []
   },
   {
     "name": "suggestion",
