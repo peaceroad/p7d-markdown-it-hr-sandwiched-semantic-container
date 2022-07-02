@@ -60,6 +60,12 @@
     "attrs": [["role", "doc-bibliography"]]
   },
   {
+    "name": "book",
+    "as": "magazine,(書籍|雑誌)(情報|案内)?,書誌(情報)?",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "caution",
     "as": "注意",
     "tag": "section",
@@ -138,6 +144,12 @@
     "attrs": [["role", "doc-example"]]
   },
   {
+    "name": "event",
+    "as": "イベント(情報|案内)?,行事(情報|案内)?,催し物(情報|案内)?,出来事",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "example",
     "as": "例",
     "tag": "figure",
@@ -181,7 +193,7 @@
   },
   {
     "name": "information",
-    "as": "info, 案内,情報,インフォメーション",
+    "as": "info,案内,情報,インフォメーション",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -202,6 +214,12 @@
     "as": "序論,序説,はじめに,始めに",
     "tag": "section",
     "attrs": [["role", "doc-introduction"]]
+  },
+  {
+    "name": "issue",
+    "as": "問題点,争点",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "keywords",
@@ -229,7 +247,7 @@
   },
   {
     "name": "notice",
-    "as": "通知,通告,注目,(お)?(し|知)らせ",
+    "as": "通知,通告,告知,掲示,注目,(お)?(し|知)らせ",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -289,7 +307,7 @@
   },
   {
     "name": "proposal",
-    "as": "提言",
+    "as": "プロポーザル,提言",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -306,15 +324,27 @@
     "attrs": [["role", "doc-qna"]]
   },
   {
-    "name": "relation",
-    "as": "related,関連",
-    "tag": "section",
+    "name": "related-book",
+    "as": "related (book|magazine),関連(した)?(本|書籍|雑誌)",
+    "tag": "aside",
     "attrs": []
   },
   {
-    "name": "related-book",
-    "as": "related book,関連(した)?(本|書籍)",
-    "tag": "section",
+    "name": "related-article",
+    "as": "related book,関連(した)?(記事)",
+    "tag": "aside",
+    "attrs": []
+  },
+  {
+    "name": "related-link",
+    "as": "related link,関連(した)?(リンク)",
+    "tag": "aside",
+    "attrs": []
+  },
+  {
+    "name": "relation",
+    "as": "related,関連",
+    "tag": "aside",
     "attrs": []
   },
   {
@@ -322,6 +352,12 @@
     "as": "recommend(ed)?,勧告,勧め,推薦,リコメンド",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "solution",
+    "as": "解答,解決(方法)?,解法",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "suggestion",
@@ -336,6 +372,12 @@
     "attrs": [["role", "doc-conclusion"]]
   },
   {
+    "name": "task",
+    "as": "課題",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "tip",
     "as": "tips,コツ,秘訣,助言",
     "tag": "section",
@@ -346,6 +388,12 @@
     "as": "目次",
     "tag": "nav",
     "attrs": [["role", "doc-nav"]]
+  },
+  {
+    "name": "topic",
+    "as": "トピック,話題",
+    "tag": "section",
+    "attrs": []
   },
   {
     "name": "warning",
