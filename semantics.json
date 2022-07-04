@@ -282,6 +282,12 @@
     "attrs": [["role", "doc-tip"]]
   },
   {
+    "name": "postscript",
+    "as": "追記",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
     "name": "preamble",
     "as": "序,序文",
     "tag": "section",
@@ -350,6 +356,12 @@
   {
     "name": "recommendation",
     "as": "recommend(ed)?,勧告,勧め,推薦,リコメンド",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
+  },
+  {
+    "name": "supplementation",
+    "as": "補足(情報)?",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
