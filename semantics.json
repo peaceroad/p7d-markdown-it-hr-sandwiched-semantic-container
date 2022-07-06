@@ -54,6 +54,12 @@
     "attrs": []
   },
   {
+    "name": "author",
+    "as": "著者",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "bibliography",
     "as": "(参考)?文献(一覧)?",
     "tag": "section",
@@ -118,6 +124,12 @@
     "as": "献呈",
     "tag": "section",
     "attrs": [["role", "doc-dedication"]]
+  },
+  {
+    "name": "editornote",
+    "as": "editor('s)? note,編注",
+    "tag": "section",
+    "attrs": [["role", "doc-notice"]]
   },
   {
     "name": "endnotes",
@@ -193,7 +205,7 @@
   },
   {
     "name": "information",
-    "as": "info,案内,情報,インフォメーション",
+    "as": "info,案内,(参考)?情報,インフォメーション",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -306,6 +318,12 @@
     "attrs": []
   },
   {
+    "name": "profile",
+    "as": "プロフィール,人物紹介",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "prologue",
     "as": "プロローグ,序幕,序章",
     "tag": "section",
@@ -330,6 +348,12 @@
     "attrs": [["role", "doc-qna"]]
   },
   {
+    "name": "reference",
+    "as": "レファレンス,参照,参考",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "related-book",
     "as": "related (book|magazine),関連(した)?(本|書籍|雑誌)",
     "tag": "aside",
@@ -337,13 +361,13 @@
   },
   {
     "name": "related-article",
-    "as": "related book,関連(した)?(記事)",
+    "as": "related book,関連(した)?記事",
     "tag": "aside",
     "attrs": []
   },
   {
     "name": "related-link",
-    "as": "related link,関連(した)?(リンク)",
+    "as": "related link,関連(した)?リンク",
     "tag": "aside",
     "attrs": []
   },
