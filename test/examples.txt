@@ -613,6 +613,24 @@ A paragraph.
 
 
 [Markdown]
+A paragraph.
+
+---
+
+**通知**：A notice.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></strong>A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
 **メモ：**Markdownファイルに限らず，テキストファイルは特定の[文字コード](#)と[改行コード](#)を使うべきです。
 
 [HTML]
@@ -628,3 +646,124 @@ A paragraph.
 <section class="sc-note" role="doc-notice">
 <p><strong class="sc-note-label">Note<span class="sc-note-label-joint">:</span></strong> <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
 </section>
+
+
+[Markdown]
+example.html
+
+[HTML]
+<p>example.html</p>
+
+
+[Markdown]
+example.Html
+
+[HTML]
+<p>example.Html</p>
+
+
+[Markdown]
+example. html
+
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><span class="sc-example-label">example<span class="sc-example-label-joint">.</span></span> html</p>
+</figure>
+
+[Markdown]
+example. Html
+
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><span class="sc-example-label">example<span class="sc-example-label-joint">.</span></span> Html</p>
+</figure>
+
+
+[Markdown]
+---
+
+example.html
+
+---
+
+[HTML]
+<hr>
+<p>example.html</p>
+<hr>
+
+
+[Markdown]
+---
+
+example. html
+
+---
+
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><span class="sc-example-label">example<span class="sc-example-label-joint">.</span></span> html</p>
+</figure>
+
+
+[Markdown]
+---
+
+**example**. html
+
+---
+
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><strong class="sc-example-label">example<span class="sc-example-label-joint">.</span></strong> html</p>
+</figure>
+
+
+[Markdown]
+# Title
+
+A paragraph.
+
+- - -
+
+## **Column:** Title
+
+A column.
+
+- - -
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<p>A paragraph.</p>
+<aside class="sc-column">
+<h2><strong class="sc-column-label">Column<span class="sc-column-label-joint">:</span></strong> Title</h2>
+<p>A column.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+
+[Markdown]
+# Title
+
+A paragraph.
+
+- - -
+
+## **Column**: Title
+
+A column.
+
+- - -
+
+A paragraph.
+[HTML]
+<h1>Title</h1>
+<p>A paragraph.</p>
+<aside class="sc-column">
+<h2><strong class="sc-column-label">Column<span class="sc-column-label-joint">:</span></strong> Title</h2>
+<p>A column.</p>
+</aside>
+<p>A paragraph.</p>
+
+

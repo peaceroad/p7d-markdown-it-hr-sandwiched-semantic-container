@@ -34,6 +34,8 @@ The notation is as follows:
 2. Write the word (`Semantics` in the example below) that means a semantic container in the string at the beginning of the first paragraph of this group of paragraphs.
 3. Immediately after the Semantics word, write one of the letters `.:。．：　`, which is a separator with the normal paragraph.
 
+Notice: In addition, half-width symbols required a space after them. [ver.0.3+] 
+
 ```md
 ---
 
@@ -105,9 +107,9 @@ prologue (プロローグ,序幕,序章)
 proposal (プロポーザル,提言)
 pull-quote (pull quote, プル(・)?ク[オォ]ート,抜粋)
 qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
-reference (レファレンス,参照,参考)
+reference ([レリ]ファレンス,参照,参考)
 related-book (related (book|magazine),関連(した)?(本|書籍|雑誌))
-related-article (related book,関連(した)?記事)
+related-article (related article,関連(した)?記事)
 related-link (related link,関連(した)?リンク)
 relation (related,関連)
 recommendation (recommend(ed)?,勧告,勧め,推薦,リコメンド)
@@ -134,6 +136,18 @@ As a notation, the Semantics word itself may be made into a strong element as fo
 ---
 
 **Semantics.** A paragraph inside the container.
+
+A paragraph inside the container.
+
+---
+```
+
+,or (ver: 0.3+)
+
+```md
+---
+
+**Semantics**. A paragraph inside the container.
 
 A paragraph inside the container.
 
@@ -262,11 +276,11 @@ npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 Notice. A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -280,11 +294,11 @@ A paragraph.
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 Notice 1. A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -298,11 +312,11 @@ A paragraph.
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 **Notice.** A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -341,11 +355,11 @@ A paragraph.
 [Markdown]
 # A heading.
 
-* * *
+---
 
 Lead. A lead.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -395,15 +409,15 @@ A paragraph.
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 Notice. A notice.
 
-* * *
+---
 
 Notice. A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -420,17 +434,17 @@ A paragraph.
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 Notice. A notice.
 
-* * *
+---
 
-* * *
+---
 
 Notice. A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -447,11 +461,11 @@ A paragraph.
 [Markdown]
 A paragraph.
 
-* * *
+---
 
 Notice 1. A notice.
 
-* * *
+---
 
 A paragraph.
 [HTML]
@@ -460,5 +474,4 @@ A paragraph.
 <p><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
-
 ```

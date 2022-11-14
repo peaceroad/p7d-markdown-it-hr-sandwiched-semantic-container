@@ -12,34 +12,61 @@ module.exports = function semantic_container_plugin(md, option) {
   }
 
   const semantics = require('./semantics.json');
-  const semanticsJoint = '[:.　：。．]';
+  const semanticsHalfJoint = '[:.]';
+  const semanticsFullJoint = '[　：。．]';
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?';
+  const strongMark = '[*_]{2}';
 
   const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
 
     const nextToken = state.tokens[n+1];
-    //console.log(n + ', type: ' + nextToken.type, ', content: ' + nextToken.content);
+    //console.log('Token: ' + n + ', type: ' + nextToken.type, ', content: ' + nextToken.content);
 
     let sn = 0;
     let actualName = null;
+
     while (sn < semantics.length) {
       let semanticsAltRegStr = '';
       if(semantics[sn].as) {
         const ts = semantics[sn].as.split(',');
         ts.forEach(x => {
+          x = x.replace(/\((.*?)\)/g, '(?:$1)')
           semanticsAltRegStr += '|' + x.trim();
         });
       }
-      //console.log('^(?:(?:[*_]{1,2})?' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint);
-      actualName = nextToken.content.match(new RegExp('^(?:[*_]{2})?(?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + semanticsJoint + ' *?(?:[*_]{2})?', 'i'));
-      //console.log(semantics[sn].name + ' /nextToken.content: ' + nextToken.content, ' /actualName: ' + actualName);
+      actualName = nextToken.content.match(new RegExp(
+        '^(?:' + strongMark +')?((?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + ')'
+          + '(?:'
+          + '(' + semanticsHalfJoint + ')(?: *?' + strongMark + ')? '
+          + '|(?: *?' + strongMark + ' *?)?(' + semanticsHalfJoint + ') '
+          + '|(' + semanticsFullJoint + ')(?: *?' + strongMark + ')?'
+          + '|(?: *?' + strongMark + ' *?)?(' + semanticsFullJoint + ')'
+          + ' *?)', 'i'));
+      //console.log(semantics[sn].name + ' ,nextToken.content: ' + nextToken.content, ' ,actualName: ' + actualName);
       if(actualName) break;
       sn++;
     }
     if(!actualName) { return false; }
-    actualName[0] = actualName[0].replace(/^[*_]{2}/, '').replace(/[*_]{2}$/, '');
 
-    const actualNameJoint = actualName[0].match(new RegExp('('+ semanticsJoint + ')(?: *?[*_]{2})?$'));
+
+    let actualNameJoint = '';
+    let hasLastJoint = false;
+    let hasHalfJoint = false;
+
+    if (actualName[2]) {
+      hasHalfJoint = true
+      actualNameJoint = actualName[2]
+    } else if (actualName[3]) {
+      hasHalfJoint = true
+      hasLastJoint = true
+      actualNameJoint = actualName[3]
+    } else if (actualName[4]) {
+      actualNameJoint = actualName[4]
+    } else if (actualName[5]) {
+      hasLastJoint = true
+      actualNameJoint = actualName[5]
+    }
+    //console.log('actualName[0]: "' + actualName[0] + '", actualName[1]: "' + actualName[1] + '", actualNameJoint: "' + actualNameJoint +'" , hasLastJoint: ' + hasLastJoint)
 
     let en = n;
     let hasEndSemanticsHr = false;
@@ -65,17 +92,20 @@ module.exports = function semantic_container_plugin(md, option) {
     if (hrType !== '' && !hasEndSemanticsHr) { return false; }
 
     sc.push({
-      "range": [n, en],
-      "continued": checked,
-      "sn": sn,
-      "hrType": hrType,
-      "actualName": actualName[0],
-      "actualNameJoint": actualNameJoint[1]
+      range: [n, en],
+      continued: checked,
+      sn: sn,
+      hrType: hrType,
+      actualCont: actualName[0],
+      actualContNoStrong: actualName[0].replace(/[*_]{2}/g, ''),
+      actualName: actualName[1],
+      actualNameJoint: actualNameJoint,
+      hasLastJoint: hasLastJoint,
+      hasHalfJoint: hasHalfJoint,
     });
     if(hrType === '' && pCloseN !== -1) {
       sc[sc.length - 1].range[1] = pCloseN + 1;
     }
-
     return true;
   };
 
@@ -116,7 +146,7 @@ module.exports = function semantic_container_plugin(md, option) {
       }
     }
     const nextToken = state.tokens[rs+1];
-    //console.log(nextToken.type,);
+    //console.log(nextToken.type);
 
     const sToken = new state.Token('html_block', '', 0);
     sToken.content = '<' + semantics[sn].tag;
@@ -125,10 +155,11 @@ module.exports = function semantic_container_plugin(md, option) {
       let ai = 0;
       while (ai < semantics[sn].attrs.length) {
         if(!moveToAriaLabel) {
-          moveToAriaLabel = semantics[sn].attrs[ai][0]=== "aria-label";
+          moveToAriaLabel = semantics[sn].attrs[ai][0] === "aria-label";
           if(moveToAriaLabel) {
-            semantics[sn].attrs[ai][1] = sc.actualName.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '');
-            moveToAriaLabel = true;
+            // semantics[sn].attrs[ai][1] = sc.actualName.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '');
+            semantics[sn].attrs[ai][1] = sc.actualName
+            // moveToAriaLabel = true;
           }
         }
         sToken.content += ' ' + semantics[sn].attrs[ai][0] + '="' + semantics[sn].attrs[ai][1] + '"';
@@ -153,37 +184,60 @@ module.exports = function semantic_container_plugin(md, option) {
       state.tokens.splice(re+1, 0, eToken);
     }
 
-
-
+    //console.log('moveToAriaLabel: ' + moveToAriaLabel)
     if(moveToAriaLabel) {
-      nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualName + ' *'), '');
-      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualName + ' *'), '');
+      nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualContNoStrong), '');
+      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualContNoStrong + ' *'), '');
+      nextToken.content = nextToken.content.replace(new RegExp('^ *'), '');
       return nJump;
     }
+    //console.log('Set(' + n + '): actualName: "' + sc.actualName + '", actualNameJoint: "' + sc.actualNameJoint +'" , hasLastJoint: ' + sc.hasLastJoint)
 
     if (/^#+/.test(nextToken.content)) {
+      //console.log('processingheading):')
       nJump += 2;
     }
-    if (/^[*_]{2}/.test(nextToken.content)) {
-      //Passed the test, but...
+    if (/^[*_]{2}/.test(nextToken.content) ) {
+      //console.log('processing(strong):')
       if (nextToken.children[1]) {
         if (nextToken.children[1].type === 'strong_open') {
+          //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
           nextToken.children[1].attrJoin('class', 'sc-' + semantics[sn].name + '-label');
+          if (sc.hasLastJoint) {
+            if (sc.hasHalfJoint) {
+              nextToken.children[4].content = ' ' + nextToken.children[4].content.replace(new RegExp('^\\' + sc.actualNameJoint + ' *'), '')
+            } else {
+              nextToken.children[4].content = nextToken.children[4].content.replace(new RegExp('^\\' + sc.actualNameJoint + ' *'), '')
+            }
+          } else {
+            nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '')
+          }
         } else {
+          //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
           const strongBefore = new state.Token('text', '', 0);
           const strongOpen = new state.Token('strong_oepn', 'strong', 1);
           const strongContent = new state.Token('text', '', 0);
           strongContent.content =sc.actualName;
           const strongClose = new state.Token('strong_close', 'strong', -1);
           strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
-    
+  
           nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+
+          if (sc.hasLastSpace || sc.hasHalfJoint) {
+            nextToken.children[0].content = ' ' + nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+          } else {
+            nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+          }
+          nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+
           nextToken.children.unshift(strongClose);
           nextToken.children.unshift(strongContent);
           nextToken.children.unshift(strongOpen);
           nextToken.children.unshift(strongBefore);
         }
+        nJump += 3;
       } else {
+        //console.log('nextToken.children.length: ' + nextToken.children.length)
 
         const strongBefore = new state.Token('text', '', 0);
         const strongOpen = new state.Token('strong_oepn', 'strong', 1);
@@ -191,22 +245,33 @@ module.exports = function semantic_container_plugin(md, option) {
         strongContent.content =sc.actualName;
         const strongClose = new state.Token('strong_close', 'strong', -1);
         strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
-  
+
         nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+        nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+
         nextToken.children.unshift(strongClose);
         nextToken.children.unshift(strongContent);
         nextToken.children.unshift(strongOpen);
         nextToken.children.unshift(strongBefore);
       }
-      nJump += 3;
     } else {
+      //console.log('Processing(normal):: actualContNoStrong:' +  sc.actualContNoStrong + ', actualNameJoint: ' + sc.actualNameJoint)
       const lt_first = new state.Token('text', '', 0);
       const lt_span_open = new state.Token('span_open', 'span', 1);
       lt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label");
       const lt_span_content = new state.Token('text', '', 0);
       lt_span_content.content = sc.actualName;
       const lt_span_close = new state.Token('span_close', 'span', -1);
-      nextToken.children[0].content = nextToken.children[0].content.replace(sc.actualName, '');
+
+      //console.log(nextToken.children[0].content + ', ac: "' + sc.actualContNoStrong + '"')
+      if (sc.hasHalfJoint) {
+        nextToken.children[0].content = ' ' + nextToken.children[0].content.replace(new RegExp('^' + sc.actualContNoStrong), '');
+      } else {
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualContNoStrong), '');
+      }
+
       nextToken.children.unshift(lt_span_close);
       nextToken.children.unshift(lt_span_content);
       nextToken.children.unshift(lt_span_open);
@@ -216,8 +281,6 @@ module.exports = function semantic_container_plugin(md, option) {
 
 
     // Add label joint span.
-    nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp(sc.actualNameJoint + '$'), '');
-
     const ljt_span_open = new state.Token('span_open', 'span', 1);
     ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
     const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
@@ -237,7 +300,7 @@ module.exports = function semantic_container_plugin(md, option) {
     let cn = [];
 
     while (n < state.tokens.length) {
-      //console.log(n + ": " + state.tokens[n].type + ": ==========");
+      //console.log(n + ', type:' + state.tokens[n].type + '", requireHrAtOneParagraph: ' + opt.requireHrAtOneParagraph + ' ==============');
       let sc = [];
       let sci = 0;
       let hrType = '';
@@ -250,6 +313,7 @@ module.exports = function semantic_container_plugin(md, option) {
       if (n === 0 || n === state.tokens.length -1) {
         if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
+            //console.log('set sc(n): '+ JSON.stringify(sc));
             nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
             n += nJumps[0];
             continue;
@@ -264,7 +328,7 @@ module.exports = function semantic_container_plugin(md, option) {
             if (n === cni + 1) { alreadyChecked = true; }
           });
           if (alreadyChecked) { n++; continue; }
-        //console.log('n:' + n + ', cn: ' + cn);
+          //console.log('n:' + n + ', cn: ' + cn);
 
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
             //console.log('set sc(noHr): '+ JSON.stringify(sc));

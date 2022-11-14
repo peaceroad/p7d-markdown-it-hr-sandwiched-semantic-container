@@ -349,7 +349,7 @@
   },
   {
     "name": "reference",
-    "as": "レファレンス,参照,参考",
+    "as": "[レリ]ファレンス,参照,参考",
     "tag": "section",
     "attrs": []
   },
@@ -361,7 +361,7 @@
   },
   {
     "name": "related-article",
-    "as": "related book,関連(した)?記事",
+    "as": "related article,関連(した)?記事",
     "tag": "aside",
     "attrs": []
   },
