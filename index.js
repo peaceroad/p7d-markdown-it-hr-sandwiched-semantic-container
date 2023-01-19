@@ -3,7 +3,7 @@
 module.exports = function semantic_container_plugin(md, option) {
 
   let opt = {
-    'requireHrAtOneParagraph': false,
+    requireHrAtOneParagraph: false,
   };
   if (option !== undefined) {
     if (option.requireHrAtOneParagraph !== undefined) {
@@ -329,6 +329,8 @@ module.exports = function semantic_container_plugin(md, option) {
           });
           if (alreadyChecked) { n++; continue; }
           //console.log('n:' + n + ', cn: ' + cn);
+
+          if (state.tokens[n - 1].type === 'list_item_open') { n++; continue; }
 
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
             //console.log('set sc(noHr): '+ JSON.stringify(sc));

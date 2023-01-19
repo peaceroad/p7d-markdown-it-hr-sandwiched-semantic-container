@@ -767,3 +767,41 @@ A paragraph.
 <p>A paragraph.</p>
 
 
+[Markdown]
+A paragraph.
+
+- - -
+
+- Notice: A List.
+- Notice: A List.
+
+- - -
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<hr>
+<ul>
+<li>Notice: A List.</li>
+<li>Notice: A List.</li>
+</ul>
+<hr>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+- Notice: A List.
+- Notice: A List.
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<ul>
+<li>Notice: A List.</li>
+<li>Notice: A List.</li>
+</ul>
+<p>A paragraph.</p>
+
+
