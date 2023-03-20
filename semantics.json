@@ -6,6 +6,12 @@
     "attrs": [["role", "doc-abstract"]]
   },
   {
+    "name": "answer",
+    "as": "回答,答え?",
+    "tag": "div",
+    "attrs": []
+  },
+  {
     "name": "acknowledgments",
     "as": "謝辞",
     "tag": "section",
@@ -346,6 +352,12 @@
     "as": "Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え)",
     "tag": "section",
     "attrs": [["role", "doc-qna"]]
+  },
+  {
+    "name": "question",
+    "as": "質問,問(題)?",
+    "tag": "div",
+    "attrs": []
   },
   {
     "name": "reference",

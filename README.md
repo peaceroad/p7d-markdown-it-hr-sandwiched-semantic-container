@@ -50,6 +50,7 @@ The Semantics words are defined as follows. (This word can be in uppercase or lo
 
 ```plain
 abstract (要旨,抄録)
+answer（回答,答え）
 acknowledgments (謝辞)
 afterword (後書き,あとがき,跋文)
 agenda (議題,検討課題,アジェンダ)
@@ -107,6 +108,7 @@ prologue (プロローグ,序幕,序章)
 proposal (プロポーザル,提言)
 pull-quote (pull quote, プル(・)?ク[オォ]ート,抜粋)
 qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
+question（質問,問(題)?）
 reference ([レリ]ファレンス,参照,参考)
 related-book (related (book|magazine),関連(した)?(本|書籍|雑誌))
 related-article (related article,関連(した)?記事)
