@@ -252,6 +252,12 @@
     "attrs": [["aria-label", "NAME"]]
   },
   {
+    "name": "lesson",
+    "as": "レッスン,教訓",
+    "tag": "section",
+    "attrs": []
+  },
+  {
     "name": "memo",
     "as": "メモ",
     "tag": "section",
