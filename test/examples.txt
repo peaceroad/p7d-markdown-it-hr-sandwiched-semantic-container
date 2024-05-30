@@ -554,10 +554,6 @@ Notice. A notice.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
-[HTML:skipFirstLine]
-<section class="sc-notice" role="doc-notice">
-<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
-</section>
 
 
 [Markdown]
@@ -803,5 +799,63 @@ A paragraph.
 <li>Notice: A List.</li>
 </ul>
 <p>A paragraph.</p>
+
+
+[Markdown]
+---
+
+2024年5月25日追記：
+
+A paragraph.
+
+---
+[HTML]
+<section class="sc-postscript" role="doc-notice">
+<p><span class="sc-postscript-label">2024年5月25日追記<span class="sc-postscript-label-joint">：</span></span></p>
+<p>A paragraph.</p>
+</section>
+
+
+[Markdown]
+---
+
+5月25日追記：
+
+A paragraph.
+
+---
+[HTML]
+<section class="sc-postscript" role="doc-notice">
+<p><span class="sc-postscript-label">5月25日追記<span class="sc-postscript-label-joint">：</span></span></p>
+<p>A paragraph.</p>
+</section>
+
+
+[Markdown]
+---
+
+**2024年5月25日追記：**
+
+A paragraph.
+
+---
+[HTML]
+<section class="sc-postscript" role="doc-notice">
+<p><strong class="sc-postscript-label">2024年5月25日追記<span class="sc-postscript-label-joint">：</span></strong></p>
+<p>A paragraph.</p>
+</section>
+
+
+[Markdown]
+---
+
+**2024年5月25日追記：**A paragraph.
+
+---
+[HTML]
+<section class="sc-postscript" role="doc-notice">
+<p><strong class="sc-postscript-label">2024年5月25日追記<span class="sc-postscript-label-joint">：</span></strong>A paragraph.</p>
+</section>
+
 
 

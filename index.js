@@ -1,21 +1,9 @@
-'use strict';
+import semantics from './semantics.json' with { type: 'json' }
 
-module.exports = function semantic_container_plugin(md, option) {
-
-  let opt = {
-    requireHrAtOneParagraph: false,
-  };
-  if (option !== undefined) {
-    if (option.requireHrAtOneParagraph !== undefined) {
-      opt.requireHrAtOneParagraph = option.requireHrAtOneParagraph;
-    }
-  }
-
-  const semantics = require('./semantics.json');
-  const semanticsHalfJoint = '[:.]';
-  const semanticsFullJoint = '[　：。．]';
-  const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?';
-  const strongMark = '[*_]{2}';
+const semanticsHalfJoint = '[:.]';
+const semanticsFullJoint = '[　：。．]';
+const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?';
+const strongMark = '[*_]{2}';
 
   const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
 
@@ -30,14 +18,14 @@ module.exports = function semantic_container_plugin(md, option) {
       if(semantics[sn].as) {
         const ts = semantics[sn].as.split(',');
         ts.forEach(x => {
-          x = x.replace(/\((.*?)\)/g, '(?:$1)')
+          x = x.replace(/\(/g, '(?:')
           semanticsAltRegStr += '|' + x.trim();
         });
       }
       actualName = nextToken.content.match(new RegExp(
         '^(?:' + strongMark +')?((?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + ')'
           + '(?:'
-          + '(' + semanticsHalfJoint + ')(?: *?' + strongMark + ')? '
+          + '(' + semanticsHalfJoint + ')(?: *?' + strongMark + ')?(?: |$)'
           + '|(?: *?' + strongMark + ' *?)?(' + semanticsHalfJoint + ') '
           + '|(' + semanticsFullJoint + ')(?: *?' + strongMark + ')?'
           + '|(?: *?' + strongMark + ' *?)?(' + semanticsFullJoint + ')'
@@ -47,7 +35,6 @@ module.exports = function semantic_container_plugin(md, option) {
       sn++;
     }
     if(!actualName) { return false; }
-
 
     let actualNameJoint = '';
     let hasLastJoint = false;
@@ -129,7 +116,7 @@ module.exports = function semantic_container_plugin(md, option) {
   };
 
 
-  const setSemanticContainer = (state, n, hrType, sc, sci) => {
+  const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
     let nJump = 0;
     let moveToAriaLabel = false;
     let rs = sc.range[0];
@@ -215,7 +202,7 @@ module.exports = function semantic_container_plugin(md, option) {
         } else {
           //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
           const strongBefore = new state.Token('text', '', 0);
-          const strongOpen = new state.Token('strong_oepn', 'strong', 1);
+          const strongOpen = new state.Token('strong_open', 'strong', 1);
           const strongContent = new state.Token('text', '', 0);
           strongContent.content =sc.actualName;
           const strongClose = new state.Token('strong_close', 'strong', -1);
@@ -240,7 +227,7 @@ module.exports = function semantic_container_plugin(md, option) {
         //console.log('nextToken.children.length: ' + nextToken.children.length)
 
         const strongBefore = new state.Token('text', '', 0);
-        const strongOpen = new state.Token('strong_oepn', 'strong', 1);
+        const strongOpen = new state.Token('strong_open', 'strong', 1);
         const strongContent = new state.Token('text', '', 0);
         strongContent.content =sc.actualName;
         const strongClose = new state.Token('strong_close', 'strong', -1);
@@ -281,25 +268,44 @@ module.exports = function semantic_container_plugin(md, option) {
 
 
     // Add label joint span.
+    let jointIsAtLineEnd = false
+    if (state.tokens[n+1].children) {
+      //console.log(state.tokens[n+1].children[state.tokens[n+1].children.length - 1])
+      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
+        jointIsAtLineEnd = true
+        state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
+      }
+    }
+    //console.log('jointIsAtLineEnd: ' + jointIsAtLineEnd)
+
+  if (!opt.removeJointAtLineEnd || !jointIsAtLineEnd) {
     const ljt_span_open = new state.Token('span_open', 'span', 1);
     ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
     const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
     ljt_span_content.content = sc.actualNameJoint;
     const ljt_span_close = new state.Token('span_close', 'span', -1);
-
     nextToken.children.splice(3, 0, ljt_span_close);
     nextToken.children.splice(3, 0, ljt_span_content);
     nextToken.children.splice(3, 0, ljt_span_open);
-
+  }
     return nJump;
   };
 
 
-  function semanticContainer (state, startLine, endLine, silent) {
-    let n = 0;
-    let cn = [];
+const semanticContainer = (state, option) => {
+  let opt = {
+    requireHrAtOneParagraph: false,
+    removeJointAtLineEnd: false,
+  };
+  if (option !== undefined) {
+    for (let o in option) {
+      opt[o] = option[o];
+    }
+  }
 
-    while (n < state.tokens.length) {
+  let n = 0;
+  let cn = [];
+  while (n < state.tokens.length) {
       //console.log(n + ', type:' + state.tokens[n].type + '", requireHrAtOneParagraph: ' + opt.requireHrAtOneParagraph + ' ==============');
       let sc = [];
       let sci = 0;
@@ -314,7 +320,7 @@ module.exports = function semantic_container_plugin(md, option) {
         if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
             //console.log('set sc(n): '+ JSON.stringify(sc));
-            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
+            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
             n += nJumps[0];
             continue;
           }
@@ -334,7 +340,7 @@ module.exports = function semantic_container_plugin(md, option) {
 
           if(checkSematicContainerCore(state, n, hrType, sc, false)) {
             //console.log('set sc(noHr): '+ JSON.stringify(sc));
-            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1));
+            nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
             n += nJumps[0];
             continue;
           }
@@ -354,7 +360,7 @@ module.exports = function semantic_container_plugin(md, option) {
       sci = 0;
       while (sci < sc.length) {
         //console.log('sci: ' + sci + ' ---------');
-        nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci));
+        nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci, opt));
         cn.push(sc[sci].range[1] + sci + 1);
         sci++;
       }
@@ -363,5 +369,11 @@ module.exports = function semantic_container_plugin(md, option) {
     return true;
   }
 
-  md.core.ruler.after('inline', 'semantic_container', semanticContainer);
-};
+
+const mditSemanticContainer = (md, option) => {
+  md.core.ruler.after('inline', 'semantic_container', (state) => {
+    semanticContainer(state, option)
+  })
+}
+
+export default mditSemanticContainer

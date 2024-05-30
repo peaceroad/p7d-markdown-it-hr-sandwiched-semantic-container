@@ -307,7 +307,7 @@
   },
   {
     "name": "postscript",
-    "as": "追記",
+    "as": "(([0-9]+年)?[0-9]+月[0-9]+日)?追記",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
