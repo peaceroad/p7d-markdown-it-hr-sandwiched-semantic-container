@@ -1,0 +1,64 @@
+[Markdown]
+---
+
+Notice. A notice.
+
+---
+[HTML:requireHrAtOneParagraph]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+
+
+[Markdown]
+---
+
+Notice. A notice.
+
+---
+[HTML:requireHrAtOneParagraph]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+
+
+[Markdown]
+**Note:** [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<p><strong>Note:</strong> <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+
+
+[Markdown]
+example.html
+
+[HTML]
+<p>example.html</p>
+
+
+[Markdown]
+example.Html
+
+[HTML]
+<p>example.Html</p>
+
+
+[Markdown]
+example. html
+
+[HTML]
+<p>example. html</p>
+
+[Markdown]
+---
+
+example.html
+
+---
+
+[HTML]
+<hr>
+<p>example.html</p>
+<hr>
+
+

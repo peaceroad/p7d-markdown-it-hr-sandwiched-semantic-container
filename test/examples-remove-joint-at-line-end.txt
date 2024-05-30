@@ -1,0 +1,127 @@
+[Markdown]
+A paragraph.
+
+---
+
+Column. A title.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column<span class="sc-column-label-joint">.</span></span> A title.</p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column</span></p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+### Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<aside class="sc-column">
+<h3><span class="sc-column-label">Column</span></h3>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+追記：
+
+追記文章。
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-postscript" role="doc-notice">
+<p><span class="sc-postscript-label">追記</span></p>
+<p>追記文章。</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+**5月30日追記：**
+
+追記文章。
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-postscript" role="doc-notice">
+<p><strong class="sc-postscript-label">5月30日追記</strong></p>
+<p>追記文章。</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+**5月30日追記**：
+
+追記文章。
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-postscript" role="doc-notice">
+<p><strong class="sc-postscript-label">5月30日追記</strong></p>
+<p>追記文章。</p>
+</section>
+<p>A paragraph.</p>
+
+
+
