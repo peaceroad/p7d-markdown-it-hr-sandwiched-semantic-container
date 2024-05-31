@@ -50,7 +50,7 @@ The Semantics words are defined as follows. (This word can be in uppercase or lo
 
 ```plain
 abstract (要旨,抄録)
-answer（回答,答え）
+answer (回答,答え?)
 acknowledgments (謝辞)
 afterword (後書き,あとがき,跋文)
 agenda (議題,検討課題,アジェンダ)
@@ -91,6 +91,7 @@ introduction (序論,序説,はじめに,始めに)
 issue (問題点,争点)
 keywords (キーワード,手がかり(語)?)
 lead (リード(文)?,導入(文)?)
+lesson (レッスン,教訓)
 memo (メモ)
 note (ノート)
 notice (通知,通告,告知,掲示,注目,(お)?(し|知)らせ)
@@ -99,7 +100,7 @@ outline (概略,アウトライン)
 overview (概観,大要,あらまし)
 planning (plan,計画,案)
 point (ポイント,要点,論点)
-postscript (追記)
+postscript ((([0-9]+年)?[0-9]+月[0-9]+日)?追記)
 preamble (序,序文)
 preface (前書き,まえがき)
 problem (問[い題]?)
@@ -108,7 +109,7 @@ prologue (プロローグ,序幕,序章)
 proposal (プロポーザル,提言)
 pull-quote (pull quote, プル(・)?ク[オォ]ート,抜粋)
 qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
-question（質問,問(題)?）
+question (質問,問(題)?)
 reference ([レリ]ファレンス,参照,参考)
 related-book (related (book|magazine),関連(した)?(本|書籍|雑誌))
 related-article (related article,関連(した)?記事)
@@ -250,21 +251,24 @@ A paragraph.
 ## Use
 
 ```js
-const md = require('markdown-it')()
-            .use(require('@peaceroad/markdown-it-hr-sandwiched-semantic-container'));
-
-md.render(/*...*/); // See examples above
+import mdit from 'markdown-it'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+const md = mdit().use(mditSemanticContainer);
+const markdownCont = '...'
+md.render(markdowonCont)
 ```
 
 The hr element can be omitted in a one-paragraph semantics container, but if not, specify the following option.
 
 ```js
-const md = require('markdown-it')();
-const sc = require('@peaceroad/markdown-it-hr-sandwiched-semantic-container');
-md.use(sc, {"requireHrAtOneParagraph": true});
-
-md.render(/*...*/); // See examples above
+import mdit from 'markdown-it'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+const md = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true});
+const markdownCont = '...'
+md.render(markdowonCont)
 ```
+
+Other options are explained under headings towards the end of the document.
 
 ## Install
 
@@ -274,7 +278,7 @@ npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
 
 ## Example
 
-```plain
+~~~
 [Markdown]
 A paragraph.
 
@@ -476,4 +480,60 @@ A paragraph.
 <p><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
+~~~
+
+
+## Option
+
+### removeJointAtLineEnd
+
+If the semantic label is a line and there is nothing after the label joint, remove the label joint and output it.
+
 ```
+mdit().use(mditSemanticContainer, {"removeJointAtLineEnd": true})
+```
+
+Using this option will result in the following:
+
+~~~
+[Markdown]
+A paragraph.
+
+---
+
+Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column</span></p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+### Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<aside class="sc-column">
+<h3><span class="sc-column-label">Column</span></h3>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+~~~
