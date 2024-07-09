@@ -3,10 +3,13 @@ import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
 import mditSemanticContainer from '../index.js'
+import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 
-const md = mdit().use(mditSemanticContainer)
-const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
-const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {"removeJointAtLineEnd": true})
+const md = mdit().use(mditSemanticContainer, {mditStrongJa: true}).use(mditStrongJa)
+
+const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true, mditStrongJa: true}).use(mditStrongJa)
+
+const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {"removeJointAtLineEnd": true, mditStrongJa: true}).use(mditStrongJa)
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -70,7 +73,8 @@ const runTest = (process, pat, pass, testId) => {
   while(n <= end) {
 
     if (!ms[n]
-//      || n != 3
+       //|| n != 3
+       //|| n != 33
     ) {
       n++
       continue

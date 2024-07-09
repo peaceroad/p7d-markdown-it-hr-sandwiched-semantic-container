@@ -183,9 +183,29 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   }
   if (/^[*_]{2}/.test(nextToken.content) ) {
     //console.log('processing(strong):')
+
+    if (opt.mditStrongJa && nextToken.children.length > 3) {
+      if (nextToken.children[0].type === 'strong_open'
+        && nextToken.children[2].type === 'strong_close') {
+        const hasStrongJa = nextToken.children[1].content.match(new RegExp('^' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$'))
+        //console.log(hasStrongJa)
+        if (hasStrongJa) {
+          if (hasStrongJa[2]) {
+            //nextToken.children[3].content = nextToken.children[3].content.replace(/^ /, '')
+          }
+          nextToken.children.splice(0, 3)
+          if (hasStrongJa[1]) {
+            //console.log(nextToken.children[0].content)
+            //nextToken.children[0].content = nextToken.children[0].content.replace(/^ /, '')
+          } else {
+            nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^(?:' + semanticsHalfJoint + '|' + semanticsFullJoint + ')'), '')
+          }
+        }
+      }
+    }
     if (nextToken.children[1]) {
       if (nextToken.children[1].type === 'strong_open') {
-        //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
+        console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
         nextToken.children[1].attrJoin('class', 'sc-' + semantics[sn].name + '-label');
         if (sc.hasLastJoint) {
           if (sc.hasHalfJoint) {
@@ -196,6 +216,7 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
         } else {
           nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '')
         }
+        console.log(nextToken.children[5])
       } else {
         //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
         const strongBefore = new state.Token('text', '', 0);
@@ -205,12 +226,13 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
         const strongClose = new state.Token('strong_close', 'strong', -1);
         strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
 
-        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
-
-        if (sc.hasLastSpace || sc.hasHalfJoint) {
-          nextToken.children[0].content = ' ' + nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
-        } else {
-          nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+        if (!opt.mditStrongJa) {
+          nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+          if (sc.hasLastSpace || sc.hasHalfJoint) {
+            nextToken.children[0].content = ' ' + nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+          } else {
+            nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+          }
         }
         nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
 
@@ -226,9 +248,10 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
       const strongClose = new state.Token('strong_close', 'strong', -1);
       strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
 
-      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
-
-      nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+      if (!opt.mditStrongJa) {
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '');
+        nextToken.children[0].content = nextToken.children[0].content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
+      }
       nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
 
       nextToken.children.splice(0, 0, strongBefore, strongOpen, strongContent, strongClose);
@@ -260,6 +283,16 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
     if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
       jointIsAtLineEnd = true
       state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
+    } else {
+      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
+        jointIsAtLineEnd = true
+        state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
+      }
+    }
+    if (opt.mditStrongJa) {
+      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content === '★mdStrongJa★*') {
+        jointIsAtLineEnd = true
+      }
     }
   }
   //console.log('jointIsAtLineEnd: ' + jointIsAtLineEnd)
@@ -281,6 +314,7 @@ const semanticContainer = (state, option) => {
   let opt = {
     requireHrAtOneParagraph: false,
     removeJointAtLineEnd: false,
+    mditStrongJa: false,
   };
   if (option !== undefined) {
     for (let o in option) {

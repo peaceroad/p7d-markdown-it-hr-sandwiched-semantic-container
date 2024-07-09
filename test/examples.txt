@@ -645,6 +645,33 @@ A paragraph.
 
 
 [Markdown]
+**Note:   ** [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label">Note<span class="sc-note-label-joint">:</span></strong> <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
+
+
+[Markdown]
+**Note:**   [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label">Note<span class="sc-note-label-joint">:</span></strong>   <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
+
+
+[Markdown]
+**Note**:   [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label">Note<span class="sc-note-label-joint">:</span></strong>   <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
+
+
+[Markdown]
 example.html
 
 [HTML]
