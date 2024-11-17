@@ -885,4 +885,7 @@ A paragraph.
 </section>
 
 
-
+[Markdown]
+**Warning: paragraph
+[HTML]
+<p>**Warning: paragraph</p>

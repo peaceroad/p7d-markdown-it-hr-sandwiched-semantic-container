@@ -5,11 +5,15 @@ import mdit from 'markdown-it'
 import mditSemanticContainer from '../index.js'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 
-const md = mdit().use(mditSemanticContainer, {mditStrongJa: true}).use(mditStrongJa)
 
-const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true, mditStrongJa: true}).use(mditStrongJa)
+const md = mdit().use(mditSemanticContainer)
+const mdJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {mditStrongJa: true})
 
-const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {"removeJointAtLineEnd": true, mditStrongJa: true}).use(mditStrongJa)
+const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
+const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true, mditStrongJa: true})
+
+const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {removeJointAtLineEnd: true})
+const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true, mditStrongJa: true})
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -73,8 +77,8 @@ const runTest = (process, pat, pass, testId) => {
   while(n <= end) {
 
     if (!ms[n]
-       //|| n != 3
-       //|| n != 33
+       //|| n != 1
+       //|| n != 45
     ) {
       n++
       continue
@@ -102,5 +106,9 @@ let pass = true
 pass = runTest(md, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraph, testData.requireHrAtOneParagraph, pass)
 pass = runTest(mdRemoveJointAtLineEnd, testData.removeJointAtLineEnd, pass)
+console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
+pass = runTest(mdJa, testData.noOption, pass)
+pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)
+pass = runTest(mdRemoveJointAtLineEndJa, testData.removeJointAtLineEnd, pass)
 
 if (pass) console.log('Passed all test.')

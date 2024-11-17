@@ -23,12 +23,12 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
       });
     }
     actualName = nextToken.content.match(new RegExp(
-      '^(?:' + strongMark +')?((?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + ')'
+      '^(' + strongMark + ')?((?:' + semantics[sn].name + semanticsAltRegStr + ')' + sNumber + ')'
         + '(?:'
-        + '(' + semanticsHalfJoint + ')(?: *?' + strongMark + ')?(?: |$)'
-        + '|(?: *?' + strongMark + ' *?)?(' + semanticsHalfJoint + ') '
-        + '|(' + semanticsFullJoint + ')(?: *?' + strongMark + ')?'
-        + '|(?: *?' + strongMark + ' *?)?(' + semanticsFullJoint + ')'
+        + '(' + semanticsHalfJoint + ') *?\\1(?: |$)'
+        + '| *?\\1 *?(' + semanticsHalfJoint + ') '
+        + '|(' + semanticsFullJoint + ') *?\\1'
+        + '| *?\\1 *?(' + semanticsFullJoint + ')'
         + ' *?)', 'i'));
     //console.log(semantics[sn].name + ' ,nextToken.content: ' + nextToken.content, ' ,actualName: ' + actualName);
     if(actualName) break;
@@ -40,20 +40,20 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
   let hasLastJoint = false;
   let hasHalfJoint = false;
 
-  if (actualName[2]) {
+  if (actualName[3]) {
     hasHalfJoint = true
-    actualNameJoint = actualName[2]
-  } else if (actualName[3]) {
-    hasHalfJoint = true
-    hasLastJoint = true
     actualNameJoint = actualName[3]
   } else if (actualName[4]) {
+    hasHalfJoint = true
+    hasLastJoint = true
     actualNameJoint = actualName[4]
   } else if (actualName[5]) {
-    hasLastJoint = true
     actualNameJoint = actualName[5]
+  } else if (actualName[6]) {
+    hasLastJoint = true
+    actualNameJoint = actualName[6]
   }
-  //console.log('actualName[0]: "' + actualName[0] + '", actualName[1]: "' + actualName[1] + '", actualNameJoint: "' + actualNameJoint +'" , hasLastJoint: ' + hasLastJoint)
+  //console.log('actualName[0]: "' + actualName[0] + '", actualName[2]: "' + actualName[2] + '", actualNameJoint: "' + actualNameJoint +'" , hasLastJoint: ' + hasLastJoint)
 
   let en = n;
   let hasEndSemanticsHr = false;
@@ -85,7 +85,7 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
     hrType: hrType,
     actualCont: actualName[0],
     actualContNoStrong: actualName[0].replace(/[*_]{2}/g, ''),
-    actualName: actualName[1],
+    actualName: actualName[2],
     actualNameJoint: actualNameJoint,
     hasLastJoint: hasLastJoint,
     hasHalfJoint: hasHalfJoint,
@@ -183,8 +183,7 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   }
   if (/^[*_]{2}/.test(nextToken.content) ) {
     //console.log('processing(strong):')
-
-    if (opt.mditStrongJa && nextToken.children.length > 3) {
+    if (opt.mditStrongJa && nextToken.children.length > 2) {
       if (nextToken.children[0].type === 'strong_open'
         && nextToken.children[2].type === 'strong_close') {
         const hasStrongJa = nextToken.children[1].content.match(new RegExp('^' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$'))
@@ -205,24 +204,19 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
     }
     if (nextToken.children[1]) {
       if (nextToken.children[1].type === 'strong_open') {
-        console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
+        //console.log('true: nextToken.children[1].type: ' + nextToken.children[1].type)
         nextToken.children[1].attrJoin('class', 'sc-' + semantics[sn].name + '-label');
         if (sc.hasLastJoint) {
-          if (sc.hasHalfJoint) {
-            nextToken.children[4].content = ' ' + nextToken.children[4].content.replace(new RegExp('^\\' + sc.actualNameJoint + ' *'), '')
-          } else {
-            nextToken.children[4].content = nextToken.children[4].content.replace(new RegExp('^\\' + sc.actualNameJoint + ' *'), '')
-          }
+          nextToken.children[4].content =  nextToken.children[4].content.replace(new RegExp('^\\' + sc.actualNameJoint ), '')
         } else {
           nextToken.children[2].content = nextToken.children[2].content.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '')
         }
-        console.log(nextToken.children[5])
       } else {
-        //console.log('nextToken.children[1].type: ' + nextToken.children[1].type)
+        //console.log('false: nextToken.children[1].type: ' + nextToken.children[1].type)
         const strongBefore = new state.Token('text', '', 0);
         const strongOpen = new state.Token('strong_open', 'strong', 1);
         const strongContent = new state.Token('text', '', 0);
-        strongContent.content =sc.actualName;
+        strongContent.content = sc.actualName;
         const strongClose = new state.Token('strong_close', 'strong', -1);
         strongOpen.attrJoin('class', 'sc-' + semantics[sn].name + '-label');
 
@@ -235,7 +229,6 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
           }
         }
         nextToken.content = nextToken.content.replace(new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*')), '');
-
         nextToken.children.splice(0, 0, strongBefore, strongOpen, strongContent, strongClose);
       }
       nJump += 3;
@@ -279,25 +272,19 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   // Add label joint span.
   let jointIsAtLineEnd = false
   if (state.tokens[n+1].children) {
-    //console.log(state.tokens[n+1].children[state.tokens[n+1].children.length - 1])
+    //console.log(state.tokens[n+1].children)
     if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
       jointIsAtLineEnd = true
       state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
     } else {
-      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
-        jointIsAtLineEnd = true
-        state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
-      }
-    }
-    if (opt.mditStrongJa) {
-      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content === '★mdStrongJa★*') {
+      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'strong_close') {
         jointIsAtLineEnd = true
       }
     }
+    
   }
-  //console.log('jointIsAtLineEnd: ' + jointIsAtLineEnd)
-
-  if (!opt.removeJointAtLineEnd || !jointIsAtLineEnd) {
+  //console.log('opt.removeJointAtLineEnd: ' + opt.removeJointAtLineEnd + ', jointIsAtLineEnd: ')
+  if (opt.removeJointAtLineEnd && jointIsAtLineEnd) return nJump
     const ljt_span_open = new state.Token('span_open', 'span', 1);
     ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
     const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
@@ -305,12 +292,88 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
     const ljt_span_close = new state.Token('span_close', 'span', -1);
 
     nextToken.children.splice(3, 0, ljt_span_open, ljt_span_content, ljt_span_close);
-  }
+
   return nJump;
 };
 
 
-const semanticContainer = (state, option) => {
+const semanticContainerCore = (state, n, cn, opt) => {
+  let sc = [];
+  let sci = 0;
+  let hrType = '';
+  let alreadyChecked = false;
+  let nJumps = [];
+
+  const prevToken = state.tokens[n-1];
+  const token = state.tokens[n];
+
+  if (n === 0 || n === state.tokens.length -1) {
+    if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+      if(checkSematicContainerCore(state, n, hrType, sc, false)) {
+        //console.log('set sc(n): '+ JSON.stringify(sc));
+        nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
+        return n += nJumps[0]
+      }
+    }
+    n++
+    return n
+  }
+  if (prevToken.type !== 'hr') {
+    if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+      cn.forEach(cni => {
+        if (n === cni + 1) { alreadyChecked = true; }
+      });
+      if (alreadyChecked) {
+        n++; return n
+      }
+      //console.log('n:' + n + ', cn: ' + cn);
+
+      if (state.tokens[n - 1].type === 'list_item_open') {
+        n++; return n
+      }
+
+      if(checkSematicContainerCore(state, n, hrType, sc, false)) {
+        //console.log('set sc(noHr): '+ JSON.stringify(sc));
+        nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
+        n += nJumps[0]
+        return n
+      }
+    }
+    n++;
+    return n
+  }
+
+  if(/\*/.test(prevToken.markup)) hrType = '*';
+  if(/-/.test(prevToken.markup)) hrType = '-';
+  if(/_/.test(prevToken.markup)) hrType = '_';
+
+  if (!checkSemanticContainer(state, n, hrType, sc)) {
+    n++
+    return n
+  }
+  //console.log('set sc: '+ JSON.stringify(sc));
+
+  sci = 0;
+  while (sci < sc.length) {
+    //console.log('sci: ' + sci + ' ---------');
+    nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci, opt));
+    cn.push(sc[sci].range[1] + sci + 1);
+    sci++;
+  }
+  n += nJumps[0]
+  return n
+}
+
+const semanticContainer = (state, opt) => {
+  let n = 0
+  let cn = []
+  while (n < state.tokens.length) {
+    n = semanticContainerCore(state, n, cn, opt)
+  }
+  return true
+}
+
+const mditSemanticContainer = (md, option) => {
   let opt = {
     requireHrAtOneParagraph: false,
     removeJointAtLineEnd: false,
@@ -321,75 +384,8 @@ const semanticContainer = (state, option) => {
       opt[o] = option[o];
     }
   }
-
-  let n = 0;
-  let cn = [];
-  while (n < state.tokens.length) {
-    //console.log(n + ', type:' + state.tokens[n].type + '", requireHrAtOneParagraph: ' + opt.requireHrAtOneParagraph + ' ==============');
-    let sc = [];
-    let sci = 0;
-    let hrType = '';
-    let alreadyChecked = false;
-    let nJumps = [];
-
-    const prevToken = state.tokens[n-1];
-    const token = state.tokens[n];
-
-    if (n === 0 || n === state.tokens.length -1) {
-      if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-        if(checkSematicContainerCore(state, n, hrType, sc, false)) {
-          //console.log('set sc(n): '+ JSON.stringify(sc));
-          nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
-          n += nJumps[0];
-          continue;
-        }
-      }
-      n++;
-      continue;
-    }
-    if (prevToken.type !== 'hr') {
-      if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-        cn.forEach(cni => {
-          if (n === cni + 1) { alreadyChecked = true; }
-        });
-        if (alreadyChecked) { n++; continue; }
-        //console.log('n:' + n + ', cn: ' + cn);
-
-        if (state.tokens[n - 1].type === 'list_item_open') { n++; continue; }
-
-        if(checkSematicContainerCore(state, n, hrType, sc, false)) {
-          //console.log('set sc(noHr): '+ JSON.stringify(sc));
-          nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt));
-          n += nJumps[0];
-          continue;
-        }
-      }
-      n++;
-      continue;
-    }
-
-    if(/\*/.test(prevToken.markup)) hrType = '*';
-    if(/-/.test(prevToken.markup)) hrType = '-';
-    if(/_/.test(prevToken.markup)) hrType = '_';
-
-    if (!checkSemanticContainer(state, n, hrType, sc)) { n++; continue; }
-    //console.log('set sc: '+ JSON.stringify(sc));
-
-    sci = 0;
-    while (sci < sc.length) {
-      //console.log('sci: ' + sci + ' ---------');
-      nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci, opt));
-      cn.push(sc[sci].range[1] + sci + 1);
-      sci++;
-    }
-    n += nJumps[0];
-  }
-  return true;
-}
-
-const mditSemanticContainer = (md, option) => {
   md.core.ruler.after('inline', 'semantic_container', (state) => {
-    semanticContainer(state, option)
+    semanticContainer(state, opt)
   })
 }
 
