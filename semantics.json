@@ -6,12 +6,6 @@
     "attrs": [["role", "doc-abstract"]]
   },
   {
-    "name": "answer",
-    "as": "回答,答え?",
-    "tag": "div",
-    "attrs": []
-  },
-  {
     "name": "acknowledgments",
     "as": "謝辞",
     "tag": "section",
@@ -27,7 +21,7 @@
     "name": "agenda",
     "as": "議題,検討課題,アジェンダ",
     "tag": "section",
-    "attrs": [["role", "doc-afterword"]]
+    "attrs": []
   },
   {
     "name": "alert",
@@ -43,7 +37,7 @@
   },
   {
     "name": "answer",
-    "as": "answers,回答,答え",
+    "as": "answers,回答,答え?",
     "tag": "section",
     "attrs": []
   },
@@ -235,7 +229,7 @@
   },
   {
     "name": "issue",
-    "as": "問題点,争点",
+    "as": "問題点,争点,論点,イシュー",
     "tag": "section",
     "attrs": []
   },
@@ -301,7 +295,7 @@
   },
   {
     "name": "point",
-    "as": "ポイント,要点,論点",
+    "as": "ポイント,要点",
     "tag": "section",
     "attrs": [["role", "doc-tip"]]
   },
@@ -402,8 +396,8 @@
     "attrs": [["role", "doc-notice"]]
   },
   {
-    "name": "supplementation",
-    "as": "補足(情報)?",
+    "name": "supplement",
+    "as": "supplements,補足(情報)?",
     "tag": "section",
     "attrs": [["role", "doc-notice"]]
   },
@@ -427,7 +421,7 @@
   },
   {
     "name": "task",
-    "as": "課題",
+    "as": "課題,作業,タスク",
     "tag": "section",
     "attrs": []
   },
