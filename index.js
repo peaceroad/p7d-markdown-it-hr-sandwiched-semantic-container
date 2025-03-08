@@ -270,28 +270,29 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   }
 
   // Add label joint span.
-  let jointIsAtLineEnd = false
-  if (state.tokens[n+1].children) {
-    //console.log(state.tokens[n+1].children)
-    if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'text' && /^ *$/.test(state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content)) {
-      jointIsAtLineEnd = true
-      state.tokens[n+1].children[state.tokens[n+1].children.length - 1].content = ''
-    } else {
-      if (state.tokens[n+1].children[state.tokens[n+1].children.length - 1].type === 'strong_close') {
+  if (opt.removeJointAtLineEnd) {
+    let jointIsAtLineEnd = false
+    if (nextToken.children) {
+      if (nextToken.children[nextToken.children.length - 1].type === 'text' && /^ *$/.test(nextToken.children[nextToken.children.length - 1].content)) {
         jointIsAtLineEnd = true
+        nextToken.children[nextToken.children.length - 1].content = ''
+      } else {
+        if (nextToken.children[nextToken.children.length - 1].type === 'strong_close') {
+          jointIsAtLineEnd = true
+        }
       }
     }
-    
+    //console.log('opt.removeJointAtLineEnd: ' + opt.removeJointAtLineEnd + ', jointIsAtLineEnd: ')
+    if (jointIsAtLineEnd) return nJump
   }
-  //console.log('opt.removeJointAtLineEnd: ' + opt.removeJointAtLineEnd + ', jointIsAtLineEnd: ')
-  if (opt.removeJointAtLineEnd && jointIsAtLineEnd) return nJump
-    const ljt_span_open = new state.Token('span_open', 'span', 1);
-    ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
-    const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
-    ljt_span_content.content = sc.actualNameJoint;
-    const ljt_span_close = new state.Token('span_close', 'span', -1);
 
-    nextToken.children.splice(3, 0, ljt_span_open, ljt_span_content, ljt_span_close);
+  const ljt_span_open = new state.Token('span_open', 'span', 1);
+  ljt_span_open.attrJoin("class", "sc-" + semantics[sn].name + "-label-joint");
+  const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0);
+  ljt_span_content.content = sc.actualNameJoint;
+  const ljt_span_close = new state.Token('span_close', 'span', -1);
+
+  nextToken.children.splice(3, 0, ljt_span_open, ljt_span_content, ljt_span_close);
 
   return nJump;
 };
@@ -379,11 +380,8 @@ const mditSemanticContainer = (md, option) => {
     removeJointAtLineEnd: false,
     mditStrongJa: false,
   };
-  if (option !== undefined) {
-    for (let o in option) {
-      opt[o] = option[o];
-    }
-  }
+  if (option) Object.assign(opt, option)
+
   md.core.ruler.after('inline', 'semantic_container', (state) => {
     semanticContainer(state, opt)
   })

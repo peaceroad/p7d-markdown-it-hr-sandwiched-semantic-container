@@ -124,4 +124,92 @@ A paragraph.
 <p>A paragraph.</p>
 
 
+[Markdown]
+A paragraph.
 
+---
+
+Notice. A notice.
+
+
+---
+
+Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column</span></p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+Notice.
+
+A notice.
+
+---
+
+Column.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice</span></p>
+<p>A notice.</p>
+</section>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column</span></p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+---
+
+Notice.
+
+A notice.
+
+---
+
+Column. A title.
+
+A column paragraph.
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice</span></p>
+<p>A notice.</p>
+</section>
+<aside class="sc-column">
+<p><span class="sc-column-label">Column<span class="sc-column-label-joint">.</span></span> A title.</p>
+<p>A column paragraph.</p>
+</aside>
+<p>A paragraph.</p>
