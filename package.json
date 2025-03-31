@@ -11,7 +11,7 @@
   "author": "peaceroad <peaceroad@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@peaceroad/markdown-it-strong-ja": "^0.3.6",
+    "@peaceroad/markdown-it-strong-ja": "^0.4.0",
     "markdown-it": "^14.1.0"
   }
 }
