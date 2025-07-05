@@ -3,11 +3,12 @@ import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
 import mditSemanticContainer from '../index.js'
+import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 
 
-const md = mdit().use(mditSemanticContainer)
-const mdJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {mditStrongJa: true})
+const md = mdit().use(mditSemanticContainer).use(mditFootnoteHere)
+const mdJa = mdit().use(mditStrongJa).use(mditFootnoteHere).use(mditSemanticContainer, {mditStrongJa: true})
 
 const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
 const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true, mditStrongJa: true})

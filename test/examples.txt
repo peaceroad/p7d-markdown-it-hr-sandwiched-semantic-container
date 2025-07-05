@@ -889,3 +889,27 @@ A paragraph.
 **Warning: paragraph
 [HTML]
 <p>**Warning: paragraph</p>
+
+
+[Markdown]
+A paragraph.[^1]
+
+[^1]: A footnote.
+
+Warning. A wargin text.
+
+A paragraph.[^2]
+
+[^2]: A footnote 2.
+[HTML]
+<p>A paragraph.<a href="#fn1" id="fn-ref1" class="fn-noteref" role="doc-noteref">[1]</a></p>
+<aside id="fn1" class="fn" role="doc-footnote">
+<p><a href="#fn-ref1" class="fn-backlink" role="doc-backlink">[1]</a> A footnote.</p>
+</aside>
+<section class="sc-warning" role="doc-notice">
+<p><span class="sc-warning-label">Warning<span class="sc-warning-label-joint">.</span></span> A wargin text.</p>
+</section>
+<p>A paragraph.<a href="#fn2" id="fn-ref2" class="fn-noteref" role="doc-noteref">[2]</a></p>
+<aside id="fn2" class="fn" role="doc-footnote">
+<p><a href="#fn-ref2" class="fn-backlink" role="doc-backlink">[2]</a> A footnote 2.</p>
+</aside>

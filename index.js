@@ -372,7 +372,10 @@ const mditSemanticContainer = (md, option) => {
   }
   if (option) Object.assign(opt, option)
 
-  md.core.ruler.after('inline', 'semantic_container', (state) => {
+  // Run after 'text_join' to prevent conflicts with @peaceroad/markdown-it-footnote-here.
+  // FootnoteHere's anchor processing uses 'inline' phase to record footnote positions.
+  // If SemanticContainer runs during 'inline' and uses tokens.splice(), it shifts indices, causing footnote backlinks to be lost.
+  md.core.ruler.after('text_join', 'semantic_container', (state) => {
     semanticContainer(state, opt)
   })
 }
