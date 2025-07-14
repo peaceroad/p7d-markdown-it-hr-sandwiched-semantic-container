@@ -123,10 +123,14 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   const sn = sc.sn
   const sem = semantics[sn]
 
+  // Pre-compile all regex patterns to avoid multiple creations
   const regActualContNoStrong = new RegExp('^' + sc.actualContNoStrong)
   const regActualContNoStrongSpace = new RegExp('^' + sc.actualContNoStrong + ' *')
   const regActualContAsterisk = new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*'))
   const regLeadSpace = /^ */
+  const regStrongLabel = new RegExp('^' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$')
+  const regStrongPattern = new RegExp('\\*\\* *?' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
+  const regJointRemoval = new RegExp('^\\' + sc.actualNameJoint)
 
   // for continued semantic container.
   if(sci > 1) {
@@ -175,7 +179,10 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
 
   if(moveToAriaLabel) {
     nt.content = nt.content.replace(regActualContNoStrong, '')
-    ntChildren[0].content = ntChildren[0].content.replace(regActualContNoStrongSpace, '')
+    const firstChild = ntChildren?.[0]
+    if (firstChild?.content) {
+      firstChild.content = firstChild.content.replace(regActualContNoStrongSpace, '')
+    }
     nt.content = nt.content.replace(regLeadSpace, '')
     return nJump
   }
@@ -186,104 +193,167 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   }
   if (/^[*_]{2}/.test(nt.content) ) {
     //console.log('processing(strong):')
-    if (opt.mditStrongJa && ntChildren.length > 2) {
-      if (ntChildren[0].type === 'strong_open'
-        && ntChildren[2].type === 'strong_close') {
-        const hasStrongJa = ntChildren[1].content.match(new RegExp('^' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$'))
+    
+    // Check if the first strong element contains the semantic label
+    let foundLabelStrong = false
+    let labelStrongIndex = -1
+    
+    // Look for the first strong element that matches the semantic label
+    // Also collect information about subsequent text nodes in the same loop
+    for (let i = 0; i < ntChildren.length - 2; i++) {
+      if (ntChildren[i] && ntChildren[i].type === 'strong_open'
+        && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
+        && ntChildren[i + 1] && ntChildren[i + 1].content) {
+        
+        const strongContent = ntChildren[i + 1].content
+        const hasStrongJa = strongContent.match(regStrongLabel)
+        
         if (hasStrongJa) {
-          ntChildren.splice(0, 3)
-          if (!hasStrongJa[1]) {
-            ntChildren[0].content = ntChildren[0].content.replace(new RegExp('^(?:' + semanticsHalfJoint + '|' + semanticsFullJoint + ')'), '')
+          foundLabelStrong = true
+          labelStrongIndex = i
+          
+          // Pre-calculate text node index after strong close for efficiency
+          let textAfterStrongIndex = -1
+          for (let j = i + 3; j < ntChildren.length; j++) {
+            if (ntChildren[j] && ntChildren[j].type === 'text') {
+              textAfterStrongIndex = j
+              break
+            }
           }
+          
+          // Add the semantic label class to this strong element
+          ntChildren[i].attrJoin('class', 'sc-' + sem.name + '-label')
+          
+          // Create joint span inside the strong element
+          const jointSpan = new state.Token('span_open', 'span', 1)
+          jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+          const jointContent = new state.Token('text', '', 0)
+          jointContent.content = sc.actualNameJoint
+          const jointSpanClose = new state.Token('span_close', 'span', -1)
+          
+          // Remove joint from the strong content and add joint span
+          if (hasStrongJa[1]) {
+            // Joint is inside the strong content
+            const trailingSpaces = hasStrongJa[2] || ''
+            ntChildren[i + 1].content = sc.actualName // Only keep the semantic name
+            // Insert joint span after the text content
+            ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+            
+            // Handle spaces after strong element based on trailing spaces from original content
+            if (textAfterStrongIndex !== -1) {
+              // Adjust index after insertion of joint span (adds 3 elements)
+              const adjustedTextIndex = textAfterStrongIndex + 3
+              if (trailingSpaces) {
+                // There were trailing spaces in the strong content, ensure single space after strong element
+                if (ntChildren[adjustedTextIndex].content === '') {
+                  // If the text node is empty, set it to a single space
+                  ntChildren[adjustedTextIndex].content = ' '
+                } else {
+                  // If the text node has content, ensure it starts with a single space
+                  ntChildren[adjustedTextIndex].content = ' ' + ntChildren[adjustedTextIndex].content.replace(/^ +/, '')
+                }
+              } else {
+                // No trailing spaces in original strong content, keep text node as-is
+                // (this preserves existing behavior for cases without spaces in strong)
+              }
+            }
+          } else if (sc.hasLastJoint) {
+            // Joint is after the strong element, move it inside
+            if (ntChildren[i + 3] && ntChildren[i + 3].content) {
+              ntChildren[i + 3].content = ntChildren[i + 3].content.replace(regJointRemoval, '')
+            }
+            // Insert joint span after the text content
+            ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+          }
+          break
         }
       }
     }
-    if (ntChildren[1]) {
-      if (ntChildren[1].type === 'strong_open') {
-        ntChildren[1].attrJoin('class', 'sc-' + sem.name + '-label')
-        if (sc.hasLastJoint) {
-          ntChildren[4].content =  ntChildren[4].content.replace(new RegExp('^\\' + sc.actualNameJoint ), '')
-        } else {
-          ntChildren[2].content = ntChildren[2].content.replace(new RegExp('\\' + sc.actualNameJoint + '$'), '')
-        }
-      } else {
-        const strongBefore = new state.Token('text', '', 0)
-        const strongOpen = new state.Token('strong_open', 'strong', 1)
-        const strongContent = new state.Token('text', '', 0)
-        strongContent.content = sc.actualName
-        const strongClose = new state.Token('strong_close', 'strong', -1)
-        strongOpen.attrJoin('class', 'sc-' + sem.name + '-label')
-
-        if (!opt.mditStrongJa) {
-          ntChildren[0].content = ntChildren[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '')
-          if (sc.hasLastSpace || sc.hasHalfJoint) {
-            ntChildren[0].content = ' ' + ntChildren[0].content.replace(regActualContAsterisk, '')
-          } else {
-            ntChildren[0].content = ntChildren[0].content.replace(regActualContAsterisk, '')
-          }
-        }
-        nt.content = nt.content.replace(regActualContAsterisk, '')
-        ntChildren.splice(0, 0, strongBefore, strongOpen, strongContent, strongClose)
-      }
-      nJump += 3
-    } else {
+    
+    if (!foundLabelStrong) {
+      // No existing strong element contains the label, create a new one
       const strongBefore = new state.Token('text', '', 0)
       const strongOpen = new state.Token('strong_open', 'strong', 1)
       const strongContent = new state.Token('text', '', 0)
-      strongContent.content =sc.actualName
+      strongContent.content = sc.actualName
+      const jointSpan = new state.Token('span_open', 'span', 1)
+      jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+      const jointContent = new state.Token('text', '', 0)
+      jointContent.content = sc.actualNameJoint
+      const jointSpanClose = new state.Token('span_close', 'span', -1)
       const strongClose = new state.Token('strong_close', 'strong', -1)
       strongOpen.attrJoin('class', 'sc-' + sem.name + '-label')
 
-      if (!opt.mditStrongJa) {
-        ntChildren[0].content = ntChildren[0].content.replace(new RegExp('[*_]{2} *?' + sc.actualName + ' *[*_]{2}'), '')
-        ntChildren[0].content = ntChildren[0].content.replace(regActualContAsterisk, '')
+      const firstChild = ntChildren?.[0]
+      if (firstChild?.content) {
+        // Extract spaces from the original content
+        const originalContent = firstChild.content
+        const match = originalContent.match(regStrongPattern)
+        
+        // Remove the strong pattern and preserve trailing spaces
+        if (match && match[0]) {
+          // Check if there are spaces after the strong pattern
+          const trailingSpaces = match[0].match(/ +$/);
+          const replacement = trailingSpaces ? trailingSpaces[0] : '';
+          firstChild.content = firstChild.content.replace(regStrongPattern, replacement)
+        }
+        firstChild.content = firstChild.content.replace(regActualContAsterisk, '')
       }
       nt.content = nt.content.replace(regActualContAsterisk, '')
 
-      ntChildren.splice(0, 0, strongBefore, strongOpen, strongContent, strongClose)
+      ntChildren.splice(0, 0, strongBefore, strongOpen, strongContent, jointSpan, jointContent, jointSpanClose, strongClose)
     }
+    nJump += 3
   } else {
     const lt_first = new state.Token('text', '', 0)
     const lt_span_open = new state.Token('span_open', 'span', 1)
     lt_span_open.attrJoin("class", "sc-" + sem.name + "-label")
     const lt_span_content = new state.Token('text', '', 0)
     lt_span_content.content = sc.actualName
+    const lt_joint_span_open = new state.Token('span_open', 'span', 1)
+    lt_joint_span_open.attrJoin("class", "sc-" + sem.name + "-label-joint")
+    const lt_joint_content = new state.Token('text', '', 0)
+    lt_joint_content.content = sc.actualNameJoint
+    const lt_joint_span_close = new state.Token('span_close', 'span', -1)
     const lt_span_close = new state.Token('span_close', 'span', -1)
 
-    if (sc.hasHalfJoint) {
-      ntChildren[0].content = ' ' + ntChildren[0].content.replace(regActualContNoStrong, '')
-    } else {
-      ntChildren[0].content = ntChildren[0].content.replace(regActualContNoStrong, '')
+    const firstChild = ntChildren?.[0]
+    if (sc.hasHalfJoint && firstChild?.content) {
+      firstChild.content = ' ' + firstChild.content.replace(regActualContNoStrong, '')
+    } else if (firstChild?.content) {
+      firstChild.content = firstChild.content.replace(regActualContNoStrong, '')
     }
 
-    ntChildren.splice(0, 0, lt_first, lt_span_open, lt_span_content, lt_span_close)
+    ntChildren.splice(0, 0, lt_first, lt_span_open, lt_span_content, lt_joint_span_open, lt_joint_content, lt_joint_span_close, lt_span_close)
     nJump += 3
   }
 
-  // Add label joint span.
+  // Handle removeJointAtLineEnd option
   if (opt.removeJointAtLineEnd) {
     let jointIsAtLineEnd = false
-    if (ntChildren) {
-      if (ntChildren[ntChildren.length - 1].type === 'text' && /^ *$/.test(ntChildren[ntChildren.length - 1].content)) {
+    if (ntChildren && ntChildren.length > 0) {
+      const lastToken = ntChildren[ntChildren.length - 1]
+      if (lastToken.type === 'text' && /^ *$/.test(lastToken.content)) {
         jointIsAtLineEnd = true
-        ntChildren[ntChildren.length - 1].content = ''
-      } else {
-        if (ntChildren[ntChildren.length - 1].type === 'strong_close') {
-          jointIsAtLineEnd = true
-        }
+        lastToken.content = ''
+      } else if (lastToken.type === 'strong_close') {
+        jointIsAtLineEnd = true
+      } else if (lastToken.type === 'span_close') {
+        jointIsAtLineEnd = true
       }
     }
 
-    if (jointIsAtLineEnd) return nJump
+    if (jointIsAtLineEnd) {
+      // Remove joint span from strong or span elements
+      for (let i = 0; i < ntChildren.length - 2; i++) {
+        if (ntChildren[i] && ntChildren[i].attrGet && ntChildren[i].attrGet('class') && 
+            ntChildren[i].attrGet('class').includes('-label-joint')) {
+          ntChildren.splice(i, 3) // Remove joint span open, content, and close
+          break
+        }
+      }
+    }
   }
-
-  const ljt_span_open = new state.Token('span_open', 'span', 1)
-  ljt_span_open.attrJoin("class", "sc-" + sem.name + "-label-joint")
-  const ljt_span_content = new state.Token('text', sc.actualNameJoint, 0)
-  ljt_span_content.content = sc.actualNameJoint
-  const ljt_span_close = new state.Token('span_close', 'span', -1)
-
-  ntChildren.splice(3, 0, ljt_span_open, ljt_span_content, ljt_span_close)
 
   return nJump
 }
@@ -368,7 +438,6 @@ const mditSemanticContainer = (md, option) => {
   let opt = {
     requireHrAtOneParagraph: false,
     removeJointAtLineEnd: false,
-    mditStrongJa: false,
   }
   if (option) Object.assign(opt, option)
 

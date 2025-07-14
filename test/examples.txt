@@ -913,3 +913,73 @@ A paragraph.[^2]
 <aside id="fn2" class="fn" role="doc-footnote">
 <p><a href="#fn-ref2" class="fn-backlink" role="doc-backlink">[2]</a> A footnote 2.</p>
 </aside>
+
+
+[Markdown]
+---
+
+**Warning:** A **warning** text.
+
+---
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong> A <strong>warning</strong> text.</p>
+</section>
+
+
+[Markdown]
+**Warning:** A **warning** text.
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong> A <strong>warning</strong> text.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Warning:** A **string** text.
+
+---
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong> A <strong>string</strong> text.</p>
+</section>
+
+[Markdown]
+**Warning:** A **string** text.
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong> A <strong>string</strong> text.</p>
+</section>
+
+
+[Markdown]
+**Warning:**   [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong>   <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
+
+
+[Markdown]
+**Warning**:   [HTML](https://html.spec.whatwg.org/multipage/)
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong>   <a href="https://html.spec.whatwg.org/multipage/">HTML</a></p>
+</section>
+
+
+[Markdown]
+---
+
+A **Warning:** A **string** text.
+
+---
+[HTML]
+<hr>
+<p>A <strong>Warning:</strong> A <strong>string</strong> text.</p>
+<hr>
+
