@@ -1,0 +1,237 @@
+[Markdown]
+---
+
+[Note]Paragraph.
+
+Paragraph.
+
+---
+
+[HTML]
+<hr>
+<p>[Note]Paragraph.</p>
+<p>Paragraph.</p>
+<hr>
+
+[Markdown]
+---
+
+[Note] Paragraph.
+
+Paragraph.
+
+---
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">[</span>Note<span class="sc-note-label-joint">]</span></span> Paragraph.</p>
+<p>Paragraph.</p>
+</section>
+
+[Markdown]
+---
+
+[Warning] Warning message.
+
+This is a warning content.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><span class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></span> Warning message.</p>
+<p>This is a warning content.</p>
+</section>
+
+[Markdown]
+---
+
+[Tip] Helpful tip.
+
+This is a tip content.
+
+---
+
+[HTML]
+<section class="sc-tip" role="doc-tip">
+<p><span class="sc-tip-label"><span class="sc-tip-label-joint">[</span>Tip<span class="sc-tip-label-joint">]</span></span> Helpful tip.</p>
+<p>This is a tip content.</p>
+</section>
+
+[Markdown]
+---
+
+[Example] Example content.
+
+This is example content.
+
+---
+
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><span class="sc-example-label"><span class="sc-example-label-joint">[</span>Example<span class="sc-example-label-joint">]</span></span> Example content.</p>
+<p>This is example content.</p>
+</figure>
+
+[Markdown]
+A paragraph.
+
+---
+
+[Note] A note with bracket format.
+
+---
+
+Another paragraph.
+
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">[</span>Note<span class="sc-note-label-joint">]</span></span> A note with bracket format.</p>
+</section>
+<p>Another paragraph.</p>
+
+[Markdown]
+---
+
+[Notice] Multiple line content
+
+First line of content.
+
+Second paragraph of content.
+
+---
+
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Multiple line content</p>
+<p>First line of content.</p>
+<p>Second paragraph of content.</p>
+</section>
+
+[Markdown]
+---
+
+[Warning] Text with **emphasis** and *italic*.
+
+Content with **bold** and *italic* text.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><span class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></span> Text with <strong>emphasis</strong> and <em>italic</em>.</p>
+<p>Content with <strong>bold</strong> and <em>italic</em> text.</p>
+</section>
+
+
+[Markdown]
+---
+
+［Note］ Full-width bracket note.
+
+Content with full-width brackets.
+
+---
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">［</span>Note<span class="sc-note-label-joint">］</span></span>Full-width bracket note.</p>
+<p>Content with full-width brackets.</p>
+</section>
+
+
+[Markdown]
+---
+
+［Warning］Full-width bracket warning.
+
+This is a warning with full-width brackets.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><span class="sc-warning-label"><span class="sc-warning-label-joint">［</span>Warning<span class="sc-warning-label-joint">］</span></span>Full-width bracket warning.</p>
+<p>This is a warning with full-width brackets.</p>
+</section>
+
+[Markdown]
+---
+
+［Warning］Full-width bracket warning.
+
+This is a warning with full-width brackets.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><span class="sc-warning-label"><span class="sc-warning-label-joint">［</span>Warning<span class="sc-warning-label-joint">］</span></span>Full-width bracket warning.</p>
+<p>This is a warning with full-width brackets.</p>
+</section>
+
+
+
+[Markdown]
+---
+
+[Note] Paragraph.
+
+Paragraph.
+
+---
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">[</span>Note<span class="sc-note-label-joint">]</span></span> Paragraph.</p>
+<p>Paragraph.</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Warning]** Warning message.
+
+This is a warning content.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></strong> Warning message.</p>
+<p>This is a warning content.</p>
+</section>
+
+
+[Markdown]
+---
+
+**［Note］** Full-width bracket note.
+
+Content with full-width brackets.
+
+---
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">［</span>Note<span class="sc-note-label-joint">］</span></strong>Full-width bracket note.</p>
+<p>Content with full-width brackets.</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Warning]** A **warning** message.
+
+This is a warning content.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></strong> A <strong>warning</strong> message.</p>
+<p>This is a warning content.</p>
+</section>

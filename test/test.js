@@ -16,6 +16,11 @@ const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticCon
 const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {removeJointAtLineEnd: true})
 const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true, mditStrongJa: true})
 
+const mdGitHubAlerts = mdit().use(mditSemanticContainer, {githubTypeContainer: true})
+
+// ブラケット形式のテスト用
+const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
+
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
 if (isWindows) {
@@ -26,6 +31,9 @@ const testData = {
   noOption: __dirname + path.sep +  'examples.txt',
   requireHrAtOneParagraph: __dirname + path.sep +  'examples-require-hr-at-one-paragraph.txt',
   removeJointAtLineEnd: __dirname + path.sep + 'examples-remove-joint-at-line-end.txt',
+  complex: __dirname + path.sep + 'examples-complex.txt',
+  githubAlerts: __dirname + path.sep + 'examples-github-alerts.txt',
+  bracketFormat: __dirname + path.sep + 'examples-bracket-format.txt',
 }
 
 const getTestData = (pat) => {
@@ -107,9 +115,14 @@ let pass = true
 pass = runTest(md, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraph, testData.requireHrAtOneParagraph, pass)
 pass = runTest(mdRemoveJointAtLineEnd, testData.removeJointAtLineEnd, pass)
+pass = runTest(md, testData.complex, pass)
 console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
 pass = runTest(mdJa, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)
 pass = runTest(mdRemoveJointAtLineEndJa, testData.removeJointAtLineEnd, pass)
+pass = runTest(mdJa, testData.complex, pass)
+//console.log('\nGitHub Alerts: true ::::::::::::::::::::::::::::::::::::::::::::')
+//pass = runTest(mdGitHubAlerts, testData.githubAlerts, pass)
+pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 
 if (pass) console.log('Passed all test.')
