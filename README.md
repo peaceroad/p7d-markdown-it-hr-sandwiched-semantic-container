@@ -551,7 +551,11 @@ Example usage:
 [Markdown]
 A paragraph.
 
+---
+
 [Notice] A notice message.
+
+---
 
 A paragraph.
 [HTML]
@@ -603,13 +607,10 @@ mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
 With this option enabled, the following would NOT be converted to a semantic container:
 
 ```md
-Notice. A single paragraph notice.
+A paragraph.
+
+Notice. This paragraph will not be converted to a Notice semantic container.
+
+A paragraph.
 ```
 
-But this would still work:
-
-```md
----
-Notice. A single paragraph notice.
----
-```
