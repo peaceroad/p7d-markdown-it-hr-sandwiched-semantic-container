@@ -1,0 +1,187 @@
+[Markdown]
+> [!TIP]
+> This is a helpful tip.
+[HTML]
+<section class="sc-tip" role="doc-tip">
+<p><strong class="sc-tip-label"><span class="sc-tip-label-joint">[</span>TIP<span class="sc-tip-label-joint">]</span></strong></p>
+<p>This is a helpful tip.</p>
+</section>
+
+
+[Markdown]
+> [!IMPORTANT]
+> This is important information.
+[HTML]
+<section class="sc-importance" role="doc-notice">
+<p><strong class="sc-importance-label"><span class="sc-importance-label-joint">[</span>IMPORTANT<span class="sc-importance-label-joint">]</span></strong></p>
+<p>This is important information.</p>
+</section>
+
+
+[Markdown]
+> [!WARNING]
+> This is a warning message.
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong></p>
+<p>This is a warning message.</p>
+</section>
+
+
+[Markdown]
+> [!CAUTION]
+> This is a caution alert.
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">[</span>CAUTION<span class="sc-caution-label-joint">]</span></strong></p>
+<p>This is a caution alert.</p>
+</section>
+
+
+[Markdown]
+> [!EXAMPLE]
+> This is an example alert.
+[HTML]
+<figure class="sc-example" role="doc-example">
+<p><strong class="sc-example-label"><span class="sc-example-label-joint">[</span>EXAMPLE<span class="sc-example-label-joint">]</span></strong></p>
+<p>This is an example alert.</p>
+</figure>
+
+
+[Markdown]
+> [!UNKNOWN]
+> This should not be converted.
+[HTML]
+<blockquote>
+<p>[!UNKNOWN]
+This should not be converted.</p>
+</blockquote>
+
+
+[Markdown]
+A paragraph.
+
+> [!NOTE]
+> Multi-line note alert.
+> With second line.
+
+Another paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>Multi-line note alert.
+With second line.</p>
+</section>
+<p>Another paragraph.</p>
+
+
+[Markdown]
+A paragraph.
+
+> [!NOTE]
+> Multi-line note alert.
+>
+> Second line.
+
+Another paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>Multi-line note alert.</p>
+<p>Second line.</p>
+</section>
+<p>Another paragraph.</p>
+
+
+[Markdown]
+> [!NOTE]
+> Note with **bold** and *italic* text.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>Note with <strong>bold</strong> and <em>italic</em> text.</p>
+</section>
+
+
+[Markdown]
+Normal blockquote:
+
+> This is just a normal blockquote.
+[HTML]
+<p>Normal blockquote:</p>
+<blockquote>
+<p>This is just a normal blockquote.</p>
+</blockquote>
+
+[Markdown]
+> [!注意]
+> This is 注意.
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">[</span>注意<span class="sc-caution-label-joint">]</span></strong></p>
+<p>This is 注意.</p>
+</section>
+
+
+[Markdown]
+> ［!注意］
+> This is 注意.
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<p>This is 注意.</p>
+</section>
+
+
+[Markdown]
+> ［！注意］
+> This is 注意.
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<p>This is 注意.</p>
+</section>
+
+
+[Markdown]
+> ［！注意］
+> ![](https://example.com/image.png)
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<p><img src="https://example.com/image.png" alt=""></p>
+</section>
+
+[Markdown]
+> ［！注意］
+> ```
+> code block
+> ```
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<pre><code>
+code block
+</code></pre>
+</section>
+
+
+[Markdown]
+> ［！注意］
+> ```
+> code block
+> ```
+> 
+> Paragraph あああ**「string」**あああcode block.
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<pre><code>
+code block
+</code></pre>
+<p>Paragraph あああ<strong>「string」</strong>あああcode block.</p>
+</section>
+
+

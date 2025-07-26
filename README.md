@@ -536,3 +536,80 @@ A paragraph.
 </aside>
 <p>A paragraph.</p>
 ~~~
+
+### allowBracketJoint
+
+Enable bracket format for semantic containers. This allows using square brackets `[Semantics] Content` or full-width brackets `［Semantics］Content` instead of traditional format.
+
+```js
+mdit().use(mditSemanticContainer, {"allowBracketJoint": true})
+```
+
+Example usage:
+
+```markdown
+[Markdown]
+A paragraph.
+
+[Notice] A notice message.
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A notice message.</p>
+</section>
+<p>A paragraph.</p>
+```
+
+### githubTypeContainer
+
+Enable GitHub-style alert containers using `> [!TYPE]` syntax or full-width `> ［！TYPE］` syntax.
+
+```js
+mdit().use(mditSemanticContainer, {"githubTypeContainer": true})
+```
+
+Example usage:
+
+```markdown
+[Markdown]
+> [!NOTE]
+> This is a helpful note.
+
+> [!WARNING]
+> This is a warning message.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>This is a helpful note.</p>
+</section>
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong></p>
+<p>This is a warning message.</p>
+</section>
+```
+
+Supported GitHub alert types: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, and their Japanese equivalents.
+
+### requireHrAtOneParagraph
+
+Force the use of horizontal rules even for single-paragraph containers. By default, single-paragraph semantic containers don't require surrounding `---` lines.
+
+```js
+mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
+```
+
+With this option enabled, the following would NOT be converted to a semantic container:
+
+```md
+Notice. A single paragraph notice.
+```
+
+But this would still work:
+
+```md
+---
+Notice. A single paragraph notice.
+---
+```

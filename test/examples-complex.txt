@@ -1,0 +1,119 @@
+[Markdown]
+A paragraph with **strong text** and footnote[^1].
+
+* * *
+
+**Warning:** This is a complex warning with footnote[^1] and **emphasized text**.
+
+* * *
+
+Another paragraph here.
+
+[^1]: This is a footnote.
+[HTML]
+<p>A paragraph with <strong>strong text</strong> and footnote<a href="#fn1" id="fn-ref1-a" class="fn-noteref" role="doc-noteref">[1]</a>.</p>
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label">Warning<span class="sc-warning-label-joint">:</span></strong> This is a complex warning with footnote<a href="#fn1" id="fn-ref1-b" class="fn-noteref" role="doc-noteref">[1]</a> and <strong>emphasized text</strong>.</p>
+</section>
+<p>Another paragraph here.</p>
+<aside id="fn1" class="fn" role="doc-footnote">
+<p><a href="#fn-ref1-a" class="fn-backlink" role="doc-backlink">[1]</a> This is a footnote.</p>
+</aside>
+
+
+[Markdown]
+A paragraph before.
+
+* * *
+
+**Notice 1:** First notice with **important details**.
+
+* * *
+
+* * *
+
+**Information 2:** Second container with *emphasis* and code `sample`.
+
+* * *
+
+Final paragraph.
+[HTML]
+<p>A paragraph before.</p>
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">:</span></strong> First notice with <strong>important details</strong>.</p>
+</section>
+<section class="sc-information" role="doc-notice">
+<p><strong class="sc-information-label">Information 2<span class="sc-information-label-joint">:</span></strong> Second container with <em>emphasis</em> and code <code>sample</code>.</p>
+</section>
+<p>Final paragraph.</p>
+
+
+[Markdown]
+Introduction paragraph.
+
+- - -
+
+**Example 1-A:** This is a multi-line example
+with **complex formatting** including:
+
+- List item with `code`
+- Another item with *emphasis*
+
+And more content here.
+
+- - -
+
+Next section.
+[HTML]
+<p>Introduction paragraph.</p>
+<figure class="sc-example" role="doc-example">
+<p><strong class="sc-example-label">Example 1-A<span class="sc-example-label-joint">:</span></strong> This is a multi-line example
+with <strong>complex formatting</strong> including:</p>
+<ul>
+<li>List item with <code>code</code></li>
+<li>Another item with <em>emphasis</em></li>
+</ul>
+<p>And more content here.</p>
+</figure>
+<p>Next section.</p>
+
+
+[Markdown]
+Start paragraph with footnote[^complex].
+
+___
+
+**Question A-1:** How does this work with footnote[^complex] and **strong text**?
+
+This answer includes:
+1. Numbered list item
+2. Another item with `code sample`
+
+**Answer:** The system handles it properly[^answer].
+
+___
+
+End paragraph.
+
+[^complex]: Complex footnote with **formatting**.
+[^answer]: Answer footnote.
+[HTML]
+<p>Start paragraph with footnote<a href="#fn1" id="fn-ref1-a" class="fn-noteref" role="doc-noteref">[1]</a>.</p>
+<div class="sc-question">
+<p><strong class="sc-question-label">Question A-1<span class="sc-question-label-joint">:</span></strong> How does this work with footnote<a href="#fn1" id="fn-ref1-b" class="fn-noteref" role="doc-noteref">[1]</a> and <strong>strong text</strong>?</p>
+<p>This answer includes:</p>
+<ol>
+<li>Numbered list item</li>
+<li>Another item with <code>code sample</code></li>
+</ol>
+<section class="sc-answer">
+<p><strong class="sc-answer-label">Answer<span class="sc-answer-label-joint">:</span></strong> The system handles it properly<a href="#fn2" id="fn-ref2" class="fn-noteref" role="doc-noteref">[2]</a>.</p>
+</section>
+</div>
+<p>End paragraph.</p>
+<aside id="fn1" class="fn" role="doc-footnote">
+<p><a href="#fn-ref1-a" class="fn-backlink" role="doc-backlink">[1]</a> Complex footnote with <strong>formatting</strong>.</p>
+</aside>
+<aside id="fn2" class="fn" role="doc-footnote">
+<p><a href="#fn-ref2" class="fn-backlink" role="doc-backlink">[2]</a> Answer footnote.</p>
+</aside>
