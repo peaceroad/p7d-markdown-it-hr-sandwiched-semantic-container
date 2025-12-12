@@ -28,7 +28,6 @@ const semanticsReg = semantics.map((sem) => {
 })
 
 const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
-  const hrRegex = hrType ? new RegExp('\\' + hrType) : null
   const tokens = state.tokens
   const tokensLength = tokens.length
   const nextToken = tokens[n+1]
@@ -66,24 +65,27 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
   let pCloseN = -1
   while (en < tokensLength) {
     const tokenAtEn = tokens[en]
-    if (tokenAtEn.type !== 'hr') {
-      if (tokenAtEn.type === 'paragraph_close' && pCloseN == -1) {
-        pCloseN = en
+    if (tokenAtEn.type === 'hr') {
+      if (hrType && tokenAtEn.markup.includes(hrType)) {
+        hasEndSemanticsHr = true
+        break
       }
       en++
       continue
     }
 
-    if (hrRegex && hrRegex.test(tokenAtEn.markup)) {
-      hasEndSemanticsHr = true
-      break
+    if (tokenAtEn.type === 'paragraph_close' && pCloseN === -1) {
+      pCloseN = en
+      if (!hrType) break
     }
+
     en++
   }
-  if (hrType !== '' && !hasEndSemanticsHr) return false
+  if (hrType && !hasEndSemanticsHr) return false
 
+  const rangeEnd = hrType ? en : (pCloseN !== -1 ? pCloseN + 1 : en)
   sc.push({
-    range: [n, en],
+    range: [n, rangeEnd],
     continued: checked,
     sn: sn,
     hrType: hrType,
@@ -94,9 +96,6 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
     hasLastJoint: hasLastJoint,
     hasHalfJoint: hasHalfJoint,
   })
-  if(hrType === '' && pCloseN !== -1) {
-    sc[sc.length - 1].range[1] = pCloseN + 1
-  }
   return true
 }
 
@@ -110,21 +109,18 @@ const getCheckFunction = (opt) => {
   }
 }
 
-const checkSemanticContainer = (state, n, hrType, sc, allowBracketJoint, githubTypeContainer) => {
-  let continued = 0
-  const checkFunc = getCheckFunction({ allowBracketJoint, githubTypeContainer })
-  
-  if (!checkFunc(state, n, hrType, sc, continued)) {
+const checkSemanticContainer = (state, n, hrType, sc, checkFunc) => {
+  if (!checkFunc(state, n, hrType, sc, false)) {
     return false
   }
+
   let cn = sc[sc.length - 1].range[1] + 1
-  while (cn < state.tokens.length -1) {
-    continued = true
-    if (!checkFunc(state, cn, hrType, sc, continued)) {
-      return true
+  const tokensLength = state.tokens.length
+  while (cn < tokensLength - 1) {
+    if (!checkFunc(state, cn, hrType, sc, true)) {
+      break
     }
     cn = sc[sc.length - 1].range[1] + 1
-    continued++
   }
   return true
 }
@@ -355,7 +351,7 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   return nJump
 }
 
-const semanticContainerCore = (state, n, cn, opt) => {
+const semanticContainerCore = (state, n, cn, opt, checkFunc) => {
   const tokens = state.tokens
   let sc = []
   let sci = 0
@@ -368,7 +364,6 @@ const semanticContainerCore = (state, n, cn, opt) => {
 
   if (n === 0 || n === tokens.length -1) {
     if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-      const checkFunc = getCheckFunction(opt)
       if(checkFunc(state, n, hrType, sc, false)) {
         nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt))
         return n += nJumps[0]
@@ -390,7 +385,6 @@ const semanticContainerCore = (state, n, cn, opt) => {
         n++; return n
       }
 
-      const checkFunc = getCheckFunction(opt)
       if(checkFunc(state, n, hrType, sc, false)) {
         nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt))
         n += nJumps[0]
@@ -405,7 +399,7 @@ const semanticContainerCore = (state, n, cn, opt) => {
   if(/-/.test(prevToken.markup)) hrType = '-'
   if(/_/.test(prevToken.markup)) hrType = '_'
 
-  if (!checkSemanticContainer(state, n, hrType, sc, opt.allowBracketJoint, opt.githubTypeContainer)) {
+  if (!checkSemanticContainer(state, n, hrType, sc, checkFunc)) {
     n++
     return n
   }
@@ -420,11 +414,12 @@ const semanticContainerCore = (state, n, cn, opt) => {
 
 const semanticContainer = (state, opt) => {
   const tokens = state.tokens
+  const checkFunc = getCheckFunction(opt)
   let n = 0
   let cn = []
   let tokensLength = tokens.length
   while (n < tokensLength) {
-    n = semanticContainerCore(state, n, cn, opt)
+    n = semanticContainerCore(state, n, cn, opt, checkFunc)
     tokensLength = tokens.length
   }
   return true
