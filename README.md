@@ -46,7 +46,7 @@ A paragraph inside the container.
 ---
 ```
 
-The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [semantics.json](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics.json).
+The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json) and locale files such as [`semantics/ja.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/ja.json). English is always loaded; Japanese labels are loaded by default and can be toggled via the new `languages` option.
 
 ```plain
 abstract (要旨,抄録)
@@ -484,6 +484,18 @@ A paragraph.
 
 ## Option
 
+### languages
+
+Specify additional locale label files to load in addition to English. English is always included. Default: `["ja"]`.
+
+```js
+// English + Japanese (default)
+mdit().use(mditSemanticContainer, { languages: ["ja"] })
+
+// English only
+mdit().use(mditSemanticContainer, { languages: [] })
+```
+
 ### removeJointAtLineEnd
 
 If the semantic label is a line and there is nothing after the label joint, remove the label joint and output it.
@@ -613,4 +625,3 @@ Notice. This paragraph will not be converted to a Notice semantic container.
 
 A paragraph.
 ```
-

@@ -1,10 +1,12 @@
-import semantics from '../semantics.json' with {type: 'json'};
+import { buildSemantics } from '../src/semantics.js'
 
-const sNumber = '[0-9A-Z]{1,6}([.-][0-9A-Z]{1,6}){0,6}';
+// Default includes English + Japanese labels; adjust languages as needed.
+const semantics = buildSemantics(['ja'])
 
-let output = '';
-for (let s of semantics) {
-  output += s.name + ' (' + s.as + ')\n';
+let output = ''
+for (const s of semantics) {
+  const aliases = s.aliases.join(',')
+  output += s.name + ' (' + aliases + ')\n'
 }
 
-console.log(output);
+console.log(output)
