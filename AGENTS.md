@@ -9,9 +9,9 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 2) **Helper factories**
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
    - `createLabelMatcher(...)`: checks the current token group for a semantic label and closing hr/paragraph.
-   - `pickActiveCheck(...)`: chooses the checker (GitHub alerts, bracket format, or core) based on options and available helpers.
+   - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
-   - `createContainerApplier(...)`: rewrites tokens to wrap the semantic container and fix labels/joints/aria-label.
+   - `createContainerApplier(...)`: rewrites tokens to wrap the semantic container and fix labels/joints/aria-label (delegates to GitHub/bracket setters when applicable).
    - `createContainerWalker(...)`: main token walker; skips non-target tokens and applies setters.
    - `createContainerRunner(...)`: runs the walker over all tokens.
 

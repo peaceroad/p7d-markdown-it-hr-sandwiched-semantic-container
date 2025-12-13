@@ -82,15 +82,13 @@ Warning. Warning message ${Math.random()}.
 }
 
 // Performance measurement utilities
-function measurePerformance(fn, iterations = 100) {
+function measurePerformance(fn, iterations = 50, warmup = 5) {
   const times = []
   
-  // Warm-up
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < warmup; i++) {
     fn()
   }
   
-  // Measure
   for (let i = 0; i < iterations; i++) {
     const start = performance.now()
     fn()
@@ -130,7 +128,7 @@ function measureMemory(fn) {
 }
 
 // Feature-specific benchmark tests
-function runFeatureBenchmarks() {
+function runFeatureBenchmarks({ iterations = 50 } = {}) {
   console.log('\n=== Feature-specific Benchmarks ===')
   
   const featureTests = [
@@ -147,11 +145,11 @@ function runFeatureBenchmarks() {
     
     // Get baseline first
     const baselineMd = configurations.baseline.setup()
-    const baselineResult = measurePerformance(() => baselineMd.render(test.content), 50)
+    const baselineResult = measurePerformance(() => baselineMd.render(test.content), iterations)
     
     Object.entries(configurations).forEach(([key, config]) => {
       const md = config.setup()
-      const result = measurePerformance(() => md.render(test.content), 50)
+      const result = measurePerformance(() => md.render(test.content), iterations)
       const overhead = key === 'baseline' ? 0 : ((result.avg - baselineResult.avg) / baselineResult.avg * 100)
       
       console.log(`  ${config.name}: ${result.avg.toFixed(3)}ms avg (${overhead > 0 ? '+' : ''}${overhead.toFixed(1)}% overhead)`)
@@ -160,10 +158,8 @@ function runFeatureBenchmarks() {
 }
 
 // Scalability test
-function runScalabilityTest() {
+function runScalabilityTest({ sizes = [1000, 5000, 10000, 50000], iterations = 20 } = {}) {
   console.log('\n=== Scalability Test ===')
-  
-  const sizes = [1000, 5000, 10000, 50000]
   const results = {}
   
   sizes.forEach(size => {
@@ -172,7 +168,7 @@ function runScalabilityTest() {
     
     Object.entries(configurations).forEach(([key, config]) => {
       const md = config.setup()
-      const result = measurePerformance(() => md.render(content), 20)
+      const result = measurePerformance(() => md.render(content), iterations)
       
       if (!results[key]) results[key] = []
       results[key].push({ size, time: result.avg })
@@ -205,8 +201,8 @@ function runTokenDensityTest() {
     
     Object.entries(configurations).forEach(([key, config]) => {
       const md = config.setup()
-      const tokens = md.parse(test.content)
-      const result = measurePerformance(() => md.render(test.content), 100)
+      const tokens = md.parse(test.content, {}) // ensure env exists to avoid inline link rule errors
+      const result = measurePerformance(() => md.render(test.content), 30)
       
       console.log(`  ${config.name}: ${result.avg.toFixed(3)}ms (${tokens.length} tokens)`)
     })
@@ -214,16 +210,11 @@ function runTokenDensityTest() {
 }
 
 // Main comprehensive test
-function runComprehensiveTest() {
+function runComprehensiveTest({ iterations = 50, sizes = { small: 1000, medium: 5000, large: 10000, xlarge: 50000 }, saveResults = true } = {}) {
   console.log('markdown-it-hr-sandwiched-semantic-container Comprehensive Performance Test')
   console.log('='.repeat(80))
   
-  const testSizes = {
-    small: 1000,
-    medium: 5000,
-    large: 10000,
-    xlarge: 50000
-  }
+  const testSizes = sizes
   
   const results = {}
   
@@ -237,7 +228,7 @@ function runComprehensiveTest() {
       const md = config.setup()
       
       // Performance measurement
-      const perfResult = measurePerformance(() => md.render(content))
+      const perfResult = measurePerformance(() => md.render(content), iterations)
       
       // Memory measurement (if available)
       const memResult = measureMemory(() => md.render(content))
@@ -275,26 +266,28 @@ function runComprehensiveTest() {
   })
   
   // Save detailed results
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const filename = `performance_results_${timestamp}.json`
-  
-  const detailedResults = {
-    timestamp: new Date().toISOString(),
-    configurations: Object.keys(configurations),
-    testSizes,
-    results,
-    summary: {
-      memoryTestAvailable: !!global.gc,
-      nodeVersion: process.version,
-      platform: process.platform
+  if (saveResults) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const filename = `performance_results_${timestamp}.json`
+    
+    const detailedResults = {
+      timestamp: new Date().toISOString(),
+      configurations: Object.keys(configurations),
+      testSizes,
+      results,
+      summary: {
+        memoryTestAvailable: !!global.gc,
+        nodeVersion: process.version,
+        platform: process.platform
+      }
     }
-  }
-  
-  fs.writeFileSync(filename, JSON.stringify(detailedResults, null, 2))
-  console.log(`\nDetailed results saved to: ${filename}`)
-  
-  if (!global.gc) {
-    console.log('\nNote: To run memory tests, execute with: node --expose-gc performance-test.js')
+    
+    fs.writeFileSync(filename, JSON.stringify(detailedResults, null, 2))
+    console.log(`\nDetailed results saved to: ${filename}`)
+    
+    if (!global.gc) {
+      console.log('\nNote: To run memory tests, execute with: node --expose-gc performance-test.js')
+    }
   }
 }
 
@@ -314,12 +307,25 @@ function main() {
       runTokenDensityTest()
       break
     case 'comprehensive':
-    default:
+    case 'full':
       runComprehensiveTest()
       runFeatureBenchmarks()
       runScalabilityTest()
       runTokenDensityTest()
       break
+    case 'quick':
+    default: {
+      console.log('Running quick performance pass (use "full" for the exhaustive suite).')
+      runComprehensiveTest({
+        iterations: 10,
+        sizes: { small: 1000, medium: 5000 },
+        saveResults: false,
+      })
+      runFeatureBenchmarks({ iterations: 10 })
+      runScalabilityTest({ sizes: [1000, 5000], iterations: 10 })
+      runTokenDensityTest()
+      break
+    }
   }
 }
 
