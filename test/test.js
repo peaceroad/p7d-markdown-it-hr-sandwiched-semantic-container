@@ -19,6 +19,7 @@ const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContai
 const mdGitHubAlerts = mdit().use(mditSemanticContainer, {githubTypeContainer: true}).use(mditStrongJa)
 
 const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
+const mdAllFeatures = mdit().use(mditSemanticContainer, {allowBracketJoint: true, githubTypeContainer: true})
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -33,6 +34,7 @@ const testData = {
   complex: __dirname + path.sep + 'examples-complex.txt',
   githubAlerts: __dirname + path.sep + 'examples-github-type-container.txt',
   bracketFormat: __dirname + path.sep + 'examples-bracket-format.txt',
+  mixedFeatures: __dirname + path.sep + 'examples-mixed-types.txt',
 }
 
 const getTestData = (pat) => {
@@ -123,5 +125,6 @@ pass = runTest(mdJa, testData.complex, pass)
 
 pass = runTest(mdGitHubAlerts, testData.githubAlerts, pass)
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
+pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
 
 if (pass) console.log('Passed all test.')

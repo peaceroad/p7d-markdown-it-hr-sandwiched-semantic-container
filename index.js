@@ -1,6 +1,6 @@
-import semantics from './semantics.json' with { type: 'json' }
-import { checkBracketSemanticContainerCore, setBracketSemanticContainer } from './src/bracket-format.js'
-import { checkGitHubAlertsCore, setGitHubAlertsSemanticContainer, githubAlertsBlock } from './src/github-type-container.js'
+import { buildSemantics } from './src/semantics.js'
+import { createBracketFormat } from './src/bracket-format.js'
+import { createGitHubTypeContainer } from './src/github-type-container.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -8,16 +8,14 @@ const strongMark = '[*_]{2}'
 const semanticsHalfJoint = '[:.]'
 const semanticsFullJoint = '[　：。．]'
 
-const semanticsReg = semantics.map((sem) => {
-  let str = ''
-  if (sem.as) {
-    const patterns = sem.as.split(',')
-    patterns.forEach((x) => {
-      str += '|' + x.replace(/\(/g, '(?:').trim()
-    })
-  }
+const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const buildSemanticsReg = (semantics) => semantics.map((sem) => {
+  const aliasStr = sem.aliases.length
+    ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
+    : ''
   const pattern =
-    '^(' + strongMark + ')?((?:' + sem.name + str + ')' + sNumber + ')'
+    '^(' + strongMark + ')?((?:' + sem.name + aliasStr + ')' + sNumber + ')'
     + '(?:'
     + '(' + semanticsHalfJoint + ') *?\\1(?: |$)'
     + '| *?\\1 *?(' + semanticsHalfJoint + ') '
@@ -27,7 +25,7 @@ const semanticsReg = semantics.map((sem) => {
   return new RegExp(pattern, 'i')
 })
 
-const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
+const createLabelMatcher = (semantics, semanticsReg) => (state, n, hrType, sc, checked) => {
   const tokens = state.tokens
   const tokensLength = tokens.length
   const nextToken = tokens[n+1]
@@ -99,25 +97,28 @@ const checkSematicContainerCore = (state, n, hrType, sc, checked) => {
   return true
 }
 
-const getCheckFunction = (opt) => {
-  if (opt.githubTypeContainer) {
-    return checkGitHubAlertsCore
-  } else if (opt.allowBracketJoint) {
-    return checkBracketSemanticContainerCore
-  } else {
-    return checkSematicContainerCore
+const createActiveCheck = ({ githubCheck, bracketCheck, defaultCheck }) => {
+  return (state, n, hrType, sc, checked) => {
+    const token = state.tokens[n]
+    if (githubCheck && token.type === 'blockquote_open') {
+      return githubCheck(state, n, hrType, sc, checked)
+    }
+    if (bracketCheck && bracketCheck(state, n, hrType, sc, checked)) {
+      return true
+    }
+    return defaultCheck(state, n, hrType, sc, checked)
   }
 }
 
-const checkSemanticContainer = (state, n, hrType, sc, checkFunc) => {
-  if (!checkFunc(state, n, hrType, sc, false)) {
+const createContainerRangeChecker = (activeCheck) => (state, n, hrType, sc) => {
+  if (!activeCheck(state, n, hrType, sc, false)) {
     return false
   }
 
   let cn = sc[sc.length - 1].range[1] + 1
   const tokensLength = state.tokens.length
   while (cn < tokensLength - 1) {
-    if (!checkFunc(state, cn, hrType, sc, true)) {
+    if (!activeCheck(state, cn, hrType, sc, true)) {
       break
     }
     cn = sc[sc.length - 1].range[1] + 1
@@ -125,7 +126,7 @@ const checkSemanticContainer = (state, n, hrType, sc, checkFunc) => {
   return true
 }
 
-const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
+const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType, sc, sci , optLocal) => {
   const tokens = state.tokens
   let nJump = 0
   let moveToAriaLabel = false
@@ -134,20 +135,25 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   const sn = sc.sn
   const sem = semantics[sn]
 
-  if (sc.isGitHubAlert) {
-    return setGitHubAlertsSemanticContainer(state, n, hrType, sc, sci, opt)
+  if (sc.isGitHubAlert && featureHelpers.github?.setGitHubAlertsSemanticContainer) {
+    return featureHelpers.github.setGitHubAlertsSemanticContainer(state, n, hrType, sc, sci, optLocal)
   }
 
-  if (sc.isBracketFormat) {
-    return setBracketSemanticContainer(state, n, hrType, sc, sci, opt)
+  if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
+    return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
   }
-  const regActualContNoStrong = new RegExp('^' + sc.actualContNoStrong)
-  const regActualContNoStrongSpace = new RegExp('^' + sc.actualContNoStrong + ' *')
-  const regActualContAsterisk = new RegExp('^' + sc.actualCont.replace(/\*/g, '\\*'))
+  const escapedActualContNoStrong = escapeRegExp(sc.actualContNoStrong)
+  const escapedActualCont = escapeRegExp(sc.actualCont)
+  const escapedActualName = escapeRegExp(sc.actualName)
+  const escapedActualNameJoint = escapeRegExp(sc.actualNameJoint)
+
+  const regActualContNoStrong = new RegExp('^' + escapedActualContNoStrong)
+  const regActualContNoStrongSpace = new RegExp('^' + escapedActualContNoStrong + ' *')
+  const regActualContAsterisk = new RegExp('^' + escapedActualCont)
   const regLeadSpace = /^ */
-  const regStrongLabel = new RegExp('^' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$')
-  const regStrongPattern = new RegExp('\\*\\* *?' + sc.actualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
-  const regJointRemoval = new RegExp('^\\' + sc.actualNameJoint)
+  const regStrongLabel = new RegExp('^' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$')
+  const regStrongPattern = new RegExp('\\*\\* *?' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
+  const regJointRemoval = new RegExp('^' + escapedActualNameJoint)
 
   // for continued semantic container.
   if(sci > 1) {
@@ -162,13 +168,12 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   sToken.content += ' class="sc-' + sem.name + '"'
   if (sem.attrs.length > 0) {
     for (let ai = 0; ai < sem.attrs.length; ai++) {
-      if(!moveToAriaLabel) {
-        moveToAriaLabel = sem.attrs[ai][0] === "aria-label"
-        if(moveToAriaLabel) {
-          sem.attrs[ai][1] = sc.actualName
-        }
+      const [attrKey, attrVal] = sem.attrs[ai]
+      if (!moveToAriaLabel) {
+        moveToAriaLabel = attrKey === 'aria-label'
       }
-      sToken.content += ' ' + sem.attrs[ai][0] + '="' + sem.attrs[ai][1] + '"'
+      const value = attrKey === 'aria-label' ? sc.actualName : attrVal
+      sToken.content += ' ' + attrKey + '="' + value + '"'
     }
   }
   sToken.content += '>\n'
@@ -204,8 +209,6 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   if (/^[*_]{2}/.test(nt.content) ) {
     let foundLabelStrong = false
     
-    // Look for the first strong element that matches the semantic label
-    // Also collect information about subsequent text nodes in the same loop
     for (let i = 0; i < ntChildren.length - 2; i++) {
       if (ntChildren[i] && ntChildren[i].type === 'strong_open'
         && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
@@ -217,7 +220,6 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
         if (hasStrongJa) {
           foundLabelStrong = true
           
-          // Pre-calculate text node index after strong close for efficiency
           let textAfterStrongIndex = -1
           for (let j = i + 3; j < ntChildren.length; j++) {
             if (ntChildren[j] && ntChildren[j].type === 'text') {
@@ -234,34 +236,25 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
           jointContent.content = sc.actualNameJoint
           const jointSpanClose = new state.Token('span_close', 'span', -1)
           
-          // Remove joint from the strong content and add joint span
           if (hasStrongJa[1]) {
-            // Joint is inside the strong content
             const trailingSpaces = hasStrongJa[2] || ''
-            ntChildren[i + 1].content = sc.actualName // Only keep the semantic name
-            // Insert joint span after the text content
+            ntChildren[i + 1].content = sc.actualName
             ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
             
-            // Handle spaces after strong element based on trailing spaces from original content
             if (textAfterStrongIndex !== -1) {
               const adjustedTextIndex = textAfterStrongIndex + 3
               if (trailingSpaces) {
-                // There were trailing spaces in the strong content, ensure single space after strong element
                 if (ntChildren[adjustedTextIndex].content === '') {
-                  // If the text node is empty, set it to a single space
                   ntChildren[adjustedTextIndex].content = ' '
                 } else {
-                  // If the text node has content, ensure it starts with a single space
                   ntChildren[adjustedTextIndex].content = ' ' + ntChildren[adjustedTextIndex].content.replace(/^ +/, '')
                 }
               }
             }
           } else if (sc.hasLastJoint) {
-            // Joint is after the strong element, move it inside
             if (ntChildren[i + 3] && ntChildren[i + 3].content) {
               ntChildren[i + 3].content = ntChildren[i + 3].content.replace(regJointRemoval, '')
             }
-            // Insert joint span after the text content
             ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
           }
           break
@@ -323,7 +316,7 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
     nJump += 3
   }
 
-  if (opt.removeJointAtLineEnd) {
+  if (optLocal.removeJointAtLineEnd) {
     let jointIsAtLineEnd = false
     if (ntChildren && ntChildren.length > 0) {
       const lastToken = ntChildren[ntChildren.length - 1]
@@ -351,29 +344,34 @@ const setSemanticContainer = (state, n, hrType, sc, sci , opt) => {
   return nJump
 }
 
-const semanticContainerCore = (state, n, cn, opt, checkFunc) => {
+const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer) => (state, n, cn, optLocal) => {
   const tokens = state.tokens
   let sc = []
   let sci = 0
   let hrType = ''
   let alreadyChecked = false
-  let nJumps = []
+  let firstJump = 0
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
 
   if (n === 0 || n === tokens.length -1) {
-    if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-      if(checkFunc(state, n, hrType, sc, false)) {
-        nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt))
-        return n += nJumps[0]
+    if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+      if(activeCheck(state, n, hrType, sc, false)) {
+        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+        return n += firstJump
+      }
+    } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
+      if(activeCheck(state, n, hrType, sc, false)) {
+        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+        return n += firstJump
       }
     }
     n++
     return n
   }
   if (prevToken.type !== 'hr') {
-    if (!opt.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+    if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
       cn.forEach(cni => {
         if (n === cni + 1) { alreadyChecked = true; }
       })
@@ -385,9 +383,15 @@ const semanticContainerCore = (state, n, cn, opt, checkFunc) => {
         n++; return n
       }
 
-      if(checkFunc(state, n, hrType, sc, false)) {
-        nJumps.push(setSemanticContainer(state, n, hrType, sc[0], -1, opt))
-        n += nJumps[0]
+      if(activeCheck(state, n, hrType, sc, false)) {
+        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+        n += firstJump
+        return n
+      }
+    } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
+      if(activeCheck(state, n, hrType, sc, false)) {
+        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+        n += firstJump
         return n
       }
     }
@@ -399,30 +403,43 @@ const semanticContainerCore = (state, n, cn, opt, checkFunc) => {
   if(/-/.test(prevToken.markup)) hrType = '-'
   if(/_/.test(prevToken.markup)) hrType = '_'
 
-  if (!checkSemanticContainer(state, n, hrType, sc, checkFunc)) {
+  if (!checkContainerRanges(state, n, hrType, sc)) {
     n++
     return n
   }
 
   for (sci = 0; sci < sc.length; sci++) {
-    nJumps.push(setSemanticContainer(state, n, hrType, sc[sci], sci, opt))
+    const jump = applyContainer(state, n, hrType, sc[sci], sci, optLocal)
+    if (sci === 0) firstJump = jump
     cn.push(sc[sci].range[1] + sci + 1)
   }
-  n += nJumps[0]
+  n += firstJump
   return n
 }
 
-const semanticContainer = (state, opt) => {
+const createContainerRunner = (walkContainers) => (state, optLocal) => {
   const tokens = state.tokens
-  const checkFunc = getCheckFunction(opt)
   let n = 0
   let cn = []
   let tokensLength = tokens.length
   while (n < tokensLength) {
-    n = semanticContainerCore(state, n, cn, opt, checkFunc)
+    n = walkContainers(state, n, cn, optLocal)
     tokensLength = tokens.length
   }
   return true
+}
+
+const createSemanticEngine = (semantics, opt, featureHelpers) => {
+  const semanticsReg = buildSemanticsReg(semantics)
+  const semanticLabelMatcher = createLabelMatcher(semantics, semanticsReg)
+  const githubCheck = opt.githubTypeContainer ? featureHelpers.github?.checkGitHubAlertsCore : null
+  const bracketCheck = opt.allowBracketJoint ? featureHelpers.bracket?.checkBracketSemanticContainerCore : null
+  const activeCheck = createActiveCheck({ githubCheck, bracketCheck, defaultCheck: semanticLabelMatcher })
+  const checkContainerRanges = createContainerRangeChecker(activeCheck)
+  const applyContainer = createContainerApplier(semantics, featureHelpers)
+  const walkContainers = createContainerWalker(activeCheck, checkContainerRanges, applyContainer)
+  const semanticContainer = createContainerRunner(walkContainers)
+  return { semanticContainer }
 }
 
 const mditSemanticContainer = (md, option) => {
@@ -431,11 +448,19 @@ const mditSemanticContainer = (md, option) => {
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
     githubTypeContainer: false,
+    // Additional languages to load on top of English
+    languages: ['ja'],
   }
   if (option) Object.assign(opt, option)
   
-  if (opt.githubTypeContainer) {
-    md.block.ruler.before('blockquote', 'github_alerts', githubAlertsBlock)
+  const semantics = buildSemantics(opt.languages)
+  const bracket = opt.allowBracketJoint ? createBracketFormat(semantics) : null
+  const github = opt.githubTypeContainer ? createGitHubTypeContainer(semantics) : null
+  const featureHelpers = { bracket, github }
+  const { semanticContainer } = createSemanticEngine(semantics, opt, featureHelpers)
+
+  if (opt.githubTypeContainer && github) {
+    md.block.ruler.before('blockquote', 'github_alerts', github.githubAlertsBlock)
   }
 
   // Run after 'text_join' to prevent conflicts with @peaceroad/markdown-it-footnote-here.
