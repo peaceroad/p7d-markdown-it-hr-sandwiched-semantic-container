@@ -22,8 +22,10 @@
   "author": "peaceroad <peaceroad@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@peaceroad/markdown-it-footnote-here": "^0.2.1",
-    "@peaceroad/markdown-it-strong-ja": "^0.4.4",
+    "@peaceroad/markdown-it-cjk-breaks-mod": "^0.1.4",
+    "@peaceroad/markdown-it-figure-with-p-caption": "^0.15.1",
+    "@peaceroad/markdown-it-footnote-here": "^0.3.0",
+    "@peaceroad/markdown-it-strong-ja": "^0.6.1",
     "markdown-it": "^14.1.0"
   }
 }

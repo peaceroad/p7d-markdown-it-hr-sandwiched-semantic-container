@@ -1,0 +1,27 @@
+[Markdown]
+**Notice.** Aaaa[aaaa](htpps://example.com/)aaaa
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> Aaaa<a href="htpps://example.com/">aaaa</a>aaaa</p>
+</section>
+
+[Markdown]
+**Notice**. Aaaa[aaaa](htpps://example.com/)aaaa
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> Aaaa<a href="htpps://example.com/">aaaa</a>aaaa</p>
+</section>
+
+[Markdown]
+**Notice**. Aaaa `bbb` aaaa
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> Aaaa <code>bbb</code> aaaa</p>
+</section>
+
+[Markdown]
+**Notice.** Aaaa `bbb` aaaa
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> Aaaa <code>bbb</code> aaaa</p>
+</section>

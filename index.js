@@ -25,76 +25,79 @@ const buildSemanticsReg = (semantics) => semantics.map((sem) => {
   return new RegExp(pattern, 'i')
 })
 
-const createLabelMatcher = (semantics, semanticsReg) => (state, n, hrType, sc, checked) => {
-  const tokens = state.tokens
-  const tokensLength = tokens.length
-  const nextToken = tokens[n+1]
+const createLabelMatcher = (semantics, semanticsReg) => {
+  const semanticsLength = semantics.length
+  return (state, n, hrType, sc, checked) => {
+    const tokens = state.tokens
+    const tokensLength = tokens.length
+    const nextToken = tokens[n+1]
 
-  let sn = 0
-  let actualName = null
+    let sn = 0
+    let actualName = null
 
-  while (sn < semantics.length) {
-    actualName = nextToken.content.match(semanticsReg[sn])
-    if(actualName) break
-    sn++
-  }
-  if(!actualName) return false
+    while (sn < semanticsLength) {
+      actualName = nextToken.content.match(semanticsReg[sn])
+      if(actualName) break
+      sn++
+    }
+    if(!actualName) return false
 
-  let actualNameJoint = ''
-  let hasLastJoint = false
-  let hasHalfJoint = false
+    let actualNameJoint = ''
+    let hasLastJoint = false
+    let hasHalfJoint = false
 
-  if (actualName[3]) {
-    hasHalfJoint = true
-    actualNameJoint = actualName[3]
-  } else if (actualName[4]) {
-    hasHalfJoint = true
-    hasLastJoint = true
-    actualNameJoint = actualName[4]
-  } else if (actualName[5]) {
-    actualNameJoint = actualName[5]
-  } else if (actualName[6]) {
-    hasLastJoint = true
-    actualNameJoint = actualName[6]
-  }
+    if (actualName[3]) {
+      hasHalfJoint = true
+      actualNameJoint = actualName[3]
+    } else if (actualName[4]) {
+      hasHalfJoint = true
+      hasLastJoint = true
+      actualNameJoint = actualName[4]
+    } else if (actualName[5]) {
+      actualNameJoint = actualName[5]
+    } else if (actualName[6]) {
+      hasLastJoint = true
+      actualNameJoint = actualName[6]
+    }
 
-  let en = n
-  let hasEndSemanticsHr = false
-  let pCloseN = -1
-  while (en < tokensLength) {
-    const tokenAtEn = tokens[en]
-    if (tokenAtEn.type === 'hr') {
-      if (hrType && tokenAtEn.markup.includes(hrType)) {
-        hasEndSemanticsHr = true
-        break
+    let en = n
+    let hasEndSemanticsHr = false
+    let pCloseN = -1
+    while (en < tokensLength) {
+      const tokenAtEn = tokens[en]
+      if (tokenAtEn.type === 'hr') {
+        if (hrType && tokenAtEn.markup.includes(hrType)) {
+          hasEndSemanticsHr = true
+          break
+        }
+        en++
+        continue
       }
+
+      if (tokenAtEn.type === 'paragraph_close' && pCloseN === -1) {
+        pCloseN = en
+        if (!hrType) break
+      }
+
       en++
-      continue
     }
+    if (hrType && !hasEndSemanticsHr) return false
 
-    if (tokenAtEn.type === 'paragraph_close' && pCloseN === -1) {
-      pCloseN = en
-      if (!hrType) break
-    }
-
-    en++
+    const rangeEnd = hrType ? en : (pCloseN !== -1 ? pCloseN + 1 : en)
+    sc.push({
+      range: [n, rangeEnd],
+      continued: checked,
+      sn: sn,
+      hrType: hrType,
+      actualCont: actualName[0],
+      actualContNoStrong: actualName[0].replace(/[*_]{2}/g, ''),
+      actualName: actualName[2],
+      actualNameJoint: actualNameJoint,
+      hasLastJoint: hasLastJoint,
+      hasHalfJoint: hasHalfJoint,
+    })
+    return true
   }
-  if (hrType && !hasEndSemanticsHr) return false
-
-  const rangeEnd = hrType ? en : (pCloseN !== -1 ? pCloseN + 1 : en)
-  sc.push({
-    range: [n, rangeEnd],
-    continued: checked,
-    sn: sn,
-    hrType: hrType,
-    actualCont: actualName[0],
-    actualContNoStrong: actualName[0].replace(/[*_]{2}/g, ''),
-    actualName: actualName[2],
-    actualNameJoint: actualNameJoint,
-    hasLastJoint: hasLastJoint,
-    hasHalfJoint: hasHalfJoint,
-  })
-  return true
 }
 
 const createActiveCheck = ({ githubCheck, bracketCheck, defaultCheck }) => {
@@ -160,6 +163,23 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     rs += sci - 1
     re += sci - 1
   }
+  const startRefToken = (hrType && tokens[rs - 1] && tokens[rs - 1].type === 'hr')
+    ? tokens[rs - 1]
+    : tokens[rs]
+  let endRefToken = null
+  if (hrType && tokens[re] && tokens[re].type === 'hr') {
+    endRefToken = tokens[re]
+  } else {
+    for (let i = re - 1; i >= rs; i--) {
+      if (tokens[i] && tokens[i].map) {
+        endRefToken = tokens[i]
+        break
+      }
+    }
+    if (!endRefToken && tokens[rs] && tokens[rs].map) {
+      endRefToken = tokens[rs]
+    }
+  }
   const nt = tokens[rs+1]
   const ntChildren = nt.children
 
@@ -178,11 +198,17 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   }
   sToken.content += '>\n'
   sToken.block = true
+  if (startRefToken && startRefToken.map) {
+    sToken.map = [startRefToken.map[0], startRefToken.map[1]]
+  }
   tokens.splice(rs, 0, sToken)
 
   const eToken = new state.Token('html_block', '', 0)
   eToken.content = '</' + sem.tag + '>\n'
   eToken.block = true
+  if (endRefToken && endRefToken.map) {
+    eToken.map = [endRefToken.map[0], endRefToken.map[1]]
+  }
 
   if(sci !== -1) {
     tokens.splice(re+1, 1, eToken); // ending hr delete too.
@@ -349,7 +375,6 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   let sc = []
   let sci = 0
   let hrType = ''
-  let alreadyChecked = false
   let firstJump = 0
 
   const prevToken = tokens[n-1]
@@ -372,10 +397,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   }
   if (prevToken.type !== 'hr') {
     if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-      cn.forEach(cni => {
-        if (n === cni + 1) { alreadyChecked = true; }
-      })
-      if (alreadyChecked) {
+      if (cn.has(n - 1)) {
         n++; return n
       }
 
@@ -411,7 +433,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   for (sci = 0; sci < sc.length; sci++) {
     const jump = applyContainer(state, n, hrType, sc[sci], sci, optLocal)
     if (sci === 0) firstJump = jump
-    cn.push(sc[sci].range[1] + sci + 1)
+    cn.add(sc[sci].range[1] + sci + 1)
   }
   n += firstJump
   return n
@@ -420,7 +442,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
 const createContainerRunner = (walkContainers) => (state, optLocal) => {
   const tokens = state.tokens
   let n = 0
-  let cn = []
+  let cn = new Set()
   let tokensLength = tokens.length
   while (n < tokensLength) {
     n = walkContainers(state, n, cn, optLocal)

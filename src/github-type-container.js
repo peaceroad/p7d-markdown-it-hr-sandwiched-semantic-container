@@ -103,6 +103,8 @@ const createGitHubTypeContainer = (semantics) => {
     }
 
     if (paragraphOpenIndex === -1) return nJump
+    const startRefToken = tokens[rs]
+    const endRefToken = tokens[re]
 
     const paragraphInlineToken = tokens[paragraphInlineIndex]
     const paragraphChildren = paragraphInlineToken.children
@@ -117,11 +119,17 @@ const createGitHubTypeContainer = (semantics) => {
     }
     sToken.content += '>\n'
     sToken.block = true
+    if (startRefToken && startRefToken.map) {
+      sToken.map = [startRefToken.map[0], startRefToken.map[1]]
+    }
     tokens[rs] = sToken
 
     const eToken = new state.Token('html_block', '', 0)
     eToken.content = '</' + sem.tag + '>\n'
     eToken.block = true
+    if (endRefToken && endRefToken.map) {
+      eToken.map = [endRefToken.map[0], endRefToken.map[1]]
+    }
     tokens[re] = eToken
 
     if (paragraphChildren && paragraphChildren.length > 0) {
@@ -277,7 +285,7 @@ const createGitHubTypeContainer = (semantics) => {
     }
     token_o.content += '>\n'
     token_o.block = true
-    token_o.map = [start, 0]
+    token_o.map = [start, nextLine]
     token_o._githubAlert = true
 
     let labelToken_o = state.push('paragraph_open', 'p', 1)

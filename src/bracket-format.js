@@ -102,6 +102,23 @@ const createBracketFormat = (semantics) => {
       rs += sci - 1
       re += sci - 1
     }
+    const startRefToken = (hrType && tokens[rs - 1] && tokens[rs - 1].type === 'hr')
+      ? tokens[rs - 1]
+      : tokens[rs]
+    let endRefToken = null
+    if (hrType && tokens[re] && tokens[re].type === 'hr') {
+      endRefToken = tokens[re]
+    } else {
+      for (let i = re - 1; i >= rs; i--) {
+        if (tokens[i] && tokens[i].map) {
+          endRefToken = tokens[i]
+          break
+        }
+      }
+      if (!endRefToken && tokens[rs] && tokens[rs].map) {
+        endRefToken = tokens[rs]
+      }
+    }
     const nt = tokens[rs+1]
     const ntChildren = nt.children
 
@@ -115,11 +132,17 @@ const createBracketFormat = (semantics) => {
     }
     sToken.content += '>\n'
     sToken.block = true
+    if (startRefToken && startRefToken.map) {
+      sToken.map = [startRefToken.map[0], startRefToken.map[1]]
+    }
     tokens.splice(rs, 0, sToken)
 
     const eToken = new state.Token('html_block', '', 0)
     eToken.content = '</' + sem.tag + '>\n'
     eToken.block = true
+    if (endRefToken && endRefToken.map) {
+      eToken.map = [endRefToken.map[0], endRefToken.map[1]]
+    }
 
     if(sci !== -1) {
       tokens.splice(re+1, 1, eToken)

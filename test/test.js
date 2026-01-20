@@ -5,16 +5,22 @@ import mdit from 'markdown-it'
 import mditSemanticContainer from '../index.js'
 import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
+import mditFigureWithPCaption from '@peaceroad/markdown-it-figure-with-p-caption'
 
 
 const md = mdit().use(mditSemanticContainer).use(mditFootnoteHere)
-const mdJa = mdit().use(mditStrongJa).use(mditFootnoteHere).use(mditSemanticContainer, {mditStrongJa: true})
+const mdJa = mdit().use(mditStrongJa).use(mditFootnoteHere).use(mditSemanticContainer)
+const mdJaWithFigure = mdit()
+  .use(mditStrongJa)
+  .use(mditFootnoteHere)
+  .use(mditFigureWithPCaption)
+  .use(mditSemanticContainer)
 
 const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
-const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true, mditStrongJa: true})
+const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true})
 
 const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {removeJointAtLineEnd: true})
-const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true, mditStrongJa: true})
+const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true})
 
 const mdGitHubAlerts = mdit().use(mditSemanticContainer, {githubTypeContainer: true}).use(mditStrongJa)
 
@@ -35,6 +41,7 @@ const testData = {
   githubAlerts: __dirname + path.sep + 'examples-github-type-container.txt',
   bracketFormat: __dirname + path.sep + 'examples-bracket-format.txt',
   mixedFeatures: __dirname + path.sep + 'examples-mixed-types.txt',
+  strongJaWithFigure: __dirname + path.sep + 'examples-strong-ja-figure-with-p-caption.txt',
 }
 
 const getTestData = (pat) => {
@@ -122,6 +129,8 @@ pass = runTest(mdJa, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)
 pass = runTest(mdRemoveJointAtLineEndJa, testData.removeJointAtLineEnd, pass)
 pass = runTest(mdJa, testData.complex, pass)
+console.log('\nstrongJa + figure-with-p-caption :::::::::::::::::::::::::::::::::')
+pass = runTest(mdJaWithFigure, testData.strongJaWithFigure, pass)
 
 pass = runTest(mdGitHubAlerts, testData.githubAlerts, pass)
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
