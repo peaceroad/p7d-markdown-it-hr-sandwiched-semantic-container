@@ -1,6 +1,6 @@
 {
   "name": "@peaceroad/markdown-it-hr-sandwiched-semantic-container",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "A markdown-it plugin. If a paragraph group is sandwiched between two hr elements of the same symbol type, and the first word of the paragraph group has a semantic meaning, then the paragraph group change to a semantic container.",
   "main": "index.js",
   "type": "module",
@@ -23,9 +23,9 @@
   "license": "MIT",
   "devDependencies": {
     "@peaceroad/markdown-it-cjk-breaks-mod": "^0.1.4",
-    "@peaceroad/markdown-it-figure-with-p-caption": "^0.15.1",
-    "@peaceroad/markdown-it-footnote-here": "^0.3.0",
-    "@peaceroad/markdown-it-strong-ja": "^0.6.1",
+    "@peaceroad/markdown-it-figure-with-p-caption": "^0.15.2",
+    "@peaceroad/markdown-it-footnote-here": "^0.3.3",
+    "@peaceroad/markdown-it-strong-ja": "^0.6.2",
     "markdown-it": "^14.1.0"
   }
 }
