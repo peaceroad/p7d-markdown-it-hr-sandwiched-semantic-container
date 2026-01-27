@@ -464,6 +464,40 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
   return { semanticContainer }
 }
 
+const SAFE_CORE_ANCHORS = new Set([
+  'inline',
+  'cjk_breaks',
+  'text_join',
+  'strong_ja_postprocess',
+  'footnote_anchor',
+  'endnotes_move',
+])
+
+const getSafeCoreAnchor = (md) => {
+  const rules = md?.core?.ruler?.__rules__
+  if (!Array.isArray(rules)) return 'inline'
+  let maxIndex = -1
+  let anchorName = 'inline'
+  for (let i = 0; i < rules.length; i++) {
+    const name = rules[i]?.name
+    if (!name || !SAFE_CORE_ANCHORS.has(name)) continue
+    if (i > maxIndex) {
+      maxIndex = i
+      anchorName = name
+    }
+  }
+  return anchorName
+}
+
+const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
+  const anchor = getSafeCoreAnchor(md)
+  try {
+    md.core.ruler.after(anchor, ruleName, handler)
+  } catch (err) {
+    md.core.ruler.push(ruleName, handler)
+  }
+}
+
 const mditSemanticContainer = (md, option) => {
   let opt = {
     requireHrAtOneParagraph: false,
@@ -485,10 +519,9 @@ const mditSemanticContainer = (md, option) => {
     md.block.ruler.before('blockquote', 'github_alerts', github.githubAlertsBlock)
   }
 
-  // Run after 'text_join' to prevent conflicts with @peaceroad/markdown-it-footnote-here.
-  // FootnoteHere's anchor processing uses 'inline' phase to record footnote positions.
-  // If SemanticContainer runs during 'inline' and uses tokens.splice(), it shifts indices, causing footnote backlinks to be lost.
-  md.core.ruler.after('text_join', 'semantic_container', (state) => {
+  // Run after index-sensitive plugins (footnote/strong-ja) and after inline processing.
+  // If SemanticContainer runs too early, tokens.splice() can shift recorded indices.
+  registerCoreRuleAfterSafeAnchor(md, 'semantic_container', (state) => {
     semanticContainer(state, opt)
   })
 }

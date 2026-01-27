@@ -21,7 +21,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 
 4) **Initialization**
    - `createSemanticEngine` wires the factories: builds regexes, picks the checker, builds the setter and walker, and returns `semanticContainer`.
-   - `mditSemanticContainer` sets defaults, builds semantics/helpers, optionally registers the GitHub alert block rule, and adds the core ruler (`semantic_container`) after `text_join` to avoid footnote index shifts.
+   - `mditSemanticContainer` sets defaults, builds semantics/helpers, optionally registers the GitHub alert block rule, and adds the core ruler (`semantic_container`) after the latest available safe anchor (inline/text_join/footnote/etc.) to avoid index shifts from other plugins.
 
 5) **Data layout**
    - Locale data: `semantics/en.json` (canonical entries with tags/attrs/aliases), `semantics/ja.json` (label map). Additional locales can be added similarly and passed via `languages`.
