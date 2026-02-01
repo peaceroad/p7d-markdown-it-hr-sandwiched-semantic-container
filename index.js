@@ -32,6 +32,19 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     const tokensLength = tokens.length
     const nextToken = tokens[n+1]
 
+    const content = nextToken?.content
+    if (!content) return false
+    let leadIndex = 0
+    if (content.startsWith('**') || content.startsWith('__')) {
+      leadIndex = 2
+    }
+    const leadChar = content[leadIndex]
+    if (!leadChar) return false
+    if (leadChar === '[' || leadChar === '［') return false
+    if (leadChar !== '*' && leadChar !== '_' && !/[0-9A-Za-z\u0080-\uFFFF]/.test(leadChar)) {
+      return false
+    }
+
     let sn = 0
     let actualName = null
 

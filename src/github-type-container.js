@@ -8,6 +8,63 @@ const createGitHubTypeContainer = (semantics) => {
     return new RegExp(ghPattern, 'i')
   })
 
+  let cachedBlockquoteRule = null
+
+  const getBlockquoteRule = (state) => {
+    if (cachedBlockquoteRule !== null) return cachedBlockquoteRule
+    const rules = state?.md?.block?.ruler?.__rules__
+    if (!Array.isArray(rules)) {
+      cachedBlockquoteRule = null
+      return null
+    }
+    const blockquoteRule = rules.find((rule) => rule.name === 'blockquote')
+    cachedBlockquoteRule = blockquoteRule?.fn || null
+    return cachedBlockquoteRule
+  }
+
+  const hasAlertPrefix = (content) => {
+    if (!content) return false
+    const firstChar = content[0]
+    return firstChar === '[' || firstChar === '［'
+  }
+
+  const hasInlineContent = (inlineToken, children) => {
+    if (inlineToken?.content && inlineToken.content.trim()) return true
+    if (!children) return false
+    for (const child of children) {
+      if (!child) continue
+      if (child.type === 'text' && child.content && child.content.trim()) return true
+      if (child.type === 'code_inline' && child.content && child.content.trim()) return true
+      if (child.type === 'html_inline' && child.content && child.content.trim()) return true
+      if (child.type === 'image') return true
+    }
+    return false
+  }
+
+  const trimLeadingBreaks = (children) => {
+    if (!Array.isArray(children) || children.length === 0) return
+    let trimCount = 0
+    for (let i = 0; i < children.length; i++) {
+      const token = children[i]
+      if (!token) {
+        trimCount++
+        continue
+      }
+      if (token.type === 'text' && (!token.content || /^\s*$/.test(token.content))) {
+        trimCount++
+        continue
+      }
+      if (token.type === 'softbreak' || token.type === 'hardbreak') {
+        trimCount++
+        continue
+      }
+      break
+    }
+    if (trimCount > 0) {
+      children.splice(0, trimCount)
+    }
+  }
+
   const checkGitHubAlertsCore = (state, n, hrType, sc, checked) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
@@ -28,6 +85,7 @@ const createGitHubTypeContainer = (semantics) => {
     }
 
     if (!paragraphToken || paragraphToken.type !== 'inline') return false
+    if (!hasAlertPrefix(paragraphToken.content)) return false
 
     let sn = 0
     let actualName = null
@@ -45,10 +103,19 @@ const createGitHubTypeContainer = (semantics) => {
     if (!actualName) return false
 
     let blockquoteCloseIndex = -1
-    for (let i = paragraphOpenIndex + 1; i < tokensLength; i++) {
-      if (tokens[i].type === 'blockquote_close') {
-        blockquoteCloseIndex = i
-        break
+    let depth = 0
+    for (let i = n; i < tokensLength; i++) {
+      const token = tokens[i]
+      if (token.type === 'blockquote_open') {
+        depth++
+        continue
+      }
+      if (token.type === 'blockquote_close') {
+        depth--
+        if (depth === 0) {
+          blockquoteCloseIndex = i
+          break
+        }
       }
     }
 
@@ -104,9 +171,19 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (paragraphOpenIndex === -1) return nJump
     const startRefToken = tokens[rs]
-    const endRefToken = tokens[re]
+    let endRefToken = tokens[re]
+    if (!endRefToken?.map) {
+      for (let i = re - 1; i >= rs; i--) {
+        if (tokens[i] && tokens[i].map) {
+          endRefToken = tokens[i]
+          break
+        }
+      }
+    }
 
+    const paragraphOpenToken = tokens[paragraphOpenIndex]
     const paragraphInlineToken = tokens[paragraphInlineIndex]
+    const paragraphCloseToken = tokens[paragraphCloseIndex]
     const paragraphChildren = paragraphInlineToken.children
 
     const sToken = new state.Token('html_block', '', 0)
@@ -132,10 +209,36 @@ const createGitHubTypeContainer = (semantics) => {
     }
     tokens[re] = eToken
 
+    for (let i = rs + 1; i < re; i++) {
+      const token = tokens[i]
+      if (!token) continue
+      if (token.type === 'fence' || token.type === 'code_block') {
+        if (token.content && !token.content.startsWith('\n')) {
+          token.content = '\n' + token.content
+        }
+      }
+    }
+
     if (paragraphChildren && paragraphChildren.length > 0) {
       const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
       const labelParagraphInline = new state.Token('inline', '', 0)
       const labelParagraphClose = new state.Token('paragraph_close', 'p', -1)
+      labelParagraphOpen.block = true
+      labelParagraphInline.block = true
+      labelParagraphClose.block = true
+      if (paragraphOpenToken?.map) {
+        labelParagraphOpen.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+      }
+      if (paragraphInlineToken?.map) {
+        labelParagraphInline.map = [paragraphInlineToken.map[0], paragraphInlineToken.map[1]]
+      } else if (paragraphOpenToken?.map) {
+        labelParagraphInline.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+      }
+      if (paragraphCloseToken?.map) {
+        labelParagraphClose.map = [paragraphCloseToken.map[0], paragraphCloseToken.map[1]]
+      } else if (paragraphOpenToken?.map) {
+        labelParagraphClose.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+      }
 
       const strongOpen = new state.Token('strong_open', 'strong', 1)
       strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
@@ -169,234 +272,57 @@ const createGitHubTypeContainer = (semantics) => {
       if (paragraphChildren[0] && paragraphChildren[0].type === 'text') {
         const originalContent = paragraphChildren[0].content
         let cleanedContent = originalContent
-        cleanedContent = cleanedContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)[\s\n]*/, '')
-        cleanedContent = cleanedContent.replace(/[\s\n]*(?:&gt;\s*|>\s*)/g, ' ')
-        cleanedContent = cleanedContent.replace(/\s+/g, ' ')
-        cleanedContent = cleanedContent.replace(/\n/g, ' ')
+        cleanedContent = cleanedContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)\s*/, '')
         cleanedContent = cleanedContent.replace(/^\s+/, '')
-        cleanedContent = cleanedContent.trim()
         paragraphChildren[0].content = cleanedContent
-      }
-
-      for (let i = 1; i < paragraphChildren.length; i++) {
-        if (paragraphChildren[i] && paragraphChildren[i].type === 'text' && paragraphChildren[i].content) {
-          let content = paragraphChildren[i].content
-          content = content.replace(/\n/g, ' ')
-          content = content.replace(/\s+/g, ' ')
-          content = content.replace(/^\s+/, '')
-          content = content.trim()
-          paragraphChildren[i].content = content
-        }
       }
 
       if (paragraphInlineToken.content) {
         let finalContent = paragraphInlineToken.content
-        finalContent = finalContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)[\s\n]*/, '')
-        finalContent = finalContent.replace(/[\s\n]*(?:&gt;\s*|>\s*)/g, ' ')
-        finalContent = finalContent.replace(/\n/g, ' ')
-        finalContent = finalContent.replace(/\s+/g, ' ')
+        finalContent = finalContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)\s*/, '')
         finalContent = finalContent.replace(/^\s+/, '')
-        finalContent = finalContent.trim()
         paragraphInlineToken.content = finalContent
       }
 
+      trimLeadingBreaks(paragraphChildren)
+
+      const shouldDropOriginalParagraph = !hasInlineContent(paragraphInlineToken, paragraphChildren)
+
       tokens.splice(paragraphOpenIndex, 0, labelParagraphOpen, labelParagraphInline, labelParagraphClose)
-      
-      paragraphOpenIndex += 3
-      paragraphInlineIndex += 3
-      paragraphCloseIndex += 3
+
+      if (shouldDropOriginalParagraph) {
+        tokens.splice(paragraphOpenIndex + 3, 3)
+      }
     }
 
     return nJump
   }
 
   const githubAlertsBlock = (state, start, end, silent) => {
-    let pos, nextLine, oldParent, oldLineMax
-    let startLine = start
+    if (state.sCount[start] - state.blkIndent >= 4) return false
 
-    if (state.bMarks[start] + state.tShift[start] >= state.eMarks[start]) {
-      return false
-    }
+    const pos = state.bMarks[start] + state.tShift[start]
+    if (pos >= state.eMarks[start]) return false
 
-    if (state.src.charCodeAt(state.bMarks[start] + state.tShift[start]) !== 0x3E) {
-      return false
-    }
+    if (state.src.charCodeAt(pos) !== 0x3E) return false
 
-    pos = state.bMarks[start] + state.tShift[start] + 1
-    let firstLineContent = state.src.slice(pos, state.eMarks[start])
-    
-    firstLineContent = firstLineContent.replace(/^\s*>?\s*/, '')
-    
+    let firstLineContent = state.src.slice(pos + 1, state.eMarks[start])
+    firstLineContent = firstLineContent.replace(/^\s+/, '')
+    if (!hasAlertPrefix(firstLineContent)) return false
+
     let semanticMatch = null
-    let sn = 0
-    
-    for (sn = 0; sn < semantics.length; sn++) {
+    for (let sn = 0; sn < semantics.length; sn++) {
       semanticMatch = firstLineContent.match(semanticsGitHubAlertsReg[sn])
-      if (semanticMatch) {
-        break
-      }
+      if (semanticMatch) break
     }
 
-    if (!semanticMatch) {
-      return false
-    }
+    if (!semanticMatch) return false
+    if (silent) return true
 
-    if (silent) {
-      return true
-    }
+    const blockquoteRule = getBlockquoteRule(state)
+    if (!blockquoteRule) return false
 
-    const semanticType = semanticMatch[1]
-    const isFullWidth = /［/.test(semanticMatch[0])
-    const openBracket = isFullWidth ? '［' : '['
-    const closeBracket = isFullWidth ? '］' : ']'
-    const sem = semantics[sn]
-
-    nextLine = start
-    
-    while (nextLine < end) {
-      nextLine++
-      if (nextLine >= end) {
-        break
-      }
-
-      pos = state.bMarks[nextLine] + state.tShift[nextLine]
-      
-      if (pos < state.eMarks[nextLine] && state.src.charCodeAt(pos) === 0x3E) {
-        continue
-      }
-      
-      if (state.isEmpty(nextLine)) {
-        continue
-      }
-      
-      break
-    }
-
-    oldParent = state.parentType
-    oldLineMax = state.lineMax
-    state.parentType = 'github_alert'
-
-    let token_o = state.push('html_block', '', 0)
-    token_o.content = '<' + sem.tag + ' class="sc-' + sem.name + '"'
-    if (sem.attrs && sem.attrs.length > 0) {
-      for (const attr of sem.attrs) {
-        token_o.content += ' ' + attr[0] + '="' + attr[1] + '"'
-      }
-    }
-    token_o.content += '>\n'
-    token_o.block = true
-    token_o.map = [start, nextLine]
-    token_o._githubAlert = true
-
-    let labelToken_o = state.push('paragraph_open', 'p', 1)
-    labelToken_o.map = [start, start + 1]
-
-    let labelToken_inline = state.push('inline', '', 0)
-    labelToken_inline.content = ''
-    labelToken_inline.map = [start, start + 1]
-    labelToken_inline.children = []
-
-    const strongOpen = new state.Token('strong_open', 'strong', 1)
-    strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
-    
-    const openBracketSpan = new state.Token('span_open', 'span', 1)
-    openBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-    const openBracketContent = new state.Token('text', '', 0)
-    openBracketContent.content = openBracket
-    const openBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-    const semanticNameContent = new state.Token('text', '', 0)
-    semanticNameContent.content = semanticType
-
-    const closeBracketSpan = new state.Token('span_open', 'span', 1)
-    closeBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-    const closeBracketContent = new state.Token('text', '', 0)
-    closeBracketContent.content = closeBracket
-    const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-    const strongClose = new state.Token('strong_close', 'strong', -1)
-
-    labelToken_inline.children = [
-      strongOpen,
-      openBracketSpan, openBracketContent, openBracketSpanClose,
-      semanticNameContent,
-      closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-      strongClose
-    ]
-
-    let labelToken_c = state.push('paragraph_close', 'p', -1)
-    labelToken_c.map = [start, start + 1]
-
-    state.lineMax = nextLine
-    
-    let contentLines = []
-    for (let line = start; line < nextLine; line++) {
-      let lineStart = state.bMarks[line] + state.tShift[line]
-      let lineEnd = state.eMarks[line]
-      let lineContent = state.src.slice(lineStart, lineEnd)
-      
-      lineContent = lineContent.replace(/^\s*>\s*/, '')
-      
-      if (line === start) {
-        lineContent = lineContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)\s*/, '')
-      }
-      
-      contentLines.push(lineContent)
-    }
-
-    let paragraphs = []
-    let currentParagraph = []
-    
-    for (let i = 0; i < contentLines.length; i++) {
-      const line = contentLines[i]
-      if (line.trim() === '') {
-        if (currentParagraph.length > 0) {
-          paragraphs.push(currentParagraph.join('\n').trim())
-          currentParagraph = []
-        }
-      } else {
-        currentParagraph.push(line)
-      }
-    }
-    
-    if (currentParagraph.length > 0) {
-      paragraphs.push(currentParagraph.join('\n').trim())
-    }
-
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraphContent = paragraphs[i]
-      if (paragraphContent.trim()) {
-        if (paragraphContent.startsWith('```') && paragraphContent.endsWith('```')) {
-          const codeContent = paragraphContent.slice(3, -3).trim()
-          let codeToken = state.push('code_block', 'code', 0)
-          codeToken.content = '\n' + codeContent + '\n'
-          codeToken.map = [start + 1, nextLine]
-          codeToken.markup = '```'
-        } else {
-          let contentToken_o = state.push('paragraph_open', 'p', 1)
-          contentToken_o.map = [start + 1, nextLine]
-
-          let contentToken_inline = state.push('inline', '', 0)
-          contentToken_inline.content = paragraphContent
-          contentToken_inline.map = [start + 1, nextLine]
-          contentToken_inline.children = []
-
-          let contentToken_c = state.push('paragraph_close', 'p', -1)
-          contentToken_c.map = [start + 1, nextLine]
-        }
-      }
-    }
-
-    let token_c = state.push('html_block', '', 0)
-    token_c.content = '</' + sem.tag + '>\n'
-    token_c.block = true
-    token_c.map = [nextLine, nextLine]
-
-    state.parentType = oldParent
-    state.lineMax = oldLineMax
-    state.line = nextLine
-
-    return true
+    return blockquoteRule(state, start, end, false)
   }
 
   return { checkGitHubAlertsCore, setGitHubAlertsSemanticContainer, githubAlertsBlock }

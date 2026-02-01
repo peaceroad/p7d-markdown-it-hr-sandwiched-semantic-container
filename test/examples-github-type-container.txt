@@ -185,3 +185,57 @@ code block
 </section>
 
 
+[Markdown]
+> [!NOTE] This is inline.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>This is inline.</p>
+</section>
+
+
+[Markdown]
+> [!NOTE]
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+</section>
+
+
+[Markdown]
+> [!NOTE]
+> ## Heading
+> Content
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<h2>Heading</h2>
+<p>Content</p>
+</section>
+
+
+[Markdown]
+> [!NOTE]
+>
+> - item 1
+> - item 2
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<ul>
+<li>item 1</li>
+<li>item 2</li>
+</ul>
+</section>
+
+
+[Markdown]
+> [!NOTE]
+> > Nested quote
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<blockquote>
+<p>Nested quote</p>
+</blockquote>
+</section>

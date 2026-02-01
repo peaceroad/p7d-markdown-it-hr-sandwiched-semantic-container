@@ -8,7 +8,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 
 2) **Core factories**
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
-   - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close).
+   - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
    - `createContainerApplier(...)`: wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens for scroll sync (delegates to GitHub/bracket setters when applicable).
@@ -17,7 +17,11 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 
 3) **Feature helpers**
    - Bracket format helpers are built in `src/bracket-format.js` and only instantiated when `allowBracketJoint` is true.
-   - GitHub alert helpers are built in `src/github-type-container.js` and only instantiated when `githubTypeContainer` is true; block rule registered before `blockquote`.
+   - GitHub alert helpers are built in `src/github-type-container.js` and only instantiated when `githubTypeContainer` is true; block rule registered before `blockquote` but delegates actual parsing to the built-in blockquote rule.
+     - The block rule only gates on the first line and then calls the core blockquote rule to preserve native Markdown structures (lists, headings, nested quotes, fences).
+     - Core conversion trims the `[!TYPE]` marker from the first paragraph, removes leading breaks, and ensures inserted label paragraph tokens are block-level for renderer line breaks; label paragraph map is inherited from the original paragraph for editor jump accuracy.
+     - GitHub alert range detection accounts for nested blockquotes by tracking depth.
+     - End `map` is resolved from the nearest mapped token within the blockquote, because `blockquote_close` has no map.
 
 4) **Initialization**
    - `createSemanticEngine` wires the factories: builds regexes, picks the checker, builds the setter and walker, and returns `semanticContainer`.
@@ -29,3 +33,4 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
+- GitHub/bracket/standard label checks use fast leading-char guards to reduce regex work on non-candidates.

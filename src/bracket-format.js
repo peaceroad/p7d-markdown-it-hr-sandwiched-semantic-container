@@ -18,6 +18,15 @@ const createBracketFormat = (semantics) => {
     const tokensLength = tokens.length
     const nextToken = tokens[n+1]
 
+    const content = nextToken?.content
+    if (!content) return false
+    let startIndex = 0
+    if (content.startsWith('**') || content.startsWith('__')) {
+      startIndex = 2
+    }
+    const leadChar = content[startIndex]
+    if (leadChar !== '[' && leadChar !== '［') return false
+
     let sn = 0
     let actualName = null
 
