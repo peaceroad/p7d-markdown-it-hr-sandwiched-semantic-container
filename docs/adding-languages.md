@@ -35,3 +35,6 @@ Example `semantics/es.json`:
 - Regexes are built once at init using the selected locales; unused locales do not impact runtime.
 - Keep canonical names stable; only labels vary per locale.
 - Avoid duplicating `tag`/`attrs` in locale files; those live only in `en.json`.
+- Unknown locale codes in `languages` are ignored safely.
+- Duplicate labels are de-duplicated when semantics are built.
+- Regex-like aliases are supported, but aliases with a clear literal leading character are faster in hot paths.
