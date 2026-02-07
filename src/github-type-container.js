@@ -77,6 +77,7 @@ const createGitHubTypeContainer = (semantics) => {
   })
 
   let cachedBlockquoteRule = null
+  let hasResolvedBlockquoteRule = false
   const matchCache = new Map()
   const { candidatesByLead, fallback } = buildSemanticLeadCandidates()
   const cacheSet = (key, value) => {
@@ -88,14 +89,16 @@ const createGitHubTypeContainer = (semantics) => {
   }
 
   const getBlockquoteRule = (state) => {
-    if (cachedBlockquoteRule !== null) return cachedBlockquoteRule
+    if (hasResolvedBlockquoteRule) return cachedBlockquoteRule
     const rules = state?.md?.block?.ruler?.__rules__
     if (!Array.isArray(rules)) {
+      hasResolvedBlockquoteRule = true
       cachedBlockquoteRule = null
       return null
     }
-    const blockquoteRule = rules.find((rule) => rule.name === 'blockquote')
-    cachedBlockquoteRule = blockquoteRule?.fn || null
+    const blockquoteRule = rules.find((rule) => rule?.name === 'blockquote' && typeof rule?.fn === 'function')
+    cachedBlockquoteRule = blockquoteRule ? blockquoteRule.fn : null
+    hasResolvedBlockquoteRule = true
     return cachedBlockquoteRule
   }
 

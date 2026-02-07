@@ -226,6 +226,7 @@ const createBracketFormat = (semantics) => {
     }
     const nt = tokens[rs+1]
     const ntChildren = nt.children
+    // Inline child tokens normally do not carry map; paragraph/inline token maps remain the sync anchor.
 
     const sToken = new state.Token('html_block', '', 0)
     sToken.content = '<' + sem.tag
