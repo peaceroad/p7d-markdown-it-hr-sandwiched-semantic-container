@@ -1,6 +1,72 @@
 const createBracketFormat = (semantics) => {
   const strongMark = '[*_]{2}'
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
+  const MATCH_CACHE_MAX = 128
+  const CACHE_MISS = 0
+  const CODE_LEFT_BRACKET = 91
+  const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+  const getLiteralLeadKey = (raw) => {
+    if (!raw) return null
+    const value = raw.trim()
+    if (!value) return null
+    const first = value[0]
+    if (!first) return null
+    if (first === '\\') {
+      return value[1] ? value[1].toLowerCase() : null
+    }
+    if (first === '(' || first === '[' || first === '{' || first === '|'
+      || first === '^' || first === '$' || first === '*' || first === '+'
+      || first === '?' || first === '.') {
+      return null
+    }
+    return first.toLowerCase()
+  }
+  const buildSemanticLeadCandidates = () => {
+    const byLead = new Map()
+    const fallback = []
+    for (let sn = 0; sn < semantics.length; sn++) {
+      const sem = semantics[sn]
+      const keys = new Set()
+      const semKey = getLiteralLeadKey(sem.name)
+      if (semKey) keys.add(semKey)
+      let hasUnknown = false
+      for (let i = 0; i < sem.aliases.length; i++) {
+        const aliasKey = getLiteralLeadKey(sem.aliases[i])
+        if (!aliasKey) {
+          hasUnknown = true
+          continue
+        }
+        keys.add(aliasKey)
+      }
+      if (keys.size === 0 || hasUnknown) {
+        fallback.push(sn)
+      }
+      for (const key of keys) {
+        let list = byLead.get(key)
+        if (!list) {
+          list = []
+          byLead.set(key, list)
+        }
+        list.push(sn)
+      }
+    }
+    if (fallback.length === 0) {
+      return { candidatesByLead: byLead, fallback }
+    }
+    const candidatesByLead = new Map()
+    for (const [key, list] of byLead.entries()) {
+      const seen = new Set(list)
+      const merged = list.slice()
+      for (let i = 0; i < fallback.length; i++) {
+        const sn = fallback[i]
+        if (seen.has(sn)) continue
+        seen.add(sn)
+        merged.push(sn)
+      }
+      candidatesByLead.set(key, merged)
+    }
+    return { candidatesByLead, fallback }
+  }
 
   // Bracket format regex patterns
   const semanticsBracketReg = semantics.map((sem) => {
@@ -11,6 +77,15 @@ const createBracketFormat = (semantics) => {
     const bkPattern = '^(?:(' + strongMark + ')?([\\[])((?:' + sem.name + aliasStr + ')' + sNumber + ')([\\]])\\1?( +)|(' + strongMark + ')?([［])((?:' + sem.name + aliasStr + ')' + sNumber + ')([］])\\6?( *))'
     return new RegExp(bkPattern, 'i')
   })
+  const matchCache = new Map()
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates()
+  const cacheSet = (key, value) => {
+    if (matchCache.size >= MATCH_CACHE_MAX) {
+      const firstKey = matchCache.keys().next().value
+      matchCache.delete(firstKey)
+    }
+    matchCache.set(key, value)
+  }
 
   // Bracket format check function
   const checkBracketSemanticContainerCore = (state, n, hrType, sc, checked) => {
@@ -24,18 +99,39 @@ const createBracketFormat = (semantics) => {
     if (content.startsWith('**') || content.startsWith('__')) {
       startIndex = 2
     }
-    const leadChar = content[startIndex]
-    if (leadChar !== '[' && leadChar !== '［') return false
+    const leadCode = content.charCodeAt(startIndex)
+    if (leadCode !== CODE_LEFT_BRACKET && leadCode !== CODE_FULLWIDTH_LEFT_BRACKET) return false
 
     let sn = 0
     let actualName = null
-
-    while (sn < semantics.length) {
-      actualName = nextToken.content.match(semanticsBracketReg[sn])
-      if(actualName) break
-      sn++
+    const cached = matchCache.get(content)
+    if (cached !== undefined) {
+      if (cached === CACHE_MISS) return false
+      sn = cached.sn
+      actualName = cached.actualName
+    } else {
+      const labelLead = content[startIndex + 1]
+      const leadKey = labelLead ? labelLead.toLowerCase() : ''
+      const candidates = candidatesByLead.get(leadKey) || fallback
+      if (candidates.length > 0) {
+        for (let ci = 0; ci < candidates.length; ci++) {
+          sn = candidates[ci]
+          actualName = content.match(semanticsBracketReg[sn])
+          if(actualName) break
+        }
+      } else {
+        while (sn < semantics.length) {
+          actualName = content.match(semanticsBracketReg[sn])
+          if(actualName) break
+          sn++
+        }
+      }
+      if(!actualName) {
+        cacheSet(content, CACHE_MISS)
+        return false
+      }
+      cacheSet(content, { sn, actualName })
     }
-    if(!actualName) return false
 
     // Parse regex match results
     let strongMarkLocal, openBracket, semanticName, closeBracket, trailingSpace

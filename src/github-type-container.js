@@ -1,4 +1,72 @@
 const createGitHubTypeContainer = (semantics) => {
+  const MATCH_CACHE_MAX = 128
+  const CACHE_MISS = 0
+  const CODE_LEFT_BRACKET = 91
+  const CODE_BANG = 33
+  const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+  const CODE_FULLWIDTH_BANG = 65281
+  const getLiteralLeadKey = (raw) => {
+    if (!raw) return null
+    const value = raw.trim()
+    if (!value) return null
+    const first = value[0]
+    if (!first) return null
+    if (first === '\\') {
+      return value[1] ? value[1].toLowerCase() : null
+    }
+    if (first === '(' || first === '[' || first === '{' || first === '|'
+      || first === '^' || first === '$' || first === '*' || first === '+'
+      || first === '?' || first === '.') {
+      return null
+    }
+    return first.toLowerCase()
+  }
+  const buildSemanticLeadCandidates = () => {
+    const byLead = new Map()
+    const fallback = []
+    for (let sn = 0; sn < semantics.length; sn++) {
+      const sem = semantics[sn]
+      const keys = new Set()
+      const semKey = getLiteralLeadKey(sem.name)
+      if (semKey) keys.add(semKey)
+      let hasUnknown = false
+      for (let i = 0; i < sem.aliases.length; i++) {
+        const aliasKey = getLiteralLeadKey(sem.aliases[i])
+        if (!aliasKey) {
+          hasUnknown = true
+          continue
+        }
+        keys.add(aliasKey)
+      }
+      if (keys.size === 0 || hasUnknown) {
+        fallback.push(sn)
+      }
+      for (const key of keys) {
+        let list = byLead.get(key)
+        if (!list) {
+          list = []
+          byLead.set(key, list)
+        }
+        list.push(sn)
+      }
+    }
+    if (fallback.length === 0) {
+      return { candidatesByLead: byLead, fallback }
+    }
+    const candidatesByLead = new Map()
+    for (const [key, list] of byLead.entries()) {
+      const seen = new Set(list)
+      const merged = list.slice()
+      for (let i = 0; i < fallback.length; i++) {
+        const sn = fallback[i]
+        if (seen.has(sn)) continue
+        seen.add(sn)
+        merged.push(sn)
+      }
+      candidatesByLead.set(key, merged)
+    }
+    return { candidatesByLead, fallback }
+  }
   const semanticsGitHubAlertsReg = semantics.map((sem) => {
     const aliasStr = sem.aliases.length
       ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
@@ -9,6 +77,15 @@ const createGitHubTypeContainer = (semantics) => {
   })
 
   let cachedBlockquoteRule = null
+  const matchCache = new Map()
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates()
+  const cacheSet = (key, value) => {
+    if (matchCache.size >= MATCH_CACHE_MAX) {
+      const firstKey = matchCache.keys().next().value
+      matchCache.delete(firstKey)
+    }
+    matchCache.set(key, value)
+  }
 
   const getBlockquoteRule = (state) => {
     if (cachedBlockquoteRule !== null) return cachedBlockquoteRule
@@ -24,8 +101,46 @@ const createGitHubTypeContainer = (semantics) => {
 
   const hasAlertPrefix = (content) => {
     if (!content) return false
-    const firstChar = content[0]
-    return firstChar === '[' || firstChar === '［'
+    const firstCode = content.charCodeAt(0)
+    const secondCode = content.charCodeAt(1)
+    if (firstCode === CODE_LEFT_BRACKET) return secondCode === CODE_BANG
+    if (firstCode === CODE_FULLWIDTH_LEFT_BRACKET) {
+      return secondCode === CODE_BANG || secondCode === CODE_FULLWIDTH_BANG
+    }
+    return false
+  }
+
+  const findGitHubSemanticMatch = (content) => {
+    if (!content || !hasAlertPrefix(content)) return null
+    const cached = matchCache.get(content)
+    if (cached !== undefined) {
+      return cached === CACHE_MISS ? null : cached
+    }
+
+    let semanticMatch = null
+    const semanticLead = content[2]
+    const leadKey = semanticLead ? semanticLead.toLowerCase() : ''
+    const candidates = candidatesByLead.get(leadKey) || fallback
+    if (candidates.length > 0) {
+      for (let ci = 0; ci < candidates.length; ci++) {
+        const sn = candidates[ci]
+        semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
+        if (!semanticMatch) continue
+        const result = { sn, semanticMatch }
+        cacheSet(content, result)
+        return result
+      }
+    } else {
+      for (let sn = 0; sn < semantics.length; sn++) {
+        semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
+        if (!semanticMatch) continue
+        const result = { sn, semanticMatch }
+        cacheSet(content, result)
+        return result
+      }
+    }
+    cacheSet(content, CACHE_MISS)
+    return null
   }
 
   const hasInlineContent = (inlineToken, children) => {
@@ -85,22 +200,10 @@ const createGitHubTypeContainer = (semantics) => {
     }
 
     if (!paragraphToken || paragraphToken.type !== 'inline') return false
-    if (!hasAlertPrefix(paragraphToken.content)) return false
-
-    let sn = 0
-    let actualName = null
-    let semanticMatch = null
-
-    while (sn < semantics.length) {
-      semanticMatch = paragraphToken.content.match(semanticsGitHubAlertsReg[sn])
-      if (semanticMatch) {
-        actualName = semanticMatch
-        break
-      }
-      sn++
-    }
-
-    if (!actualName) return false
+    const semantic = findGitHubSemanticMatch(paragraphToken.content)
+    if (!semantic) return false
+    const sn = semantic.sn
+    const semanticMatch = semantic.semanticMatch
 
     let blockquoteCloseIndex = -1
     let depth = 0
@@ -131,8 +234,8 @@ const createGitHubTypeContainer = (semantics) => {
       continued: checked,
       sn: sn,
       hrType: hrType,
-      actualCont: actualName[0],
-      actualContNoStrong: actualName[0],
+      actualCont: semanticMatch[0],
+      actualContNoStrong: semanticMatch[0],
       actualName: semanticType,
       actualNameJoint: '',
       hasLastJoint: false,
@@ -308,15 +411,7 @@ const createGitHubTypeContainer = (semantics) => {
 
     let firstLineContent = state.src.slice(pos + 1, state.eMarks[start])
     firstLineContent = firstLineContent.replace(/^\s+/, '')
-    if (!hasAlertPrefix(firstLineContent)) return false
-
-    let semanticMatch = null
-    for (let sn = 0; sn < semantics.length; sn++) {
-      semanticMatch = firstLineContent.match(semanticsGitHubAlertsReg[sn])
-      if (semanticMatch) break
-    }
-
-    if (!semanticMatch) return false
+    if (!findGitHubSemanticMatch(firstLineContent)) return false
     if (silent) return true
 
     const blockquoteRule = getBlockquoteRule(state)

@@ -34,3 +34,7 @@ Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
 - GitHub/bracket/standard label checks use fast leading-char guards to reduce regex work on non-candidates.
+- Standard/bracket/GitHub label matchers keep small bounded match caches to reduce repeated regex scans for identical leading content.
+- Matchers also pre-bucket semantics by detectable leading label character and only scan candidate subsets (with safe fallback for regex-like alias patterns).
+- Match caches are always enabled; this favors preview workflows (repeated renders of largely similar content), which are the primary target usage for this plugin.
+- Benchmarking guidance: use deterministic corpus + median-per-render (`npm run performance:ab`) for reliable before/after comparisons; avoid random-input benchmarks when evaluating optimizer impact.

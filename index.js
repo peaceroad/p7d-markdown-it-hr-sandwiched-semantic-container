@@ -7,8 +7,87 @@ const strongMark = '[*_]{2}'
 
 const semanticsHalfJoint = '[:.]'
 const semanticsFullJoint = '[　：。．]'
+const MATCH_CACHE_MAX = 256
+const CACHE_MISS = 0
+const CODE_STAR = 42
+const CODE_UNDERSCORE = 95
+const CODE_LEFT_BRACKET = 91
+const CODE_FULLWIDTH_LEFT_BRACKET = 65339
 
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const isAsciiAlnum = (code) => (
+  (code >= 48 && code <= 57)
+  || (code >= 65 && code <= 90)
+  || (code >= 97 && code <= 122)
+)
+const isPotentialLabelLeadCode = (code) => (
+  code === CODE_STAR
+  || code === CODE_UNDERSCORE
+  || code >= 128
+  || isAsciiAlnum(code)
+)
+const getLiteralLeadKey = (raw) => {
+  if (!raw) return null
+  const value = raw.trim()
+  if (!value) return null
+  const first = value[0]
+  if (!first) return null
+  if (first === '\\') {
+    return value[1] ? value[1].toLowerCase() : null
+  }
+  if (first === '(' || first === '[' || first === '{' || first === '|'
+    || first === '^' || first === '$' || first === '*' || first === '+'
+    || first === '?' || first === '.') {
+    return null
+  }
+  return first.toLowerCase()
+}
+const buildSemanticLeadCandidates = (semantics) => {
+  const byLead = new Map()
+  const fallback = []
+  for (let sn = 0; sn < semantics.length; sn++) {
+    const sem = semantics[sn]
+    const keys = new Set()
+    const semKey = getLiteralLeadKey(sem.name)
+    if (semKey) keys.add(semKey)
+    let hasUnknown = false
+    for (let i = 0; i < sem.aliases.length; i++) {
+      const aliasKey = getLiteralLeadKey(sem.aliases[i])
+      if (!aliasKey) {
+        hasUnknown = true
+        continue
+      }
+      keys.add(aliasKey)
+    }
+    if (keys.size === 0 || hasUnknown) {
+      fallback.push(sn)
+    }
+    for (const key of keys) {
+      let list = byLead.get(key)
+      if (!list) {
+        list = []
+        byLead.set(key, list)
+      }
+      list.push(sn)
+    }
+  }
+  const candidatesByLead = new Map()
+  if (fallback.length === 0) {
+    return { candidatesByLead: byLead, fallback }
+  }
+  for (const [key, list] of byLead.entries()) {
+    const seen = new Set(list)
+    const merged = list.slice()
+    for (let i = 0; i < fallback.length; i++) {
+      const sn = fallback[i]
+      if (seen.has(sn)) continue
+      seen.add(sn)
+      merged.push(sn)
+    }
+    candidatesByLead.set(key, merged)
+  }
+  return { candidatesByLead, fallback }
+}
 
 const buildSemanticsReg = (semantics) => semantics.map((sem) => {
   const aliasStr = sem.aliases.length
@@ -27,6 +106,16 @@ const buildSemanticsReg = (semantics) => semantics.map((sem) => {
 
 const createLabelMatcher = (semantics, semanticsReg) => {
   const semanticsLength = semantics.length
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  const matchCache = new Map()
+  const cacheSet = (key, value) => {
+    if (matchCache.size >= MATCH_CACHE_MAX) {
+      const firstKey = matchCache.keys().next().value
+      matchCache.delete(firstKey)
+    }
+    matchCache.set(key, value)
+  }
+
   return (state, n, hrType, sc, checked) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
@@ -38,22 +127,42 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     if (content.startsWith('**') || content.startsWith('__')) {
       leadIndex = 2
     }
-    const leadChar = content[leadIndex]
-    if (!leadChar) return false
-    if (leadChar === '[' || leadChar === '［') return false
-    if (leadChar !== '*' && leadChar !== '_' && !/[0-9A-Za-z\u0080-\uFFFF]/.test(leadChar)) {
+    const leadCode = content.charCodeAt(leadIndex)
+    if (!leadCode) return false
+    if (leadCode === CODE_LEFT_BRACKET || leadCode === CODE_FULLWIDTH_LEFT_BRACKET) return false
+    if (!isPotentialLabelLeadCode(leadCode)) {
       return false
     }
 
     let sn = 0
     let actualName = null
-
-    while (sn < semanticsLength) {
-      actualName = nextToken.content.match(semanticsReg[sn])
-      if(actualName) break
-      sn++
+    const cached = matchCache.get(content)
+    if (cached !== undefined) {
+      if (cached === CACHE_MISS) return false
+      sn = cached.sn
+      actualName = cached.actualName
+    } else {
+      const leadKey = content[leadIndex].toLowerCase()
+      const candidates = candidatesByLead.get(leadKey) || fallback
+      if (candidates.length > 0) {
+        for (let ci = 0; ci < candidates.length; ci++) {
+          sn = candidates[ci]
+          actualName = content.match(semanticsReg[sn])
+          if(actualName) break
+        }
+      } else {
+        while (sn < semanticsLength) {
+          actualName = content.match(semanticsReg[sn])
+          if(actualName) break
+          sn++
+        }
+      }
+      if(!actualName) {
+        cacheSet(content, CACHE_MISS)
+        return false
+      }
+      cacheSet(content, { sn, actualName })
     }
-    if(!actualName) return false
 
     let actualNameJoint = ''
     let hasLastJoint = false

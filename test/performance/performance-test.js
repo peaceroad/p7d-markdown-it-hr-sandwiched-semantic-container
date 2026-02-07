@@ -66,20 +66,57 @@ Note. Semantic container note.
 
 `.repeat(10),
 
-  scalability: (size) => {
-    const baseContent = `Paragraph ${Math.random()}.
+  scalability: (size, variant = 0) => {
+    const id = variant + 1
+    const baseContent = `Paragraph ${id}.
 
-Warning. Warning message ${Math.random()}.
+Warning. Warning message ${id}.
 
 > [!NOTE]
-> Note alert ${Math.random()}.
+> Note alert ${id}.
 
-[Bracket]. Format ${Math.random()}.
+[Bracket]. Format ${id}.
 
 `
-    return baseContent.repeat(Math.ceil(size / baseContent.length))
+    return baseContent.repeat(Math.ceil(size / baseContent.length)).slice(0, size)
   }
 }
+
+const deterministicAbCorpus = [
+  {
+    name: 'small-basic',
+    content: contentTemplates.basic,
+    batch: 50
+  },
+  {
+    name: 'small-github',
+    content: `> [!NOTE]
+> Alert with list:
+> - Item 1
+> - Item 2
+>
+> \`\`\`js
+> console.log('note')
+> \`\`\`
+`,
+    batch: 50
+  },
+  {
+    name: 'medium-mixed',
+    content: contentTemplates.complex.repeat(4),
+    batch: 20
+  },
+  {
+    name: 'large-scalability',
+    content: contentTemplates.scalability(12000, 7),
+    batch: 5
+  },
+  {
+    name: 'xlarge-scalability',
+    content: contentTemplates.scalability(36000, 13),
+    batch: 2
+  }
+]
 
 // Performance measurement utilities
 function measurePerformance(fn, iterations = 50, warmup = 5) {
@@ -209,6 +246,62 @@ function runTokenDensityTest() {
   })
 }
 
+function runDeterministicABBenchmark({
+  iterations = 50,
+  warmup = 12,
+  configKeys = ['default', 'bracketFormat', 'githubAlerts', 'allFeatures']
+} = {}) {
+  console.log('\n=== Deterministic A/B Benchmark ===')
+  console.log('Fixed corpus for before/after comparison across commits.')
+  console.log(`Cases: ${deterministicAbCorpus.length}, Iterations: ${iterations}, Warmup: ${warmup}`)
+
+  const selectedKeys = configKeys.filter((key) => configurations[key])
+  const totals = { baseline: 0 }
+  const baselineMd = configurations.baseline.setup()
+
+  for (const key of selectedKeys) {
+    totals[key] = 0
+  }
+
+  deterministicAbCorpus.forEach((testCase, index) => {
+    const batch = testCase.batch || 1
+    const renderBatch = (md) => {
+      for (let i = 0; i < batch; i++) {
+        md.render(testCase.content)
+      }
+    }
+    console.log(`\n--- Case ${index + 1}: ${testCase.name} (${testCase.content.length} chars, batch=${batch}) ---`)
+    const baselineResult = measurePerformance(
+      () => renderBatch(baselineMd),
+      iterations,
+      warmup
+    )
+    const baselineMedianPerRender = baselineResult.median / batch
+    totals.baseline += baselineMedianPerRender
+    console.log(`  ${configurations.baseline.name}: ${baselineMedianPerRender.toFixed(3)}ms median/render`)
+
+    selectedKeys.forEach((key) => {
+      const md = configurations[key].setup()
+      const result = measurePerformance(
+        () => renderBatch(md),
+        iterations,
+        warmup
+      )
+      const medianPerRender = result.median / batch
+      totals[key] += medianPerRender
+      const overhead = ((medianPerRender - baselineMedianPerRender) / baselineMedianPerRender) * 100
+      console.log(`  ${configurations[key].name}: ${medianPerRender.toFixed(3)}ms median/render (${overhead >= 0 ? '+' : ''}${overhead.toFixed(1)}%)`)
+    })
+  })
+
+  console.log('\n--- A/B Score (lower is better) ---')
+  console.log(`  ${configurations.baseline.name}: ${totals.baseline.toFixed(3)}ms total`)
+  selectedKeys.forEach((key) => {
+    const ratio = totals[key] / totals.baseline
+    console.log(`  ${configurations[key].name}: ${totals[key].toFixed(3)}ms total (${ratio.toFixed(3)}x baseline)`)
+  })
+}
+
 // Main comprehensive test
 function runComprehensiveTest({ iterations = 50, sizes = { small: 1000, medium: 5000, large: 10000, xlarge: 50000 }, saveResults = true } = {}) {
   console.log('markdown-it-hr-sandwiched-semantic-container Comprehensive Performance Test')
@@ -306,12 +399,16 @@ function main() {
     case 'density':
       runTokenDensityTest()
       break
+    case 'ab':
+      runDeterministicABBenchmark()
+      break
     case 'comprehensive':
     case 'full':
       runComprehensiveTest()
       runFeatureBenchmarks()
       runScalabilityTest()
       runTokenDensityTest()
+      runDeterministicABBenchmark()
       break
     case 'quick':
     default: {
@@ -324,6 +421,7 @@ function main() {
       runFeatureBenchmarks({ iterations: 10 })
       runScalabilityTest({ sizes: [1000, 5000], iterations: 10 })
       runTokenDensityTest()
+      runDeterministicABBenchmark({ iterations: 10, warmup: 4 })
       break
     }
   }
@@ -340,5 +438,6 @@ export {
   runFeatureBenchmarks, 
   runScalabilityTest, 
   runTokenDensityTest, 
-  runComprehensiveTest 
+  runComprehensiveTest,
+  runDeterministicABBenchmark
 }
