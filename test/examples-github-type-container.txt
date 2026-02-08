@@ -239,3 +239,63 @@ code block
 <p>Nested quote</p>
 </blockquote>
 </section>
+
+
+[Markdown]
+> Intro line.
+> [!NOTE]
+> second line.
+[HTML]
+<blockquote>
+<p>Intro line.
+[!NOTE]
+second line.</p>
+</blockquote>
+
+
+[Markdown]
+>    [!NOTE]
+> spaced marker line.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>spaced marker line.</p>
+</section>
+
+
+[Markdown]
+> ［！注意］　本文です。
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<p>本文です。</p>
+</section>
+
+
+[Markdown]
+> ［！注意］本文です。
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong></p>
+<p>本文です。</p>
+</section>
+
+
+[Markdown]
+> 	[!NOTE]
+> tab text.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>tab text.</p>
+</section>
+
+
+[Markdown]
+> 　[!NOTE]
+> full-width leading space.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p>full-width leading space.</p>
+</section>

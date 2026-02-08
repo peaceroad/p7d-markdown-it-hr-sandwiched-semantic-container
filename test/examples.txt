@@ -1011,3 +1011,50 @@ A **Warning:** A **string** text.
 <p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> Aaaa <code>bbb</code> aaaa</p>
 </section>
 
+
+[Markdown]
+Title
+----
+
+A paragraph.
+[HTML]
+<h2>Title</h2>
+<p>A paragraph.</p>
+
+
+[Markdown]
+Title
+----
+
+---
+
+Notice. In hr container.
+
+---
+[HTML]
+<h2>Title</h2>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> In hr container.</p>
+</section>
+
+
+[Markdown]
+_ _ _
+
+Notice. In underscore hr container.
+
+_ _ _
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> In underscore hr container.</p>
+</section>
+
+
+[Markdown]
+Notice.
+----
+
+Outside semantic container.
+[HTML]
+<h2>Notice.</h2>
+<p>Outside semantic container.</p>

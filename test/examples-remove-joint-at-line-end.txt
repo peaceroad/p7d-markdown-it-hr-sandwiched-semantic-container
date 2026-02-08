@@ -213,3 +213,15 @@ A paragraph.
 <p>A column paragraph.</p>
 </aside>
 <p>A paragraph.</p>
+
+
+[Markdown]
+---
+
+**Column:** A title.
+
+---
+[HTML]
+<aside class="sc-column">
+<p><strong class="sc-column-label">Column<span class="sc-column-label-joint">:</span></strong> A title.</p>
+</aside>

@@ -18,6 +18,11 @@ const mdJaWithFigure = mdit()
 
 const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
 const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true})
+const mdRequireHrAllFeatures = mdit().use(mditSemanticContainer, {
+  requireHrAtOneParagraph: true,
+  allowBracketJoint: true,
+  githubTypeContainer: true,
+})
 
 const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {removeJointAtLineEnd: true})
 const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true})
@@ -26,6 +31,9 @@ const mdGitHubAlerts = mdit().use(mditSemanticContainer, {githubTypeContainer: t
 
 const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
 const mdAllFeatures = mdit().use(mditSemanticContainer, {allowBracketJoint: true, githubTypeContainer: true})
+const mdLanguagesEnOnly = mdit().use(mditSemanticContainer, {languages: []})
+const mdLanguagesString = mdit().use(mditSemanticContainer, {languages: 'ja'})
+const mdLanguagesDuplicate = mdit().use(mditSemanticContainer, {languages: ['ja', 'ja']})
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -35,12 +43,16 @@ if (isWindows) {
 
 const testData = {
   noOption: __dirname + path.sep +  'examples.txt',
+  htmlLabels: __dirname + path.sep + 'examples-html-labels.txt',
   requireHrAtOneParagraph: __dirname + path.sep +  'examples-require-hr-at-one-paragraph.txt',
+  requireHrMixedOptions: __dirname + path.sep + 'examples-require-hr-mixed-options.txt',
   removeJointAtLineEnd: __dirname + path.sep + 'examples-remove-joint-at-line-end.txt',
   complex: __dirname + path.sep + 'examples-complex.txt',
   githubAlerts: __dirname + path.sep + 'examples-github-type-container.txt',
   bracketFormat: __dirname + path.sep + 'examples-bracket-format.txt',
   mixedFeatures: __dirname + path.sep + 'examples-mixed-types.txt',
+  languagesEnOnly: __dirname + path.sep + 'examples-languages-en-only.txt',
+  languagesNonArrayOrDuplicate: __dirname + path.sep + 'examples-languages-nonarray-and-duplicate.txt',
   strongJaWithFigure: __dirname + path.sep + 'examples-strong-ja-figure-with-p-caption.txt',
 }
 
@@ -55,26 +67,45 @@ const getTestData = (pat) => {
   let ms0 = exampleCont.split(/\n*\[Markdown\]\n/);
   let n = 1;
   while(n < ms0.length) {
-    let mhs = ms0[n].split(/\n+\[HTML[^\]]*?\]\n/);
-    let i = 1;
-    while (i < 2) {
-      if (mhs[i] === undefined) {
-        mhs[i] = '';
-      } else {
-        mhs[i] = mhs[i].replace(/$/,'\n');
+    const entry = ms0[n]
+    const htmlByLabel = {}
+    const htmlHeaders = Array.from(entry.matchAll(/\n+\[HTML(?:\:([^\]]+))?\]\n/g))
+    let markdown = ''
+
+    if (htmlHeaders.length === 0) {
+      markdown = entry
+      htmlByLabel.default = ''
+    } else {
+      markdown = entry.slice(0, htmlHeaders[0].index)
+      for (let hi = 0; hi < htmlHeaders.length; hi++) {
+        const header = htmlHeaders[hi]
+        const label = header[1] ? header[1].trim() : 'default'
+        const start = header.index + header[0].length
+        const end = hi + 1 < htmlHeaders.length ? htmlHeaders[hi + 1].index : entry.length
+        const labelKey = label || 'default'
+        // Keep the first block for a label to preserve legacy behavior.
+        if (htmlByLabel[labelKey] === undefined) {
+          htmlByLabel[labelKey] = entry.slice(start, end).replace(/$/, '\n')
+        }
       }
-      i++;
     }
+
+    const firstHtmlLabel = Object.keys(htmlByLabel)[0]
+    const htmlDefault = htmlByLabel.default !== undefined
+      ? htmlByLabel.default
+      : (firstHtmlLabel ? htmlByLabel[firstHtmlLabel] : '')
+
     ms[n] = {
-      "markdown": mhs[0],
-      "html": mhs[1],
+      "markdown": markdown,
+      "html": htmlDefault,
+      "htmlByLabel": htmlByLabel,
     };
     n++;
   }
   return ms
 }
 
-const runTest = (process, pat, pass, testId) => {
+const runTest = (process, pat, pass, testId, htmlLabel = 'default') => {
   console.log('===========================================================')
   console.log(pat)
   let ms = getTestData(pat)
@@ -103,16 +134,17 @@ const runTest = (process, pat, pass, testId) => {
 
     const m = ms[n].markdown;
     const h = process.render(m)
+    const expectedHtml = ms[n].htmlByLabel?.[htmlLabel] ?? ms[n].html
     console.log('Test: ' + n + ' >>>');
     try {
-      assert.strictEqual(h, ms[n].html);
+      assert.strictEqual(h, expectedHtml);
     } catch(e) {
       pass = false
       //console.log('Test: ' + n + ' >>>');
       //console.log(opt);
       console.log(ms[n].markdown);
       console.log('incorrect:');
-      console.log('H: ' + h +'C: ' + ms[n].html);
+      console.log('H: ' + h +'C: ' + expectedHtml);
     }
     n++;
   }
@@ -121,9 +153,15 @@ const runTest = (process, pat, pass, testId) => {
 
 let pass = true
 pass = runTest(md, testData.noOption, pass)
+pass = runTest(md, testData.htmlLabels, pass)
+pass = runTest(mdRequireHrAtOneParagraph, testData.htmlLabels, pass, undefined, 'requireHrAtOneParagraph')
 pass = runTest(mdRequireHrAtOneParagraph, testData.requireHrAtOneParagraph, pass)
+pass = runTest(mdRequireHrAllFeatures, testData.requireHrMixedOptions, pass)
 pass = runTest(mdRemoveJointAtLineEnd, testData.removeJointAtLineEnd, pass)
 pass = runTest(md, testData.complex, pass)
+pass = runTest(mdLanguagesEnOnly, testData.languagesEnOnly, pass)
+pass = runTest(mdLanguagesString, testData.languagesNonArrayOrDuplicate, pass)
+pass = runTest(mdLanguagesDuplicate, testData.languagesNonArrayOrDuplicate, pass)
 console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
 pass = runTest(mdJa, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)

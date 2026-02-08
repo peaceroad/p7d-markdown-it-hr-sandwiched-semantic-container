@@ -1,0 +1,9 @@
+[Markdown]
+Notice. A notice.
+
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+[HTML:requireHrAtOneParagraph]
+<p>Notice. A notice.</p>

@@ -62,3 +62,9 @@ example.html
 <hr>
 
 
+[Markdown]
+通知：お知らせです。
+
+[HTML]
+<p>通知：お知らせです。</p>
+

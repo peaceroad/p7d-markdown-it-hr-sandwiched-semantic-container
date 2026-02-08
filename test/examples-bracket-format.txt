@@ -235,3 +235,54 @@ This is a warning content.
 <p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></strong> A <strong>warning</strong> message.</p>
 <p>This is a warning content.</p>
 </section>
+
+
+[Markdown]
+[Note] No hr one paragraph.
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">[</span>Note<span class="sc-note-label-joint">]</span></span> No hr one paragraph.</p>
+</section>
+
+
+[Markdown]
+[Note]No hr one paragraph.
+
+[HTML]
+<p>[Note]No hr one paragraph.</p>
+
+
+[Markdown]
+［Note］本文。
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><span class="sc-note-label"><span class="sc-note-label-joint">［</span>Note<span class="sc-note-label-joint">］</span></span>本文。</p>
+</section>
+
+
+[Markdown]
+---
+
+__[Warning]__ Warning message.
+
+---
+
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></strong> Warning message.</p>
+</section>
+
+
+[Markdown]
+---
+
+__［Note］__ Full-width note.
+
+---
+
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">［</span>Note<span class="sc-note-label-joint">］</span></strong>Full-width note.</p>
+</section>
