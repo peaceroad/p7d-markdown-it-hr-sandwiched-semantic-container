@@ -38,3 +38,8 @@ Performance considerations:
 - Matchers also pre-bucket semantics by detectable leading label character and only scan candidate subsets (with safe fallback for regex-like alias patterns).
 - Match caches are always enabled; this favors preview workflows (repeated renders of largely similar content), which are the primary target usage for this plugin.
 - Benchmarking guidance: use deterministic corpus + median-per-render (`npm run performance:ab`) for reliable before/after comparisons; avoid random-input benchmarks when evaluating optimizer impact.
+- Case-insensitive matching is not full Unicode case folding; for locales with special rules (e.g., German `ß`/`ẞ`/`SS`), register explicit aliases.
+
+Testing notes:
+- The test loader supports multiple expected HTML blocks per case via `[HTML:<label>]` headers.
+- Default assertions use `[HTML]` (or the first HTML block if unlabeled); labeled assertions are selected explicitly from `test/test.js`.

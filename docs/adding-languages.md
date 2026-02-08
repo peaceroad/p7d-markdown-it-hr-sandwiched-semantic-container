@@ -38,3 +38,7 @@ Example `semantics/es.json`:
 - Unknown locale codes in `languages` are ignored safely.
 - Duplicate labels are de-duplicated when semantics are built.
 - Regex-like aliases are supported, but aliases with a clear literal leading character are faster in hot paths.
+- Matching is case-insensitive, but it does not perform full Unicode case folding.
+  For example, German `ß` is not treated the same as `ẞ` or `SS` automatically.
+- For languages with such special case rules, add explicit aliases for each expected variant.
+  (For typical Spanish labels, standard case-insensitive matching is usually sufficient.)
