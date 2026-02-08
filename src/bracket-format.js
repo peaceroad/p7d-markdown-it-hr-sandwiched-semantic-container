@@ -1,10 +1,24 @@
 const createBracketFormat = (semantics) => {
+  const semanticsLength = semantics.length
   const strongMark = '[*_]{2}'
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
+  const CODE_SPACE = 32
   const CODE_LEFT_BRACKET = 91
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+  const removeLiteralPrefix = (value, prefix) => {
+    if (!value || !prefix) return value
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value
+  }
+  const trimLeadingAsciiSpaces = (value) => {
+    if (!value) return value
+    let index = 0
+    while (index < value.length && value.charCodeAt(index) === CODE_SPACE) {
+      index++
+    }
+    return index === 0 ? value : value.slice(index)
+  }
   const getLiteralLeadKey = (raw) => {
     if (!raw) return null
     const value = raw.trim()
@@ -24,7 +38,7 @@ const createBracketFormat = (semantics) => {
   const buildSemanticLeadCandidates = () => {
     const byLead = new Map()
     const fallback = []
-    for (let sn = 0; sn < semantics.length; sn++) {
+    for (let sn = 0; sn < semanticsLength; sn++) {
       const sem = semantics[sn]
       const keys = new Set()
       const semKey = getLiteralLeadKey(sem.name)
@@ -120,7 +134,7 @@ const createBracketFormat = (semantics) => {
           if(actualName) break
         }
       } else {
-        while (sn < semantics.length) {
+        while (sn < semanticsLength) {
           actualName = content.match(semanticsBracketReg[sn])
           if(actualName) break
           sn++
@@ -134,21 +148,19 @@ const createBracketFormat = (semantics) => {
     }
 
     // Parse regex match results
-    let strongMarkLocal, openBracket, semanticName, closeBracket, trailingSpace
+    let strongMarkLocal, openBracket, semanticName, closeBracket
     if (actualName[2]) {
       // Half-width bracket match: (strongMark)?([[])(semantics)([])(space)
       strongMarkLocal = actualName[1]
       openBracket = actualName[2]
       semanticName = actualName[3]
       closeBracket = actualName[4]
-      trailingSpace = actualName[5]
     } else if (actualName[7]) {
       // Full-width bracket match: (strongMark)?([［])(semantics)([］])(space)
       strongMarkLocal = actualName[6]
       openBracket = actualName[7]
       semanticName = actualName[8]
       closeBracket = actualName[9]
-      trailingSpace = actualName[10]
     }
 
     let en = n
@@ -177,24 +189,18 @@ const createBracketFormat = (semantics) => {
       range: [n, rangeEnd],
       continued: checked,
       sn: sn,
-      hrType: hrType,
       actualCont: actualName[0], // full match
-      actualContNoStrong: strongMarkLocal ? actualName[0].replace(/\*\*/g, '') : actualName[0],
       actualName: semanticName,
-      actualNameJoint: '',
-      hasLastJoint: false,
-      hasHalfJoint: false,
       isBracketFormat: true,
       isStrongBracket: !!strongMarkLocal,
       openBracket: openBracket,
       closeBracket: closeBracket,
-      trailingSpace: trailingSpace || ''
     })
     return true
   }
 
   // Bracket format semantic container setup function
-  const setBracketSemanticContainer = (state, n, hrType, sc, sci, opt) => {
+  const setBracketSemanticContainer = (state, _n, hrType, sc, sci, _opt) => {
     const tokens = state.tokens
     let nJump = 0
     let rs = sc.range[0]
@@ -298,17 +304,7 @@ const createBracketFormat = (semantics) => {
       for (let i = labelEndIndex; i < ntChildren.length; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'text') {
           if (ntChildren[i].content && ntChildren[i].content.trim()) {
-            if (sc.openBracket === '[') {
-              ntChildren[i].content = ntChildren[i].content.replace(/^ +/, '')
-            } else {
-              if (sc.isStrongBracket) {
-                const strongBracketPattern = new RegExp('^\\*\\*［' + sc.actualName + '］\\*\\* *')
-                ntChildren[i].content = ntChildren[i].content.replace(strongBracketPattern, '')
-              } else if (sc.trailingSpace && sc.trailingSpace.length > 0) {
-                const spacePattern = new RegExp('^' + sc.trailingSpace.replace(/\\s/g, '\\\\s'))
-                ntChildren[i].content = ntChildren[i].content.replace(spacePattern, '')
-              }
-            }
+            ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
             break
           }
         }
@@ -320,11 +316,11 @@ const createBracketFormat = (semantics) => {
           && ntChildren[i + 1] && ntChildren[i + 1].content) {
           
           const strongContent = ntChildren[i + 1].content
-          const originalPattern = sc.openBracket === '[' 
-            ? new RegExp('^\\[' + sc.actualName + '\\]$')
-            : new RegExp('^［' + sc.actualName + '］$')
+          const originalLabel = sc.openBracket === '['
+            ? '[' + sc.actualName + ']'
+            : '［' + sc.actualName + '］'
           
-          if (originalPattern.test(strongContent)) {
+          if (strongContent === originalLabel) {
             ntChildren.splice(i, 3)
             if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i-1] && ntChildren[i-1].type === 'text') {
               ntChildren[i-1].content += ntChildren[i].content
@@ -342,17 +338,15 @@ const createBracketFormat = (semantics) => {
         for (let i = 10; i < ntChildren.length; i++) {
           if (ntChildren[i] && ntChildren[i].type === 'text') {
             if (ntChildren[i].content && ntChildren[i].content.trim()) {
-              ntChildren[i].content = ntChildren[i].content.replace(/^ +/, '')
+              ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
               break
             }
           }
         }
-      } else if (sc.openBracket === '［' && sc.isStrongBracket) {
+      } else if (sc.openBracket === '［') {
         for (let i = 9; i < ntChildren.length; i++) {
           if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
-            if (ntChildren[i].content.startsWith(' ')) {
-              ntChildren[i].content = ntChildren[i].content.replace(/^ +/, '')
-            }
+            ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
             break
           }
         }
@@ -394,22 +388,12 @@ const createBracketFormat = (semantics) => {
 
       for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
-          if (sc.openBracket === '[') {
-            const bracketPattern = new RegExp('^\\[' + sc.actualName + '\\] +')
-            ntChildren[i].content = ntChildren[i].content.replace(bracketPattern, '')
-          } else {
-            const bracketPattern = new RegExp('^［' + sc.actualName + '］' + (sc.trailingSpace || ''))
-            ntChildren[i].content = ntChildren[i].content.replace(bracketPattern, '')
-          }
+          ntChildren[i].content = removeLiteralPrefix(ntChildren[i].content, sc.actualCont)
           break
         }
       }
 
-      if (sc.openBracket === '[') {
-        nt.content = nt.content.replace(new RegExp('^\\[' + sc.actualName + '\\] +'), '')
-      } else {
-        nt.content = nt.content.replace(new RegExp('^［' + sc.actualName + '］' + (sc.trailingSpace || '')), '')
-      }
+      nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
       let startIndex = sc.openBracket === '[' ? 10 : 9
       for (let i = startIndex; i < ntChildren.length - 2; i++) {
@@ -418,11 +402,11 @@ const createBracketFormat = (semantics) => {
           && ntChildren[i + 1] && ntChildren[i + 1].content) {
           
           const strongContent = ntChildren[i + 1].content
-          const originalPattern = sc.openBracket === '[' 
-            ? new RegExp('^\\[' + sc.actualName + '\\]$')
-            : new RegExp('^［' + sc.actualName + '］$')
+          const originalLabel = sc.openBracket === '['
+            ? '[' + sc.actualName + ']'
+            : '［' + sc.actualName + '］'
           
-          if (originalPattern.test(strongContent)) {
+          if (strongContent === originalLabel) {
             ntChildren.splice(i, 3)
             if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content === ' ') {
               if (ntChildren[i - 1] && ntChildren[i - 1].type === 'text' && ntChildren[i - 1].content.endsWith(' ')) {

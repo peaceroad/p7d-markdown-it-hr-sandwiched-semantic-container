@@ -5,19 +5,26 @@ const localeLabels = {
   ja: jaLabels,
 }
 
-const uniq = (arr) => {
+const dedupeAliases = (aliases) => {
+  if (!aliases || aliases.length < 2) return aliases || []
   const seen = new Set()
-  const result = []
-  for (const item of arr) {
-    if (seen.has(item)) continue
+  let result = null
+  for (const item of aliases) {
+    if (seen.has(item)) {
+      if (!result) {
+        // Allocate only when duplicates are actually found.
+        result = Array.from(seen)
+      }
+      continue
+    }
     seen.add(item)
-    result.push(item)
+    if (result) result.push(item)
   }
-  return result
+  return result || aliases
 }
 
 export const buildSemantics = (languages = ['ja']) => {
-  const includeLocales = new Set(languages.filter(Boolean))
+  const includeLocales = Array.isArray(languages) ? languages : [languages]
   const semantics = enSemantics.map((entry) => ({
     name: entry.name,
     tag: entry.tag,
@@ -25,7 +32,12 @@ export const buildSemantics = (languages = ['ja']) => {
     aliases: entry.aliases ? [...entry.aliases] : [],
   }))
 
-  for (const lang of includeLocales) {
+  const seenLangs = new Set()
+  for (let i = 0; i < includeLocales.length; i++) {
+    const lang = includeLocales[i]
+    if (!lang) continue
+    if (seenLangs.has(lang)) continue
+    seenLangs.add(lang)
     if (lang === 'en') continue
     const labels = localeLabels[lang]
     if (!labels) continue
@@ -37,9 +49,9 @@ export const buildSemantics = (languages = ['ja']) => {
     }
   }
 
-  semantics.forEach((sem) => {
-    sem.aliases = uniq(sem.aliases)
-  })
+  for (let i = 0; i < semantics.length; i++) {
+    semantics[i].aliases = dedupeAliases(semantics[i].aliases)
+  }
 
   return semantics
 }

@@ -11,21 +11,62 @@ const MATCH_CACHE_MAX = 256
 const CACHE_MISS = 0
 const CODE_STAR = 42
 const CODE_UNDERSCORE = 95
+const CODE_HASH = 35
+const CODE_SPACE = 32
 const CODE_LEFT_BRACKET = 91
 const CODE_FULLWIDTH_LEFT_BRACKET = 65339
 
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const isAsciiAlnum = (code) => (
-  (code >= 48 && code <= 57)
-  || (code >= 65 && code <= 90)
-  || (code >= 97 && code <= 122)
-)
-const isPotentialLabelLeadCode = (code) => (
-  code === CODE_STAR
-  || code === CODE_UNDERSCORE
-  || code >= 128
-  || isAsciiAlnum(code)
-)
+const isSemanticJointChar = (char) => char === ':' || char === '.' || char === '　' || char === '：' || char === '。' || char === '．'
+const removeLiteralPrefix = (value, prefix) => {
+  if (!value || !prefix) return value
+  return value.startsWith(prefix) ? value.slice(prefix.length) : value
+}
+const removeLiteralPrefixAndFollowingSpaces = (value, prefix) => {
+  if (!value || !prefix || !value.startsWith(prefix)) return value
+  let index = prefix.length
+  while (index < value.length && value.charCodeAt(index) === CODE_SPACE) {
+    index++
+  }
+  return value.slice(index)
+}
+const trimLeadingAsciiSpaces = (value) => {
+  if (!value) return value
+  let index = 0
+  while (index < value.length && value.charCodeAt(index) === CODE_SPACE) {
+    index++
+  }
+  return index === 0 ? value : value.slice(index)
+}
+const isAsciiSpacesOnly = (value) => {
+  if (!value) return true
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) !== CODE_SPACE) return false
+  }
+  return true
+}
+const parseStrongLabelContent = (strongContent, actualName) => {
+  if (!strongContent || !actualName || !strongContent.startsWith(actualName)) return null
+
+  let index = actualName.length
+  let joint = ''
+  const jointChar = strongContent[index]
+  if (isSemanticJointChar(jointChar)) {
+    joint = jointChar
+    index++
+  }
+
+  for (let i = index; i < strongContent.length; i++) {
+    if (strongContent.charCodeAt(i) !== CODE_SPACE) return null
+  }
+
+  return {
+    joint,
+    trailingSpaces: strongContent.slice(index),
+  }
+}
+const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
 const getLiteralLeadKey = (raw) => {
   if (!raw) return null
   const value = raw.trim()
@@ -267,18 +308,8 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
     return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
   }
-  const escapedActualContNoStrong = escapeRegExp(sc.actualContNoStrong)
-  const escapedActualCont = escapeRegExp(sc.actualCont)
   const escapedActualName = escapeRegExp(sc.actualName)
-  const escapedActualNameJoint = escapeRegExp(sc.actualNameJoint)
-
-  const regActualContNoStrong = new RegExp('^' + escapedActualContNoStrong)
-  const regActualContNoStrongSpace = new RegExp('^' + escapedActualContNoStrong + ' *')
-  const regActualContAsterisk = new RegExp('^' + escapedActualCont)
-  const regLeadSpace = /^ */
-  const regStrongLabel = new RegExp('^' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')?( *)$')
   const regStrongPattern = new RegExp('\\*\\* *?' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
-  const regJointRemoval = new RegExp('^' + escapedActualNameJoint)
 
   // for continued semantic container.
   if(sci > 1) {
@@ -342,19 +373,19 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   }
 
   if(moveToAriaLabel) {
-    nt.content = nt.content.replace(regActualContNoStrong, '')
+    nt.content = removeLiteralPrefix(nt.content, sc.actualContNoStrong)
     const firstChild = ntChildren?.[0]
     if (firstChild?.content) {
-      firstChild.content = firstChild.content.replace(regActualContNoStrongSpace, '')
+      firstChild.content = removeLiteralPrefixAndFollowingSpaces(firstChild.content, sc.actualContNoStrong)
     }
-    nt.content = nt.content.replace(regLeadSpace, '')
+    nt.content = trimLeadingAsciiSpaces(nt.content)
     return nJump
   }
 
-  if (/^#+/.test(nt.content)) {
+  if (nt.content?.charCodeAt(0) === CODE_HASH) {
     nJump += 2
   }
-  if (/^[*_]{2}/.test(nt.content) ) {
+  if (nt.content?.startsWith('**') || nt.content?.startsWith('__')) {
     let foundLabelStrong = false
     
     for (let i = 0; i < ntChildren.length - 2; i++) {
@@ -363,9 +394,9 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
         && ntChildren[i + 1] && ntChildren[i + 1].content) {
         
         const strongContent = ntChildren[i + 1].content
-        const hasStrongJa = strongContent.match(regStrongLabel)
+        const strongLabel = parseStrongLabelContent(strongContent, sc.actualName)
         
-        if (hasStrongJa) {
+        if (strongLabel) {
           foundLabelStrong = true
           
           let textAfterStrongIndex = -1
@@ -384,8 +415,8 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
           jointContent.content = sc.actualNameJoint
           const jointSpanClose = new state.Token('span_close', 'span', -1)
           
-          if (hasStrongJa[1]) {
-            const trailingSpaces = hasStrongJa[2] || ''
+          if (strongLabel.joint) {
+            const trailingSpaces = strongLabel.trailingSpaces || ''
             ntChildren[i + 1].content = sc.actualName
             ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
             
@@ -395,13 +426,13 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
                 if (ntChildren[adjustedTextIndex].content === '') {
                   ntChildren[adjustedTextIndex].content = ' '
                 } else {
-                  ntChildren[adjustedTextIndex].content = ' ' + ntChildren[adjustedTextIndex].content.replace(/^ +/, '')
+                  ntChildren[adjustedTextIndex].content = ' ' + trimLeadingAsciiSpaces(ntChildren[adjustedTextIndex].content)
                 }
               }
             }
           } else if (sc.hasLastJoint) {
             if (ntChildren[i + 3] && ntChildren[i + 3].content) {
-              ntChildren[i + 3].content = ntChildren[i + 3].content.replace(regJointRemoval, '')
+              ntChildren[i + 3].content = removeLiteralPrefix(ntChildren[i + 3].content, sc.actualNameJoint)
             }
             ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
           }
@@ -433,9 +464,9 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
           const replacement = trailingSpaces ? trailingSpaces[0] : '';
           firstChild.content = firstChild.content.replace(regStrongPattern, replacement)
         }
-        firstChild.content = firstChild.content.replace(regActualContAsterisk, '')
+        firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualCont)
       }
-      nt.content = nt.content.replace(regActualContAsterisk, '')
+      nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
       ntChildren.splice(0, 0, strongBefore, strongOpen, strongContent, jointSpan, jointContent, jointSpanClose, strongClose)
     }
@@ -455,9 +486,9 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
 
     const firstChild = ntChildren?.[0]
     if (sc.hasHalfJoint && firstChild?.content) {
-      firstChild.content = ' ' + firstChild.content.replace(regActualContNoStrong, '')
+      firstChild.content = ' ' + removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
     } else if (firstChild?.content) {
-      firstChild.content = firstChild.content.replace(regActualContNoStrong, '')
+      firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
     }
 
     ntChildren.splice(0, 0, lt_first, lt_span_open, lt_span_content, lt_joint_span_open, lt_joint_content, lt_joint_span_close, lt_span_close)
@@ -468,7 +499,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     let jointIsAtLineEnd = false
     if (ntChildren && ntChildren.length > 0) {
       const lastToken = ntChildren[ntChildren.length - 1]
-      if (lastToken.type === 'text' && /^ *$/.test(lastToken.content)) {
+      if (lastToken.type === 'text' && isAsciiSpacesOnly(lastToken.content)) {
         jointIsAtLineEnd = true
         lastToken.content = ''
       } else if (lastToken.type === 'strong_close') {
@@ -480,8 +511,8 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
 
     if (jointIsAtLineEnd) {
       for (let i = 0; i < ntChildren.length - 2; i++) {
-        if (ntChildren[i] && ntChildren[i].attrGet && ntChildren[i].attrGet('class') && 
-            ntChildren[i].attrGet('class').includes('-label-joint')) {
+        const className = ntChildren[i] && ntChildren[i].attrGet ? ntChildren[i].attrGet('class') : ''
+        if (className && className.includes('-label-joint')) {
           ntChildren.splice(i, 3) // Remove joint span open, content, and close
           break
         }
@@ -543,9 +574,14 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     return n
   }
 
-  if(/\*/.test(prevToken.markup)) hrType = '*'
-  if(/-/.test(prevToken.markup)) hrType = '-'
-  if(/_/.test(prevToken.markup)) hrType = '_'
+  const prevMarkup = prevToken.markup || ''
+  if (prevMarkup.includes('*')) {
+    hrType = '*'
+  } else if (prevMarkup.includes('-')) {
+    hrType = '-'
+  } else if (prevMarkup.includes('_')) {
+    hrType = '_'
+  }
 
   if (!checkContainerRanges(state, n, hrType, sc)) {
     n++

@@ -1,10 +1,67 @@
 const createGitHubTypeContainer = (semantics) => {
+  const semanticsLength = semantics.length
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
+  const CODE_TAB = 9
+  const CODE_LF = 10
+  const CODE_VTAB = 11
+  const CODE_FF = 12
+  const CODE_CR = 13
+  const CODE_SPACE = 32
+  const CODE_RIGHT_BRACKET = 93
   const CODE_LEFT_BRACKET = 91
   const CODE_BANG = 33
+  const CODE_FULLWIDTH_SPACE = 12288
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+  const CODE_FULLWIDTH_RIGHT_BRACKET = 65341
   const CODE_FULLWIDTH_BANG = 65281
+  const isTrimWhitespaceCode = (code) => (
+    code === CODE_SPACE
+    || code === CODE_TAB
+    || code === CODE_LF
+    || code === CODE_VTAB
+    || code === CODE_FF
+    || code === CODE_CR
+    || code === CODE_FULLWIDTH_SPACE
+  )
+  const trimLeadingWhitespace = (value) => {
+    if (!value) return value
+    let index = 0
+    while (index < value.length && isTrimWhitespaceCode(value.charCodeAt(index))) {
+      index++
+    }
+    return index === 0 ? value : value.slice(index)
+  }
+  const stripAlertMarkerPrefix = (value) => {
+    if (!value) return value
+
+    const firstCode = value.charCodeAt(0)
+    const secondCode = value.charCodeAt(1)
+    let closeCode = 0
+    let scanFrom = -1
+
+    if (firstCode === CODE_LEFT_BRACKET && secondCode === CODE_BANG) {
+      closeCode = CODE_RIGHT_BRACKET
+      scanFrom = 2
+    } else if (firstCode === CODE_FULLWIDTH_LEFT_BRACKET
+      && (secondCode === CODE_BANG || secondCode === CODE_FULLWIDTH_BANG)) {
+      closeCode = CODE_FULLWIDTH_RIGHT_BRACKET
+      scanFrom = 2
+    } else {
+      return value
+    }
+
+    let closeIndex = -1
+    for (let i = scanFrom; i < value.length; i++) {
+      if (value.charCodeAt(i) === closeCode) {
+        closeIndex = i
+        break
+      }
+    }
+    if (closeIndex === -1) return value
+
+    return trimLeadingWhitespace(value.slice(closeIndex + 1))
+  }
   const getLiteralLeadKey = (raw) => {
     if (!raw) return null
     const value = raw.trim()
@@ -24,7 +81,7 @@ const createGitHubTypeContainer = (semantics) => {
   const buildSemanticLeadCandidates = () => {
     const byLead = new Map()
     const fallback = []
-    for (let sn = 0; sn < semantics.length; sn++) {
+    for (let sn = 0; sn < semanticsLength; sn++) {
       const sem = semantics[sn]
       const keys = new Set()
       const semKey = getLiteralLeadKey(sem.name)
@@ -134,7 +191,7 @@ const createGitHubTypeContainer = (semantics) => {
         return result
       }
     } else {
-      for (let sn = 0; sn < semantics.length; sn++) {
+      for (let sn = 0; sn < semanticsLength; sn++) {
         semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
         if (!semanticMatch) continue
         const result = { sn, semanticMatch }
@@ -190,12 +247,10 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (currentToken.type !== 'blockquote_open') return false
 
-    let paragraphOpenIndex = -1
     let paragraphToken = null
     
     for (let i = n + 1; i < tokensLength; i++) {
       if (tokens[i].type === 'paragraph_open') {
-        paragraphOpenIndex = i
         paragraphToken = tokens[i + 1]
         break
       }
@@ -228,37 +283,26 @@ const createGitHubTypeContainer = (semantics) => {
     if (blockquoteCloseIndex === -1) return false
 
     const semanticType = semanticMatch[1]
-    const isFullWidth = /［/.test(semanticMatch[0])
+    const isFullWidth = semanticMatch[0].charCodeAt(0) === CODE_FULLWIDTH_LEFT_BRACKET
     const openBracket = isFullWidth ? '［' : '['
     const closeBracket = isFullWidth ? '］' : ']'
 
     sc.push({
       range: [n, blockquoteCloseIndex],
-      continued: checked,
       sn: sn,
-      hrType: hrType,
-      actualCont: semanticMatch[0],
-      actualContNoStrong: semanticMatch[0],
       actualName: semanticType,
-      actualNameJoint: '',
-      hasLastJoint: false,
-      hasHalfJoint: !isFullWidth,
-      isBracketFormat: true,
-      isStrongBracket: true,
       openBracket: openBracket,
       closeBracket: closeBracket,
-      trailingSpace: isFullWidth ? '' : ' ',
       isGitHubAlert: true
     })
 
     return true
   }
 
-  const setGitHubAlertsSemanticContainer = (state, n, hrType, sc, sci, opt) => {
+  const setGitHubAlertsSemanticContainer = (state, _n, _hrType, sc, _sci, _opt) => {
     const tokens = state.tokens
-    let nJump = 0
-    let rs = sc.range[0]
-    let re = sc.range[1]
+    const rs = sc.range[0]
+    const re = sc.range[1]
     const sn = sc.sn
     const sem = semantics[sn]
 
@@ -275,7 +319,7 @@ const createGitHubTypeContainer = (semantics) => {
       }
     }
 
-    if (paragraphOpenIndex === -1) return nJump
+    if (paragraphOpenIndex === -1) return 0
     const startRefToken = tokens[rs]
     let endRefToken = tokens[re]
     if (!endRefToken?.map) {
@@ -376,18 +420,11 @@ const createGitHubTypeContainer = (semantics) => {
       labelParagraphInline.content = ''
 
       if (paragraphChildren[0] && paragraphChildren[0].type === 'text') {
-        const originalContent = paragraphChildren[0].content
-        let cleanedContent = originalContent
-        cleanedContent = cleanedContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)\s*/, '')
-        cleanedContent = cleanedContent.replace(/^\s+/, '')
-        paragraphChildren[0].content = cleanedContent
+        paragraphChildren[0].content = stripAlertMarkerPrefix(paragraphChildren[0].content)
       }
 
       if (paragraphInlineToken.content) {
-        let finalContent = paragraphInlineToken.content
-        finalContent = finalContent.replace(/^(?:\[![^\]]+\]|［[!！][^\]]*］)\s*/, '')
-        finalContent = finalContent.replace(/^\s+/, '')
-        paragraphInlineToken.content = finalContent
+        paragraphInlineToken.content = stripAlertMarkerPrefix(paragraphInlineToken.content)
       }
 
       trimLeadingBreaks(paragraphChildren)
@@ -401,7 +438,7 @@ const createGitHubTypeContainer = (semantics) => {
       }
     }
 
-    return nJump
+    return 0
   }
 
   const githubAlertsBlock = (state, start, end, silent) => {
@@ -412,8 +449,7 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (state.src.charCodeAt(pos) !== 0x3E) return false
 
-    let firstLineContent = state.src.slice(pos + 1, state.eMarks[start])
-    firstLineContent = firstLineContent.replace(/^\s+/, '')
+    let firstLineContent = trimLeadingWhitespace(state.src.slice(pos + 1, state.eMarks[start]))
     if (!findGitHubSemanticMatch(firstLineContent)) return false
     if (silent) return true
 
