@@ -25,12 +25,19 @@ const dedupeAliases = (aliases) => {
 
 export const buildSemantics = (languages = ['ja']) => {
   const includeLocales = Array.isArray(languages) ? languages : [languages]
-  const semantics = enSemantics.map((entry) => ({
-    name: entry.name,
-    tag: entry.tag,
-    attrs: entry.attrs,
-    aliases: entry.aliases ? [...entry.aliases] : [],
-  }))
+  const semantics = enSemantics.map((entry) => {
+    const attrs = Array.isArray(entry.attrs) ? entry.attrs : []
+    return {
+      name: entry.name,
+      tag: entry.tag,
+      attrs,
+      aliases: entry.aliases ? [...entry.aliases] : [],
+      className: 'sc-' + entry.name,
+      labelClass: 'sc-' + entry.name + '-label',
+      labelJointClass: 'sc-' + entry.name + '-label-joint',
+      hasAriaLabel: attrs.some((attr) => attr[0] === 'aria-label'),
+    }
+  })
 
   const seenLangs = new Set()
   for (let i = 0; i < includeLocales.length; i++) {

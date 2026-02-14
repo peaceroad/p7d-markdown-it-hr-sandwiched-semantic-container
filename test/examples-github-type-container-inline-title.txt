@@ -1,0 +1,42 @@
+[Markdown]
+> [!NOTE]
+> This is a helpful tip.
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> This is a helpful tip.</p>
+</section>
+
+
+[Markdown]
+> [!WARNING]
+> First paragraph.
+>
+> Second paragraph.
+[HTML]
+<section class="sc-warning" role="doc-notice">
+<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong> First paragraph.</p>
+<p>Second paragraph.</p>
+</section>
+
+
+[Markdown]
+> [!CAUTION]
+> ```
+> code block
+> ```
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">[</span>CAUTION<span class="sc-caution-label-joint">]</span></strong></p>
+<pre><code>
+code block
+</code></pre>
+</section>
+
+
+[Markdown]
+> ［！注意］
+> これは注意です。
+[HTML]
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong> これは注意です。</p>
+</section>

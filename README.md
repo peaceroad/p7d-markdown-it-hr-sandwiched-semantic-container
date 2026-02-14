@@ -641,7 +641,7 @@ Enable GitHub-style alert containers using `> [!TYPE]` syntax or full-width `> ï
 mdit().use(mditSemanticContainer, {"githubTypeContainer": true})
 ```
 
-Example usage:
+Default rendering keeps a GitHub-like title paragraph layout:
 
 ```markdown
 [Markdown]
@@ -658,6 +658,23 @@ Example usage:
 <section class="sc-warning" role="doc-notice">
 <p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong></p>
 <p>This is a warning message.</p>
+</section>
+```
+
+To use the plugin's inline-label style instead, enable:
+
+```js
+mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true
+})
+```
+
+This produces:
+
+```html
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> This is a helpful note.</p>
 </section>
 ```
 

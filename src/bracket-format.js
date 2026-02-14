@@ -1,6 +1,6 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
 import { resolveLabelControl } from './label-control.js'
-import { createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 
 const createBracketFormat = (semantics) => {
   const strongMark = '[*_]{2}'
@@ -250,23 +250,7 @@ const createBracketFormat = (semantics) => {
       rs += sci - 1
       re += sci - 1
     }
-    const startRefToken = (hrType && tokens[rs - 1] && tokens[rs - 1].type === 'hr')
-      ? tokens[rs - 1]
-      : tokens[rs]
-    let endRefToken = null
-    if (hrType && tokens[re] && tokens[re].type === 'hr') {
-      endRefToken = tokens[re]
-    } else {
-      for (let i = re - 1; i >= rs; i--) {
-        if (tokens[i] && tokens[i].map) {
-          endRefToken = tokens[i]
-          break
-        }
-      }
-      if (!endRefToken && tokens[rs] && tokens[rs].map) {
-        endRefToken = tokens[rs]
-      }
-    }
+    const { startMap, endMap } = resolveContainerMaps(tokens, rs, re, hrType)
     const nt = tokens[rs+1]
     const ntChildren = nt.children
     const startToken = tokens[rs]
@@ -275,12 +259,9 @@ const createBracketFormat = (semantics) => {
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     // Inline child tokens normally do not carry map; paragraph/inline token maps remain the sync anchor.
 
-    const startMap = startRefToken?.map
-    const endMap = endRefToken?.map
     const sToken = createContainerStartToken(
       state,
       sem,
-      'sc-' + sem.name,
       labelText,
       hideLabel,
       sc.actualName,
@@ -305,7 +286,7 @@ const createBracketFormat = (semantics) => {
 
       if (sc.isStrongBracket) {
         const strongOpen = new state.Token('strong_open', 'strong', 1)
-        strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
+        strongOpen.attrJoin('class', sem.labelClass)
         const labelContent = new state.Token('text', '', 0)
         labelContent.content = labelText
         const strongClose = new state.Token('strong_close', 'strong', -1)
@@ -313,7 +294,7 @@ const createBracketFormat = (semantics) => {
         ensureLeadingSpaceAfterLabel(ntChildren, 3)
       } else {
         const spanOpen = new state.Token('span_open', 'span', 1)
-        spanOpen.attrJoin("class", "sc-" + sem.name + "-label")
+        spanOpen.attrJoin('class', sem.labelClass)
         const labelContent = new state.Token('text', '', 0)
         labelContent.content = labelText
         const spanClose = new state.Token('span_close', 'span', -1)
@@ -326,10 +307,10 @@ const createBracketFormat = (semantics) => {
 
     if (sc.isStrongBracket) {
       const lt_strong_open = new state.Token('strong_open', 'strong', 1)
-      lt_strong_open.attrJoin("class", "sc-" + sem.name + "-label")
+      lt_strong_open.attrJoin('class', sem.labelClass)
 
       const lt_open_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_open_bracket_span.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      lt_open_bracket_span.attrJoin('class', sem.labelJointClass)
       const lt_open_bracket_content = new state.Token('text', '', 0)
       lt_open_bracket_content.content = sc.openBracket
       const lt_open_bracket_span_close = new state.Token('span_close', 'span', -1)
@@ -338,7 +319,7 @@ const createBracketFormat = (semantics) => {
       lt_span_content.content = sc.actualName
 
       const lt_close_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_close_bracket_span.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      lt_close_bracket_span.attrJoin('class', sem.labelJointClass)
       const lt_close_bracket_content = new state.Token('text', '', 0)
       lt_close_bracket_content.content = sc.closeBracket
       const lt_close_bracket_span_close = new state.Token('span_close', 'span', -1)
@@ -391,10 +372,10 @@ const createBracketFormat = (semantics) => {
       }
     } else {
       const lt_span_open = new state.Token('span_open', 'span', 1)
-      lt_span_open.attrJoin("class", "sc-" + sem.name + "-label")
+      lt_span_open.attrJoin('class', sem.labelClass)
 
       const lt_open_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_open_bracket_span.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      lt_open_bracket_span.attrJoin('class', sem.labelJointClass)
       const lt_open_bracket_content = new state.Token('text', '', 0)
       lt_open_bracket_content.content = sc.openBracket
       const lt_open_bracket_span_close = new state.Token('span_close', 'span', -1)
@@ -403,7 +384,7 @@ const createBracketFormat = (semantics) => {
       lt_span_content.content = sc.actualName
 
       const lt_close_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_close_bracket_span.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      lt_close_bracket_span.attrJoin('class', sem.labelJointClass)
       const lt_close_bracket_content = new state.Token('text', '', 0)
       lt_close_bracket_content.content = sc.closeBracket
       const lt_close_bracket_span_close = new state.Token('span_close', 'span', -1)

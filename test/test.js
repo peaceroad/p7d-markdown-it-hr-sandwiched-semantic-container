@@ -28,10 +28,19 @@ const mdRequireHrAllFeatures = mdit().use(mditSemanticContainer, {
 const mdRemoveJointAtLineEnd = mdit().use(mditSemanticContainer, {removeJointAtLineEnd: true})
 const mdRemoveJointAtLineEndJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {removeJointAtLineEnd: true})
 
-const mdGitHubAlerts = mdit().use(mditSemanticContainer, {githubTypeContainer: true}).use(mditStrongJa)
+const mdGitHubAlerts = mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+}).use(mditStrongJa)
+const mdGitHubAlertsInlineTitle = mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+})
 
 const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
-const mdAllFeatures = mdit().use(mditSemanticContainer, {allowBracketJoint: true, githubTypeContainer: true})
+const mdAllFeatures = mdit().use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  githubTypeContainer: true,
+})
 const mdLanguagesEnOnly = mdit().use(mditSemanticContainer, {languages: []})
 const mdLanguagesString = mdit().use(mditSemanticContainer, {languages: 'ja'})
 const mdLanguagesDuplicate = mdit().use(mditSemanticContainer, {languages: ['ja', 'ja']})
@@ -39,8 +48,24 @@ const mdLabelControl = mdit().use(mditAttrs).use(mditSemanticContainer, {labelCo
 const mdLabelControlOff = mdit().use(mditAttrs).use(mditSemanticContainer, {labelControl: false})
 const mdLabelControlBracket = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: true})
 const mdLabelControlBracketOff = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: false})
-const mdLabelControlGitHub = mdit().use(mditAttrs).use(mditSemanticContainer, {githubTypeContainer: true, labelControl: true})
-const mdLabelControlGitHubOff = mdit().use(mditAttrs).use(mditSemanticContainer, {githubTypeContainer: true, labelControl: false})
+const mdLabelControlGitHub = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  labelControl: true
+})
+const mdLabelControlGitHubOff = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  labelControl: false
+})
+const mdLabelControlGitHubInlineTitle = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  labelControl: true
+})
+const mdLabelControlGitHubInlineTitleOff = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  labelControl: false
+})
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -56,6 +81,7 @@ const testData = {
   removeJointAtLineEnd: __dirname + path.sep + 'examples-remove-joint-at-line-end.txt',
   complex: __dirname + path.sep + 'examples-complex.txt',
   githubAlerts: __dirname + path.sep + 'examples-github-type-container.txt',
+  githubAlertsInlineTitle: __dirname + path.sep + 'examples-github-type-container-inline-title.txt',
   bracketFormat: __dirname + path.sep + 'examples-bracket-format.txt',
   mixedFeatures: __dirname + path.sep + 'examples-mixed-types.txt',
   languagesEnOnly: __dirname + path.sep + 'examples-languages-en-only.txt',
@@ -64,6 +90,7 @@ const testData = {
   labelControl: __dirname + path.sep + 'examples-label-control.txt',
   labelControlBracket: __dirname + path.sep + 'examples-label-control-bracket.txt',
   labelControlGitHub: __dirname + path.sep + 'examples-label-control-github.txt',
+  labelControlGitHubInlineTitle: __dirname + path.sep + 'examples-label-control-github-inline-title.txt',
 }
 
 const getTestData = (pat) => {
@@ -178,6 +205,8 @@ pass = runTest(mdLabelControlBracket, testData.labelControlBracket, pass)
 pass = runTest(mdLabelControlBracketOff, testData.labelControlBracket, pass, undefined, 'labelControlOff')
 pass = runTest(mdLabelControlGitHub, testData.labelControlGitHub, pass)
 pass = runTest(mdLabelControlGitHubOff, testData.labelControlGitHub, pass, undefined, 'labelControlOff')
+pass = runTest(mdLabelControlGitHubInlineTitle, testData.labelControlGitHubInlineTitle, pass)
+pass = runTest(mdLabelControlGitHubInlineTitleOff, testData.labelControlGitHubInlineTitle, pass, undefined, 'labelControlOff')
 console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
 pass = runTest(mdJa, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)
@@ -187,6 +216,7 @@ console.log('\nstrongJa + figure-with-p-caption ::::::::::::::::::::::::::::::::
 pass = runTest(mdJaWithFigure, testData.strongJaWithFigure, pass)
 
 pass = runTest(mdGitHubAlerts, testData.githubAlerts, pass)
+pass = runTest(mdGitHubAlertsInlineTitle, testData.githubAlertsInlineTitle, pass)
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
 

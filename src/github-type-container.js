@@ -1,6 +1,6 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
 import { resolveLabelControl } from './label-control.js'
-import { createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 
 const createGitHubTypeContainer = (semantics) => {
   const MATCH_CACHE_MAX = 128
@@ -152,8 +152,9 @@ const createGitHubTypeContainer = (semantics) => {
 
   const hasInlineContent = (inlineToken, children) => {
     if (inlineToken?.content && inlineToken.content.trim()) return true
-    if (!children) return false
-    for (const child of children) {
+    if (!Array.isArray(children) || children.length === 0) return false
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
       if (!child) continue
       if (child.type === 'text' && child.content && child.content.trim()) return true
       if (child.type === 'code_inline' && child.content && child.content.trim()) return true
@@ -185,6 +186,52 @@ const createGitHubTypeContainer = (semantics) => {
     if (trimCount > 0) {
       children.splice(0, trimCount)
     }
+  }
+  const buildGitHubLabelChildren = (state, sem, sc, labelText, labelControl) => {
+    const strongOpen = new state.Token('strong_open', 'strong', 1)
+    strongOpen.attrJoin('class', sem.labelClass)
+    const semanticNameContent = new state.Token('text', '', 0)
+    semanticNameContent.content = labelText
+    const strongClose = new state.Token('strong_close', 'strong', -1)
+
+    if (labelControl) {
+      return [strongOpen, semanticNameContent, strongClose]
+    }
+
+    const openBracketSpan = new state.Token('span_open', 'span', 1)
+    openBracketSpan.attrJoin('class', sem.labelJointClass)
+    const openBracketContent = new state.Token('text', '', 0)
+    openBracketContent.content = sc.openBracket
+    const openBracketSpanClose = new state.Token('span_close', 'span', -1)
+
+    const closeBracketSpan = new state.Token('span_open', 'span', 1)
+    closeBracketSpan.attrJoin('class', sem.labelJointClass)
+    const closeBracketContent = new state.Token('text', '', 0)
+    closeBracketContent.content = sc.closeBracket
+    const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
+
+    return [
+      strongOpen,
+      openBracketSpan, openBracketContent, openBracketSpanClose,
+      semanticNameContent,
+      closeBracketSpan, closeBracketContent, closeBracketSpanClose,
+      strongClose
+    ]
+  }
+  const prependGitHubInlineLabel = (state, paragraphChildren, labelChildren) => {
+    paragraphChildren.splice(0, 0, ...labelChildren)
+    const firstContentIndex = labelChildren.length
+    if (paragraphChildren.length <= firstContentIndex) return
+    const firstContent = paragraphChildren[firstContentIndex]
+    if (firstContent?.type === 'text') {
+      if (!firstContent.content.startsWith(' ')) {
+        firstContent.content = ' ' + firstContent.content
+      }
+      return
+    }
+    const spacer = new state.Token('text', '', 0)
+    spacer.content = ' '
+    paragraphChildren.splice(firstContentIndex, 0, spacer)
   }
 
   const checkGitHubAlertsCore = (state, n, hrType, sc, checked) => {
@@ -260,33 +307,24 @@ const createGitHubTypeContainer = (semantics) => {
     }
 
     if (paragraphOpenIndex === -1) return 0
-    const startRefToken = tokens[rs]
-    let endRefToken = tokens[re]
-    if (!endRefToken?.map) {
-      for (let i = re - 1; i >= rs; i--) {
-        if (tokens[i] && tokens[i].map) {
-          endRefToken = tokens[i]
-          break
-        }
-      }
-    }
+    const { startMap, endMap } = resolveContainerMaps(tokens, rs, re, null)
 
     const paragraphOpenToken = tokens[paragraphOpenIndex]
     const paragraphInlineToken = tokens[paragraphInlineIndex]
     const paragraphCloseToken = tokens[paragraphCloseIndex]
-    const paragraphChildren = paragraphInlineToken.children
+    const paragraphChildren = Array.isArray(paragraphInlineToken.children)
+      ? paragraphInlineToken.children
+      : (paragraphInlineToken.children = [])
     const labelControl = opt?.labelControl
       ? resolveLabelControl(paragraphOpenToken, paragraphInlineToken)
       : null
     const hideLabel = !!labelControl?.hide
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
+    const separateTitleParagraph = !opt?.githubTypeInlineLabel
 
-    const startMap = startRefToken?.map
-    const endMap = endRefToken?.map
     const sToken = createContainerStartToken(
       state,
       sem,
-      'sc-' + sem.name,
       labelText,
       hideLabel,
       sc.actualName,
@@ -307,20 +345,21 @@ const createGitHubTypeContainer = (semantics) => {
       }
     }
 
-    if (paragraphChildren && paragraphChildren.length > 0) {
-      if (paragraphChildren[0] && paragraphChildren[0].type === 'text') {
-        paragraphChildren[0].content = stripAlertMarkerPrefix(paragraphChildren[0].content)
-      }
+    if (paragraphChildren[0] && paragraphChildren[0].type === 'text') {
+      paragraphChildren[0].content = stripAlertMarkerPrefix(paragraphChildren[0].content)
+    }
 
-      if (paragraphInlineToken.content) {
-        paragraphInlineToken.content = stripAlertMarkerPrefix(paragraphInlineToken.content)
-      }
+    if (paragraphInlineToken.content) {
+      paragraphInlineToken.content = stripAlertMarkerPrefix(paragraphInlineToken.content)
+    }
 
-      trimLeadingBreaks(paragraphChildren)
+    trimLeadingBreaks(paragraphChildren)
 
-      const shouldDropOriginalParagraph = !hasInlineContent(paragraphInlineToken, paragraphChildren)
+    const shouldDropOriginalParagraph = !hasInlineContent(paragraphInlineToken, paragraphChildren)
 
-      if (!hideLabel) {
+    if (!hideLabel) {
+      const labelChildren = buildGitHubLabelChildren(state, sem, sc, labelText, labelControl)
+      if (separateTitleParagraph) {
         const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
         const labelParagraphInline = new state.Token('inline', '', 0)
         const labelParagraphClose = new state.Token('paragraph_close', 'p', -1)
@@ -341,49 +380,19 @@ const createGitHubTypeContainer = (semantics) => {
           labelParagraphClose.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
         }
 
-        const strongOpen = new state.Token('strong_open', 'strong', 1)
-        strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
-
-        const semanticNameContent = new state.Token('text', '', 0)
-        semanticNameContent.content = labelText
-
-        const strongClose = new state.Token('strong_close', 'strong', -1)
-
-        if (labelControl) {
-          labelParagraphInline.children = [
-            strongOpen,
-            semanticNameContent,
-            strongClose
-          ]
-        } else {
-          const openBracketSpan = new state.Token('span_open', 'span', 1)
-          openBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-          const openBracketContent = new state.Token('text', '', 0)
-          openBracketContent.content = sc.openBracket
-          const openBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-          const closeBracketSpan = new state.Token('span_open', 'span', 1)
-          closeBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-          const closeBracketContent = new state.Token('text', '', 0)
-          closeBracketContent.content = sc.closeBracket
-          const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-          labelParagraphInline.children = [
-            strongOpen,
-            openBracketSpan, openBracketContent, openBracketSpanClose,
-            semanticNameContent,
-            closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-            strongClose
-          ]
-        }
+        labelParagraphInline.children = labelChildren
         labelParagraphInline.content = ''
-
         tokens.splice(paragraphOpenIndex, 0, labelParagraphOpen, labelParagraphInline, labelParagraphClose)
+      } else {
+        prependGitHubInlineLabel(state, paragraphChildren, labelChildren)
       }
+    }
 
-      if (shouldDropOriginalParagraph) {
-        tokens.splice(paragraphOpenIndex + (hideLabel ? 0 : 3), 3)
-      }
+    if (shouldDropOriginalParagraph && (hideLabel || separateTitleParagraph)) {
+      const originalParagraphIndex = (separateTitleParagraph && !hideLabel)
+        ? paragraphOpenIndex + 3
+        : paragraphOpenIndex
+      tokens.splice(originalParagraphIndex, 3)
     }
 
     return 0

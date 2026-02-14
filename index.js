@@ -3,13 +3,14 @@ import { createBracketFormat } from './src/bracket-format.js'
 import { createGitHubTypeContainer } from './src/github-type-container.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { resolveLabelControl } from './src/label-control.js'
-import { createContainerStartToken, createContainerEndToken } from './src/container-token.js'
+import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './src/container-token.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
 
 const semanticsHalfJoint = '[:.]'
 const semanticsFullJoint = '[　：。．]'
+const STRONG_MARK_GLOBAL_REG = /[*_]{2}/g
 const MATCH_CACHE_MAX = 256
 const CACHE_MISS = 0
 const CODE_STAR = 42
@@ -192,7 +193,7 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     return {
       sn,
       actualCont: actualMatch[0],
-      actualContNoStrong: actualMatch[0].replace(/[*_]{2}/g, ''),
+      actualContNoStrong: actualMatch[1] ? actualMatch[0].replace(STRONG_MARK_GLOBAL_REG, '') : actualMatch[0],
       actualName: actualMatch[2],
       actualNameJoint,
       hasLastJoint,
@@ -349,23 +350,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     rs += sci - 1
     re += sci - 1
   }
-  const startRefToken = (hrType && tokens[rs - 1] && tokens[rs - 1].type === 'hr')
-    ? tokens[rs - 1]
-    : tokens[rs]
-  let endRefToken = null
-  if (hrType && tokens[re] && tokens[re].type === 'hr') {
-    endRefToken = tokens[re]
-  } else {
-    for (let i = re - 1; i >= rs; i--) {
-      if (tokens[i] && tokens[i].map) {
-        endRefToken = tokens[i]
-        break
-      }
-    }
-    if (!endRefToken && tokens[rs] && tokens[rs].map) {
-      endRefToken = tokens[rs]
-    }
-  }
+  const { startMap, endMap } = resolveContainerMaps(tokens, rs, re, hrType)
   const nt = tokens[rs+1]
   const ntChildren = nt.children
   const startToken = tokens[rs]
@@ -373,14 +358,11 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   const hideLabel = !!labelControl?.hide
   const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
   const labelJoint = labelControl ? '' : sc.actualNameJoint
-  const hasSemanticAriaLabel = sem.attrs.some((attr) => attr[0] === 'aria-label')
+  const hasSemanticAriaLabel = !!sem.hasAriaLabel
 
-  const startMap = startRefToken?.map
-  const endMap = endRefToken?.map
   const sToken = createContainerStartToken(
     state,
     sem,
-    'sc-' + sem.name,
     labelText,
     hideLabel,
     sc.actualName,
@@ -435,7 +417,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
             }
           }
           
-          ntChildren[i].attrJoin('class', 'sc-' + sem.name + '-label')
+          ntChildren[i].attrJoin('class', sem.labelClass)
           ntChildren[i + 1].content = labelText
           let hasDisplayJoint = false
           let jointSpan
@@ -444,7 +426,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
           if (labelJoint) {
             hasDisplayJoint = true
             jointSpan = new state.Token('span_open', 'span', 1)
-            jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+            jointSpan.attrJoin('class', sem.labelJointClass)
             jointContent = new state.Token('text', '', 0)
             jointContent.content = labelJoint
             jointSpanClose = new state.Token('span_close', 'span', -1)
@@ -485,7 +467,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
       const strongContent = new state.Token('text', '', 0)
       strongContent.content = labelText
       const strongClose = new state.Token('strong_close', 'strong', -1)
-      strongOpen.attrJoin('class', 'sc-' + sem.name + '-label')
+      strongOpen.attrJoin('class', sem.labelClass)
 
       const firstChild = ntChildren?.[0]
       if (firstChild?.content) {
@@ -506,7 +488,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
       const labelTokens = [strongBefore, strongOpen, strongContent]
       if (labelJoint) {
         const jointSpan = new state.Token('span_open', 'span', 1)
-        jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+        jointSpan.attrJoin('class', sem.labelJointClass)
         const jointContent = new state.Token('text', '', 0)
         jointContent.content = labelJoint
         const jointSpanClose = new state.Token('span_close', 'span', -1)
@@ -519,7 +501,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   } else {
     const lt_first = new state.Token('text', '', 0)
     const lt_span_open = new state.Token('span_open', 'span', 1)
-    lt_span_open.attrJoin("class", "sc-" + sem.name + "-label")
+    lt_span_open.attrJoin('class', sem.labelClass)
     const lt_span_content = new state.Token('text', '', 0)
     lt_span_content.content = labelText
     const lt_span_close = new state.Token('span_close', 'span', -1)
@@ -534,7 +516,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     const labelTokens = [lt_first, lt_span_open, lt_span_content]
     if (labelJoint) {
       const lt_joint_span_open = new state.Token('span_open', 'span', 1)
-      lt_joint_span_open.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      lt_joint_span_open.attrJoin('class', sem.labelJointClass)
       const lt_joint_content = new state.Token('text', '', 0)
       lt_joint_content.content = labelJoint
       const lt_joint_span_close = new state.Token('span_close', 'span', -1)
@@ -579,6 +561,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   let sci = 0
   let hrType = ''
   let firstJump = 0
+  const advanceAfterApply = (index, jump) => index + (jump > 0 ? jump : 1)
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
@@ -587,12 +570,12 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n += firstJump
+        return advanceAfterApply(n, firstJump)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n += firstJump
+        return advanceAfterApply(n, firstJump)
       }
     }
     n++
@@ -610,14 +593,12 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
 
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        n += firstJump
-        return n
+        return advanceAfterApply(n, firstJump)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        n += firstJump
-        return n
+        return advanceAfterApply(n, firstJump)
       }
     }
     n++
@@ -643,18 +624,16 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     if (sci === 0) firstJump = jump
     cn.add(sc[sci].range[1] + sci + 1)
   }
-  n += firstJump
-  return n
+  return advanceAfterApply(n, firstJump)
 }
 
 const createContainerRunner = (walkContainers) => (state, optLocal) => {
-  const tokens = state.tokens
   let n = 0
   const cn = new Set()
-  let tokensLength = tokens.length
+  let tokensLength = state.tokens.length
   while (n < tokensLength) {
     n = walkContainers(state, n, cn, optLocal)
-    tokensLength = tokens.length
+    tokensLength = state.tokens.length
   }
   return true
 }
@@ -713,6 +692,9 @@ const mditSemanticContainer = (md, option) => {
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
     githubTypeContainer: false,
+    // false: GitHub-like separate title paragraph (default)
+    // true: inline label in the first paragraph
+    githubTypeInlineLabel: false,
     labelControl: false,
     // Additional languages to load on top of English
     languages: ['ja'],
