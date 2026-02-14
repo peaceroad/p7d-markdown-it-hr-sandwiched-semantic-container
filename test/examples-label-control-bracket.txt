@@ -1,0 +1,83 @@
+[Markdown]
+---
+
+[Notice] A notice body. {label="重要"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">重要</span> A notice body.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="重要"><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> A notice body.</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Notice]** A body. {label="重要"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">重要</strong> A body.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="重要"><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A body.</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Notice]** A hidden body. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>A hidden body.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label=""><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A hidden body.</p>
+</section>
+
+
+[Markdown]
+---
+
+## [Notice] Heading body {label="見出しラベル"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">見出しラベル</span> Heading body</h2>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<h2 label="見出しラベル"><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Heading body</h2>
+</section>
+
+
+[Markdown]
+---
+
+## [Notice] Hidden heading {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<h2>Hidden heading</h2>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<h2 label=""><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Hidden heading</h2>
+</section>

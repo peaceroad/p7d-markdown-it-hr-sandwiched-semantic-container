@@ -1,0 +1,29 @@
+[Markdown]
+> [!NOTE]
+> Body text. {label="重要メモ"}
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label">重要メモ</strong></p>
+<p>Body text.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p label="重要メモ">Body text.</p>
+</section>
+
+
+[Markdown]
+> [!NOTE]
+> Body text. {label=""}
+[HTML]
+<section class="sc-note" role="doc-notice" aria-label="NOTE">
+<p>Body text.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<p label="">Body text.</p>
+</section>

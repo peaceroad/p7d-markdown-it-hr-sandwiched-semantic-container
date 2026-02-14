@@ -27,6 +27,7 @@
     "@peaceroad/markdown-it-figure-with-p-caption": "^0.16.0",
     "@peaceroad/markdown-it-footnote-here": "^0.3.3",
     "@peaceroad/markdown-it-strong-ja": "^0.7.2",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "markdown-it-attrs": "^4.3.1"
   }
 }

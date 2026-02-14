@@ -496,6 +496,61 @@ mdit().use(mditSemanticContainer, { languages: ["ja"] })
 mdit().use(mditSemanticContainer, { languages: [] })
 ```
 
+### labelControl
+
+Enable label override/hide via `label` attribute on the first paragraph or heading in a semantic container.
+This option is intended to be used with `markdown-it-attrs`.
+
+```bash
+npm install markdown-it-attrs
+```
+
+```js
+import mdit from 'markdown-it'
+import mditAttrs from 'markdown-it-attrs'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+
+const md = mdit()
+  .use(mditAttrs)
+  .use(mditSemanticContainer, { labelControl: true })
+```
+
+Examples:
+
+```markdown
+[Markdown]
+---
+
+Notice. A notice body. {label="重要なお知らせ"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">重要なお知らせ</span> A notice body.</p>
+</section>
+```
+
+```markdown
+[Markdown]
+---
+
+Notice. A notice body. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>A notice body.</p>
+</section>
+```
+
+Notes:
+- `label="..."` replaces only the displayed label text.
+- `label=""` hides the label and sets `aria-label` on the container with the actual keyword written in Markdown.
+- This applies to standard labels, bracket format (`allowBracketJoint`), and GitHub alert format (`githubTypeContainer`).
+- Strong-label forms are also supported, including both `**Notice**。 body` and `**Notice。** body`.
+- If `labelControl` is disabled (or `label` is not parsed by another plugin), behavior is unchanged.
+- With `markdown-it-attrs` and `labelControl: false`, `{label="..."}` is passed through as a raw HTML `label` attribute on the original element; if HTML validity is important, prefer `data-*` attributes when not using label control.
+
 ### removeJointAtLineEnd
 
 If the semantic label is a line and there is nothing after the label joint, remove the label joint and output it.

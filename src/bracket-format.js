@@ -1,5 +1,8 @@
+import { buildSemanticLeadCandidates } from './semantic-lead.js'
+import { resolveLabelControl } from './label-control.js'
+import { createContainerStartToken, createContainerEndToken } from './container-token.js'
+
 const createBracketFormat = (semantics) => {
-  const semanticsLength = semantics.length
   const strongMark = '[*_]{2}'
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
   const MATCH_CACHE_MAX = 128
@@ -19,67 +22,95 @@ const createBracketFormat = (semantics) => {
     }
     return index === 0 ? value : value.slice(index)
   }
-  const getLiteralLeadKey = (raw) => {
-    if (!raw) return null
-    const value = raw.trim()
-    if (!value) return null
-    const first = value[0]
-    if (!first) return null
-    if (first === '\\') {
-      return value[1] ? value[1].toLowerCase() : null
+  const ensureLeadingSpaceAfterLabel = (children, startIndex) => {
+    if (!Array.isArray(children)) return
+    for (let i = startIndex; i < children.length; i++) {
+      const token = children[i]
+      if (token?.type !== 'text' || !token.content) continue
+      if (!token.content.startsWith(' ')) {
+        token.content = ' ' + token.content
+      }
+      return
     }
-    if (first === '(' || first === '[' || first === '{' || first === '|'
-      || first === '^' || first === '$' || first === '*' || first === '+'
-      || first === '?' || first === '.') {
-      return null
-    }
-    return first.toLowerCase()
   }
-  const buildSemanticLeadCandidates = () => {
-    const byLead = new Map()
-    const fallback = []
-    for (let sn = 0; sn < semanticsLength; sn++) {
-      const sem = semantics[sn]
-      const keys = new Set()
-      const semKey = getLiteralLeadKey(sem.name)
-      if (semKey) keys.add(semKey)
-      let hasUnknown = false
-      for (let i = 0; i < sem.aliases.length; i++) {
-        const aliasKey = getLiteralLeadKey(sem.aliases[i])
-        if (!aliasKey) {
-          hasUnknown = true
-          continue
+  const stripBracketLabelPrefix = (inlineToken, children, sc) => {
+    if (inlineToken?.content) {
+      inlineToken.content = removeLiteralPrefix(inlineToken.content, sc.actualCont)
+      inlineToken.content = trimLeadingAsciiSpaces(inlineToken.content)
+    }
+    if (!Array.isArray(children) || children.length === 0) return
+
+    const labelCore = sc.openBracket + sc.actualName + sc.closeBracket
+    if (children[0]?.type === 'strong_open'
+      && children[1]?.type === 'text'
+      && children[1].content === labelCore
+      && children[2]?.type === 'strong_close') {
+      children.splice(0, 3)
+      for (let i = 0; i < children.length; i++) {
+        const token = children[i]
+        if (token?.type === 'text' && token.content) {
+          token.content = trimLeadingAsciiSpaces(token.content)
+          break
         }
-        keys.add(aliasKey)
       }
-      if (keys.size === 0 || hasUnknown) {
-        fallback.push(sn)
+      return
+    }
+
+    for (let i = 0; i < children.length; i++) {
+      const token = children[i]
+      if (token?.type !== 'text' || !token.content) continue
+      const original = token.content
+      let stripped = removeLiteralPrefix(original, sc.actualCont)
+      if (stripped === original) {
+        stripped = removeLiteralPrefix(original, labelCore)
       }
-      for (const key of keys) {
-        let list = byLead.get(key)
-        if (!list) {
-          list = []
-          byLead.set(key, list)
+      if (stripped === original) continue
+      token.content = trimLeadingAsciiSpaces(stripped)
+      break
+    }
+
+    // Cleanup: if stripping emptied a leading strong wrapper, remove it.
+    let strongStartIndex = 0
+    while (strongStartIndex < children.length) {
+      const token = children[strongStartIndex]
+      if (token?.type === 'text' && !token.content) {
+        strongStartIndex++
+        continue
+      }
+      break
+    }
+    if (children[strongStartIndex]?.type === 'strong_open') {
+      let closeIndex = -1
+      let hasVisibleContent = false
+      for (let i = strongStartIndex + 1; i < children.length; i++) {
+        const token = children[i]
+        if (token?.type === 'strong_close') {
+          closeIndex = i
+          break
         }
-        list.push(sn)
+        if (token?.type !== 'text') {
+          hasVisibleContent = true
+          break
+        }
+        if (token.content && token.content.trim()) {
+          hasVisibleContent = true
+          break
+        }
+      }
+      if (!hasVisibleContent && closeIndex !== -1) {
+        children.splice(strongStartIndex, closeIndex - strongStartIndex + 1)
+        while (children[0]?.type === 'text' && !children[0].content) {
+          children.splice(0, 1)
+        }
+        for (let i = 0; i < children.length; i++) {
+          const token = children[i]
+          if (token?.type === 'text' && token.content) {
+            token.content = trimLeadingAsciiSpaces(token.content)
+            break
+          }
+        }
       }
     }
-    if (fallback.length === 0) {
-      return { candidatesByLead: byLead, fallback }
-    }
-    const candidatesByLead = new Map()
-    for (const [key, list] of byLead.entries()) {
-      const seen = new Set(list)
-      const merged = list.slice()
-      for (let i = 0; i < fallback.length; i++) {
-        const sn = fallback[i]
-        if (seen.has(sn)) continue
-        seen.add(sn)
-        merged.push(sn)
-      }
-      candidatesByLead.set(key, merged)
-    }
-    return { candidatesByLead, fallback }
   }
 
   // Bracket format regex patterns
@@ -91,8 +122,30 @@ const createBracketFormat = (semantics) => {
     const bkPattern = '^(?:(' + strongMark + ')?([\\[])((?:' + sem.name + aliasStr + ')' + sNumber + ')([\\]])\\1?( +)|(' + strongMark + ')?([［])((?:' + sem.name + aliasStr + ')' + sNumber + ')([］])\\6?( *))'
     return new RegExp(bkPattern, 'i')
   })
+  const parseBracketMatchedSemantic = (sn, actualMatch) => {
+    // Half-width bracket match: (strongMark)?([[])(semantics)([])(space)
+    if (actualMatch[2]) {
+      return {
+        sn,
+        actualCont: actualMatch[0],
+        actualName: actualMatch[3],
+        isStrongBracket: !!actualMatch[1],
+        openBracket: actualMatch[2],
+        closeBracket: actualMatch[4],
+      }
+    }
+    // Full-width bracket match: (strongMark)?([［])(semantics)([］])(space)
+    return {
+      sn,
+      actualCont: actualMatch[0],
+      actualName: actualMatch[8],
+      isStrongBracket: !!actualMatch[6],
+      openBracket: actualMatch[7],
+      closeBracket: actualMatch[9],
+    }
+  }
   const matchCache = new Map()
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates()
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
       const firstKey = matchCache.keys().next().value
@@ -116,51 +169,35 @@ const createBracketFormat = (semantics) => {
     const leadCode = content.charCodeAt(startIndex)
     if (leadCode !== CODE_LEFT_BRACKET && leadCode !== CODE_FULLWIDTH_LEFT_BRACKET) return false
 
-    let sn = 0
-    let actualName = null
+    let matchedSemantic = null
     const cached = matchCache.get(content)
     if (cached !== undefined) {
       if (cached === CACHE_MISS) return false
-      sn = cached.sn
-      actualName = cached.actualName
+      matchedSemantic = cached
     } else {
+      let sn = 0
+      let actualName = null
       const labelLead = content[startIndex + 1]
       const leadKey = labelLead ? labelLead.toLowerCase() : ''
-      const candidates = candidatesByLead.get(leadKey) || fallback
-      if (candidates.length > 0) {
-        for (let ci = 0; ci < candidates.length; ci++) {
-          sn = candidates[ci]
-          actualName = content.match(semanticsBracketReg[sn])
-          if(actualName) break
+      let candidates = candidatesByLead.get(leadKey)
+      if (!candidates) {
+        if (fallback.length === 0) {
+          cacheSet(content, CACHE_MISS)
+          return false
         }
-      } else {
-        while (sn < semanticsLength) {
-          actualName = content.match(semanticsBracketReg[sn])
-          if(actualName) break
-          sn++
-        }
+        candidates = fallback
+      }
+      for (let ci = 0; ci < candidates.length; ci++) {
+        sn = candidates[ci]
+        actualName = content.match(semanticsBracketReg[sn])
+        if(actualName) break
       }
       if(!actualName) {
         cacheSet(content, CACHE_MISS)
         return false
       }
-      cacheSet(content, { sn, actualName })
-    }
-
-    // Parse regex match results
-    let strongMarkLocal, openBracket, semanticName, closeBracket
-    if (actualName[2]) {
-      // Half-width bracket match: (strongMark)?([[])(semantics)([])(space)
-      strongMarkLocal = actualName[1]
-      openBracket = actualName[2]
-      semanticName = actualName[3]
-      closeBracket = actualName[4]
-    } else if (actualName[7]) {
-      // Full-width bracket match: (strongMark)?([［])(semantics)([］])(space)
-      strongMarkLocal = actualName[6]
-      openBracket = actualName[7]
-      semanticName = actualName[8]
-      closeBracket = actualName[9]
+      matchedSemantic = parseBracketMatchedSemantic(sn, actualName)
+      cacheSet(content, matchedSemantic)
     }
 
     let en = n
@@ -188,19 +225,19 @@ const createBracketFormat = (semantics) => {
     sc.push({
       range: [n, rangeEnd],
       continued: checked,
-      sn: sn,
-      actualCont: actualName[0], // full match
-      actualName: semanticName,
+      sn: matchedSemantic.sn,
+      actualCont: matchedSemantic.actualCont,
+      actualName: matchedSemantic.actualName,
       isBracketFormat: true,
-      isStrongBracket: !!strongMarkLocal,
-      openBracket: openBracket,
-      closeBracket: closeBracket,
+      isStrongBracket: matchedSemantic.isStrongBracket,
+      openBracket: matchedSemantic.openBracket,
+      closeBracket: matchedSemantic.closeBracket,
     })
     return true
   }
 
   // Bracket format semantic container setup function
-  const setBracketSemanticContainer = (state, _n, hrType, sc, sci, _opt) => {
+  const setBracketSemanticContainer = (state, _n, hrType, sc, sci, opt) => {
     const tokens = state.tokens
     let nJump = 0
     let rs = sc.range[0]
@@ -232,29 +269,26 @@ const createBracketFormat = (semantics) => {
     }
     const nt = tokens[rs+1]
     const ntChildren = nt.children
+    const startToken = tokens[rs]
+    const labelControl = opt?.labelControl ? resolveLabelControl(startToken, nt) : null
+    const hideLabel = !!labelControl?.hide
+    const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     // Inline child tokens normally do not carry map; paragraph/inline token maps remain the sync anchor.
 
-    const sToken = new state.Token('html_block', '', 0)
-    sToken.content = '<' + sem.tag
-    sToken.content += ' class="sc-' + sem.name + '"'
-    if (sem.attrs.length > 0) {
-      for (let ai = 0; ai < sem.attrs.length; ai++) {
-        sToken.content += ' ' + sem.attrs[ai][0] + '="' + sem.attrs[ai][1] + '"'
-      }
-    }
-    sToken.content += '>\n'
-    sToken.block = true
-    if (startRefToken && startRefToken.map) {
-      sToken.map = [startRefToken.map[0], startRefToken.map[1]]
-    }
+    const startMap = startRefToken?.map
+    const endMap = endRefToken?.map
+    const sToken = createContainerStartToken(
+      state,
+      sem,
+      'sc-' + sem.name,
+      labelText,
+      hideLabel,
+      sc.actualName,
+      startMap
+    )
     tokens.splice(rs, 0, sToken)
 
-    const eToken = new state.Token('html_block', '', 0)
-    eToken.content = '</' + sem.tag + '>\n'
-    eToken.block = true
-    if (endRefToken && endRefToken.map) {
-      eToken.map = [endRefToken.map[0], endRefToken.map[1]]
-    }
+    const eToken = createContainerEndToken(state, sem, endMap)
 
     if(sci !== -1) {
       tokens.splice(re+1, 1, eToken)
@@ -263,6 +297,31 @@ const createBracketFormat = (semantics) => {
       }
     } else {
       tokens.splice(re+1, 0, eToken)
+    }
+
+    if (labelControl) {
+      stripBracketLabelPrefix(nt, ntChildren, sc)
+      if (hideLabel) return nJump
+
+      if (sc.isStrongBracket) {
+        const strongOpen = new state.Token('strong_open', 'strong', 1)
+        strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
+        const labelContent = new state.Token('text', '', 0)
+        labelContent.content = labelText
+        const strongClose = new state.Token('strong_close', 'strong', -1)
+        ntChildren.splice(0, 0, strongOpen, labelContent, strongClose)
+        ensureLeadingSpaceAfterLabel(ntChildren, 3)
+      } else {
+        const spanOpen = new state.Token('span_open', 'span', 1)
+        spanOpen.attrJoin("class", "sc-" + sem.name + "-label")
+        const labelContent = new state.Token('text', '', 0)
+        labelContent.content = labelText
+        const spanClose = new state.Token('span_close', 'span', -1)
+        ntChildren.splice(0, 0, spanOpen, labelContent, spanClose)
+        ensureLeadingSpaceAfterLabel(ntChildren, 3)
+      }
+      nJump += 3
+      return nJump
     }
 
     if (sc.isStrongBracket) {
@@ -299,16 +358,6 @@ const createBracketFormat = (semantics) => {
         spaceAfterLabel.content = ' '
         ntChildren.splice(9, 0, spaceAfterLabel)
       }
-      
-      const labelEndIndex = sc.openBracket === '[' ? 10 : 9
-      for (let i = labelEndIndex; i < ntChildren.length; i++) {
-        if (ntChildren[i] && ntChildren[i].type === 'text') {
-          if (ntChildren[i].content && ntChildren[i].content.trim()) {
-            ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
-            break
-          }
-        }
-      }
 
       for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length - 2; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'strong_open'
@@ -334,21 +383,10 @@ const createBracketFormat = (semantics) => {
         }
       }
 
-      if (sc.openBracket === '[') {
-        for (let i = 10; i < ntChildren.length; i++) {
-          if (ntChildren[i] && ntChildren[i].type === 'text') {
-            if (ntChildren[i].content && ntChildren[i].content.trim()) {
-              ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
-              break
-            }
-          }
-        }
-      } else if (sc.openBracket === '［') {
-        for (let i = 9; i < ntChildren.length; i++) {
-          if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
-            ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
-            break
-          }
+      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length; i++) {
+        if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
+          ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
+          break
         }
       }
     } else {
@@ -395,8 +433,7 @@ const createBracketFormat = (semantics) => {
 
       nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
-      let startIndex = sc.openBracket === '[' ? 10 : 9
-      for (let i = startIndex; i < ntChildren.length - 2; i++) {
+      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length - 2; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'strong_open'
           && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
           && ntChildren[i + 1] && ntChildren[i + 1].content) {

@@ -1,0 +1,176 @@
+[Markdown]
+A paragraph.
+
+---
+
+Notice. A notice. {label="重要なお知らせ"}
+
+---
+
+A paragraph.
+[HTML]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">重要なお知らせ</span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+[HTML:labelControlOff]
+<p>A paragraph.</p>
+<section class="sc-notice" role="doc-notice">
+<p label="重要なお知らせ"><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
+</section>
+<p>A paragraph.</p>
+
+
+[Markdown]
+---
+
+Notice 1. A hidden label. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice 1">
+<p>A hidden label.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label=""><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A hidden label.</p>
+</section>
+
+
+[Markdown]
+---
+
+## Notice: The title {label="ヘッダーラベル"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">ヘッダーラベル</span> The title</h2>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<h2 label="ヘッダーラベル"><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">:</span></span> The title</h2>
+</section>
+
+
+[Markdown]
+---
+
+## Notice: Hidden title {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<h2>Hidden title</h2>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<h2 label=""><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">:</span></span> Hidden title</h2>
+</section>
+
+
+[Markdown]
+---
+
+**Notice.** A notice. {label="重要"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">重要</strong> A notice.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="重要"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A notice.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Notice.** A hidden strong label. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>A hidden strong label.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label=""><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A hidden strong label.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Notice**。 A strong label with outer joint. {label="強調ラベル外側"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">強調ラベル外側</strong> A strong label with outer joint.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="強調ラベル外側"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A strong label with outer joint.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Notice。** A strong label with inner joint. {label="強調ラベル内側"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">強調ラベル内側</strong> A strong label with inner joint.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="強調ラベル内側"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A strong label with inner joint.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Notice**。 A hidden strong label with outer joint. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>A hidden strong label with outer joint.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label=""><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A hidden strong label with outer joint.</p>
+</section>
+
+
+[Markdown]
+---
+
+**Notice。** A hidden strong label with inner joint. {label=""}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>A hidden strong label with inner joint.</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label=""><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A hidden strong label with inner joint.</p>
+</section>

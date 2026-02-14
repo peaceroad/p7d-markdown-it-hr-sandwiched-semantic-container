@@ -1,6 +1,9 @@
 import { buildSemantics } from './src/semantics.js'
 import { createBracketFormat } from './src/bracket-format.js'
 import { createGitHubTypeContainer } from './src/github-type-container.js'
+import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
+import { resolveLabelControl } from './src/label-control.js'
+import { createContainerStartToken, createContainerEndToken } from './src/container-token.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -13,8 +16,17 @@ const CODE_STAR = 42
 const CODE_UNDERSCORE = 95
 const CODE_HASH = 35
 const CODE_SPACE = 32
+const CODE_DOT = 46
+const CODE_COLON = 58
 const CODE_LEFT_BRACKET = 91
+const CODE_LF = 10
+const CODE_CR = 13
+const CODE_FULLWIDTH_SPACE = 12288
 const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+const CODE_FULLWIDTH_COLON = 65306
+const CODE_IDEOGRAPHIC_FULL_STOP = 12290
+const CODE_FULLWIDTH_DOT = 65294
+const SEMANTIC_PREFIX_SCAN_MAX = 96
 
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const isSemanticJointChar = (char) => char === ':' || char === '.' || char === '　' || char === '：' || char === '。' || char === '．'
@@ -65,69 +77,80 @@ const parseStrongLabelContent = (strongContent, actualName) => {
     trailingSpaces: strongContent.slice(index),
   }
 }
+const stripLeadingLabelFromChildren = (children, sc) => {
+  if (!Array.isArray(children) || children.length === 0) return
+
+  const first = children[0]
+  if (first?.type === 'text' && first.content) {
+    first.content = removeLiteralPrefixAndFollowingSpaces(first.content, sc.actualContNoStrong)
+    if (sc.hasLastJoint && first.content) {
+      first.content = removeLiteralPrefixAndFollowingSpaces(first.content, sc.actualNameJoint)
+    }
+    return
+  }
+
+  for (let i = 0; i < children.length - 2; i++) {
+    const open = children[i]
+    const text = children[i + 1]
+    const close = children[i + 2]
+    if (open?.type !== 'strong_open' || text?.type !== 'text' || close?.type !== 'strong_close') {
+      continue
+    }
+    const strongLabel = parseStrongLabelContent(text.content, sc.actualName)
+    if (!strongLabel) continue
+
+    children.splice(i, 3)
+
+    if (sc.hasLastJoint) {
+      for (let j = i; j < children.length; j++) {
+        const token = children[j]
+        if (token?.type !== 'text' || !token.content) continue
+        token.content = removeLiteralPrefix(token.content, sc.actualNameJoint)
+        break
+      }
+    }
+
+    for (let j = i; j < children.length; j++) {
+      const token = children[j]
+      if (token?.type !== 'text' || !token.content) continue
+      token.content = trimLeadingAsciiSpaces(token.content)
+      break
+    }
+    return
+  }
+
+  for (let i = 0; i < children.length; i++) {
+    const token = children[i]
+    if (token?.type !== 'text' || !token.content) continue
+    const original = token.content
+    token.content = removeLiteralPrefixAndFollowingSpaces(token.content, sc.actualContNoStrong)
+    if (token.content === original && sc.hasLastJoint) {
+      token.content = removeLiteralPrefixAndFollowingSpaces(token.content, sc.actualNameJoint)
+    }
+    if (token.content !== original) {
+      return
+    }
+  }
+}
 const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
 const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
-const getLiteralLeadKey = (raw) => {
-  if (!raw) return null
-  const value = raw.trim()
-  if (!value) return null
-  const first = value[0]
-  if (!first) return null
-  if (first === '\\') {
-    return value[1] ? value[1].toLowerCase() : null
-  }
-  if (first === '(' || first === '[' || first === '{' || first === '|'
-    || first === '^' || first === '$' || first === '*' || first === '+'
-    || first === '?' || first === '.') {
-    return null
-  }
-  return first.toLowerCase()
-}
-const buildSemanticLeadCandidates = (semantics) => {
-  const byLead = new Map()
-  const fallback = []
-  for (let sn = 0; sn < semantics.length; sn++) {
-    const sem = semantics[sn]
-    const keys = new Set()
-    const semKey = getLiteralLeadKey(sem.name)
-    if (semKey) keys.add(semKey)
-    let hasUnknown = false
-    for (let i = 0; i < sem.aliases.length; i++) {
-      const aliasKey = getLiteralLeadKey(sem.aliases[i])
-      if (!aliasKey) {
-        hasUnknown = true
-        continue
-      }
-      keys.add(aliasKey)
+const hasSemanticJointInPrefix = (content, startIndex) => {
+  const end = Math.min(content.length, startIndex + SEMANTIC_PREFIX_SCAN_MAX)
+  for (let i = startIndex; i < end; i++) {
+    const code = content.charCodeAt(i)
+    if (
+      code === CODE_COLON
+      || code === CODE_DOT
+      || code === CODE_FULLWIDTH_SPACE
+      || code === CODE_FULLWIDTH_COLON
+      || code === CODE_IDEOGRAPHIC_FULL_STOP
+      || code === CODE_FULLWIDTH_DOT
+    ) {
+      return true
     }
-    if (keys.size === 0 || hasUnknown) {
-      fallback.push(sn)
-    }
-    for (const key of keys) {
-      let list = byLead.get(key)
-      if (!list) {
-        list = []
-        byLead.set(key, list)
-      }
-      list.push(sn)
-    }
+    if (code === CODE_LF || code === CODE_CR) break
   }
-  const candidatesByLead = new Map()
-  if (fallback.length === 0) {
-    return { candidatesByLead: byLead, fallback }
-  }
-  for (const [key, list] of byLead.entries()) {
-    const seen = new Set(list)
-    const merged = list.slice()
-    for (let i = 0; i < fallback.length; i++) {
-      const sn = fallback[i]
-      if (seen.has(sn)) continue
-      seen.add(sn)
-      merged.push(sn)
-    }
-    candidatesByLead.set(key, merged)
-  }
-  return { candidatesByLead, fallback }
+  return false
 }
 
 const buildSemanticsReg = (semantics) => semantics.map((sem) => {
@@ -146,8 +169,36 @@ const buildSemanticsReg = (semantics) => semantics.map((sem) => {
 })
 
 const createLabelMatcher = (semantics, semanticsReg) => {
-  const semanticsLength = semantics.length
   const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  const parseMatchedSemantic = (sn, actualMatch) => {
+    let actualNameJoint = ''
+    let hasLastJoint = false
+    let hasHalfJoint = false
+
+    if (actualMatch[3]) {
+      hasHalfJoint = true
+      actualNameJoint = actualMatch[3]
+    } else if (actualMatch[4]) {
+      hasHalfJoint = true
+      hasLastJoint = true
+      actualNameJoint = actualMatch[4]
+    } else if (actualMatch[5]) {
+      actualNameJoint = actualMatch[5]
+    } else if (actualMatch[6]) {
+      hasLastJoint = true
+      actualNameJoint = actualMatch[6]
+    }
+
+    return {
+      sn,
+      actualCont: actualMatch[0],
+      actualContNoStrong: actualMatch[0].replace(/[*_]{2}/g, ''),
+      actualName: actualMatch[2],
+      actualNameJoint,
+      hasLastJoint,
+      hasHalfJoint,
+    }
+  }
   const matchCache = new Map()
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
@@ -174,53 +225,38 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     if (!isPotentialLabelLeadCode(leadCode)) {
       return false
     }
+    if (!hasSemanticJointInPrefix(content, leadIndex)) {
+      return false
+    }
 
-    let sn = 0
-    let actualName = null
+    let matchedSemantic = null
     const cached = matchCache.get(content)
     if (cached !== undefined) {
       if (cached === CACHE_MISS) return false
-      sn = cached.sn
-      actualName = cached.actualName
+      matchedSemantic = cached
     } else {
+      let sn = 0
+      let actualName = null
       const leadKey = content[leadIndex].toLowerCase()
-      const candidates = candidatesByLead.get(leadKey) || fallback
-      if (candidates.length > 0) {
-        for (let ci = 0; ci < candidates.length; ci++) {
-          sn = candidates[ci]
-          actualName = content.match(semanticsReg[sn])
-          if(actualName) break
+      let candidates = candidatesByLead.get(leadKey)
+      if (!candidates) {
+        if (fallback.length === 0) {
+          cacheSet(content, CACHE_MISS)
+          return false
         }
-      } else {
-        while (sn < semanticsLength) {
-          actualName = content.match(semanticsReg[sn])
-          if(actualName) break
-          sn++
-        }
+        candidates = fallback
+      }
+      for (let ci = 0; ci < candidates.length; ci++) {
+        sn = candidates[ci]
+        actualName = content.match(semanticsReg[sn])
+        if(actualName) break
       }
       if(!actualName) {
         cacheSet(content, CACHE_MISS)
         return false
       }
-      cacheSet(content, { sn, actualName })
-    }
-
-    let actualNameJoint = ''
-    let hasLastJoint = false
-    let hasHalfJoint = false
-
-    if (actualName[3]) {
-      hasHalfJoint = true
-      actualNameJoint = actualName[3]
-    } else if (actualName[4]) {
-      hasHalfJoint = true
-      hasLastJoint = true
-      actualNameJoint = actualName[4]
-    } else if (actualName[5]) {
-      actualNameJoint = actualName[5]
-    } else if (actualName[6]) {
-      hasLastJoint = true
-      actualNameJoint = actualName[6]
+      matchedSemantic = parseMatchedSemantic(sn, actualName)
+      cacheSet(content, matchedSemantic)
     }
 
     let en = n
@@ -250,14 +286,14 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     sc.push({
       range: [n, rangeEnd],
       continued: checked,
-      sn: sn,
+      sn: matchedSemantic.sn,
       hrType: hrType,
-      actualCont: actualName[0],
-      actualContNoStrong: actualName[0].replace(/[*_]{2}/g, ''),
-      actualName: actualName[2],
-      actualNameJoint: actualNameJoint,
-      hasLastJoint: hasLastJoint,
-      hasHalfJoint: hasHalfJoint,
+      actualCont: matchedSemantic.actualCont,
+      actualContNoStrong: matchedSemantic.actualContNoStrong,
+      actualName: matchedSemantic.actualName,
+      actualNameJoint: matchedSemantic.actualNameJoint,
+      hasLastJoint: matchedSemantic.hasLastJoint,
+      hasHalfJoint: matchedSemantic.hasHalfJoint,
     })
     return true
   }
@@ -295,7 +331,6 @@ const createContainerRangeChecker = (activeCheck) => (state, n, hrType, sc) => {
 const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType, sc, sci , optLocal) => {
   const tokens = state.tokens
   let nJump = 0
-  let moveToAriaLabel = false
   let rs = sc.range[0]
   let re = sc.range[1]
   const sn = sc.sn
@@ -308,8 +343,6 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
     return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
   }
-  const escapedActualName = escapeRegExp(sc.actualName)
-  const regStrongPattern = new RegExp('\\*\\* *?' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
 
   // for continued semantic container.
   if(sci > 1) {
@@ -335,33 +368,27 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   }
   const nt = tokens[rs+1]
   const ntChildren = nt.children
+  const startToken = tokens[rs]
+  const labelControl = optLocal.labelControl ? resolveLabelControl(startToken, nt) : null
+  const hideLabel = !!labelControl?.hide
+  const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
+  const labelJoint = labelControl ? '' : sc.actualNameJoint
+  const hasSemanticAriaLabel = sem.attrs.some((attr) => attr[0] === 'aria-label')
 
-  const sToken = new state.Token('html_block', '', 0)
-  sToken.content = '<' + sem.tag
-  sToken.content += ' class="sc-' + sem.name + '"'
-  if (sem.attrs.length > 0) {
-    for (let ai = 0; ai < sem.attrs.length; ai++) {
-      const [attrKey, attrVal] = sem.attrs[ai]
-      if (!moveToAriaLabel) {
-        moveToAriaLabel = attrKey === 'aria-label'
-      }
-      const value = attrKey === 'aria-label' ? sc.actualName : attrVal
-      sToken.content += ' ' + attrKey + '="' + value + '"'
-    }
-  }
-  sToken.content += '>\n'
-  sToken.block = true
-  if (startRefToken && startRefToken.map) {
-    sToken.map = [startRefToken.map[0], startRefToken.map[1]]
-  }
+  const startMap = startRefToken?.map
+  const endMap = endRefToken?.map
+  const sToken = createContainerStartToken(
+    state,
+    sem,
+    'sc-' + sem.name,
+    labelText,
+    hideLabel,
+    sc.actualName,
+    startMap
+  )
   tokens.splice(rs, 0, sToken)
 
-  const eToken = new state.Token('html_block', '', 0)
-  eToken.content = '</' + sem.tag + '>\n'
-  eToken.block = true
-  if (endRefToken && endRefToken.map) {
-    eToken.map = [endRefToken.map[0], endRefToken.map[1]]
-  }
+  const eToken = createContainerEndToken(state, sem, endMap)
 
   if(sci !== -1) {
     tokens.splice(re+1, 1, eToken); // ending hr delete too.
@@ -372,12 +399,13 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     tokens.splice(re+1, 0, eToken)
   }
 
-  if(moveToAriaLabel) {
+  if(hideLabel || hasSemanticAriaLabel) {
+    nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
     nt.content = removeLiteralPrefix(nt.content, sc.actualContNoStrong)
-    const firstChild = ntChildren?.[0]
-    if (firstChild?.content) {
-      firstChild.content = removeLiteralPrefixAndFollowingSpaces(firstChild.content, sc.actualContNoStrong)
+    if (sc.hasLastJoint) {
+      nt.content = removeLiteralPrefix(nt.content, sc.actualNameJoint)
     }
+    stripLeadingLabelFromChildren(ntChildren, sc)
     nt.content = trimLeadingAsciiSpaces(nt.content)
     return nJump
   }
@@ -408,20 +436,28 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
           }
           
           ntChildren[i].attrJoin('class', 'sc-' + sem.name + '-label')
-          
-          const jointSpan = new state.Token('span_open', 'span', 1)
-          jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
-          const jointContent = new state.Token('text', '', 0)
-          jointContent.content = sc.actualNameJoint
-          const jointSpanClose = new state.Token('span_close', 'span', -1)
+          ntChildren[i + 1].content = labelText
+          let hasDisplayJoint = false
+          let jointSpan
+          let jointContent
+          let jointSpanClose
+          if (labelJoint) {
+            hasDisplayJoint = true
+            jointSpan = new state.Token('span_open', 'span', 1)
+            jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+            jointContent = new state.Token('text', '', 0)
+            jointContent.content = labelJoint
+            jointSpanClose = new state.Token('span_close', 'span', -1)
+          }
           
           if (strongLabel.joint) {
             const trailingSpaces = strongLabel.trailingSpaces || ''
-            ntChildren[i + 1].content = sc.actualName
-            ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+            if (hasDisplayJoint) {
+              ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+            }
             
             if (textAfterStrongIndex !== -1) {
-              const adjustedTextIndex = textAfterStrongIndex + 3
+              const adjustedTextIndex = textAfterStrongIndex + (hasDisplayJoint ? 3 : 0)
               if (trailingSpaces) {
                 if (ntChildren[adjustedTextIndex].content === '') {
                   ntChildren[adjustedTextIndex].content = ' '
@@ -434,7 +470,9 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
             if (ntChildren[i + 3] && ntChildren[i + 3].content) {
               ntChildren[i + 3].content = removeLiteralPrefix(ntChildren[i + 3].content, sc.actualNameJoint)
             }
-            ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+            if (hasDisplayJoint) {
+              ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
+            }
           }
           break
         }
@@ -445,17 +483,14 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
       const strongBefore = new state.Token('text', '', 0)
       const strongOpen = new state.Token('strong_open', 'strong', 1)
       const strongContent = new state.Token('text', '', 0)
-      strongContent.content = sc.actualName
-      const jointSpan = new state.Token('span_open', 'span', 1)
-      jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
-      const jointContent = new state.Token('text', '', 0)
-      jointContent.content = sc.actualNameJoint
-      const jointSpanClose = new state.Token('span_close', 'span', -1)
+      strongContent.content = labelText
       const strongClose = new state.Token('strong_close', 'strong', -1)
       strongOpen.attrJoin('class', 'sc-' + sem.name + '-label')
 
       const firstChild = ntChildren?.[0]
       if (firstChild?.content) {
+        const escapedActualName = escapeRegExp(sc.actualName)
+        const regStrongPattern = new RegExp('\\*\\* *?' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
         const originalContent = firstChild.content
         const match = originalContent.match(regStrongPattern)
         
@@ -468,7 +503,17 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
       }
       nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
-      ntChildren.splice(0, 0, strongBefore, strongOpen, strongContent, jointSpan, jointContent, jointSpanClose, strongClose)
+      const labelTokens = [strongBefore, strongOpen, strongContent]
+      if (labelJoint) {
+        const jointSpan = new state.Token('span_open', 'span', 1)
+        jointSpan.attrJoin('class', 'sc-' + sem.name + '-label-joint')
+        const jointContent = new state.Token('text', '', 0)
+        jointContent.content = labelJoint
+        const jointSpanClose = new state.Token('span_close', 'span', -1)
+        labelTokens.push(jointSpan, jointContent, jointSpanClose)
+      }
+      labelTokens.push(strongClose)
+      ntChildren.splice(0, 0, ...labelTokens)
     }
     nJump += 3
   } else {
@@ -476,12 +521,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
     const lt_span_open = new state.Token('span_open', 'span', 1)
     lt_span_open.attrJoin("class", "sc-" + sem.name + "-label")
     const lt_span_content = new state.Token('text', '', 0)
-    lt_span_content.content = sc.actualName
-    const lt_joint_span_open = new state.Token('span_open', 'span', 1)
-    lt_joint_span_open.attrJoin("class", "sc-" + sem.name + "-label-joint")
-    const lt_joint_content = new state.Token('text', '', 0)
-    lt_joint_content.content = sc.actualNameJoint
-    const lt_joint_span_close = new state.Token('span_close', 'span', -1)
+    lt_span_content.content = labelText
     const lt_span_close = new state.Token('span_close', 'span', -1)
 
     const firstChild = ntChildren?.[0]
@@ -491,7 +531,17 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
       firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
     }
 
-    ntChildren.splice(0, 0, lt_first, lt_span_open, lt_span_content, lt_joint_span_open, lt_joint_content, lt_joint_span_close, lt_span_close)
+    const labelTokens = [lt_first, lt_span_open, lt_span_content]
+    if (labelJoint) {
+      const lt_joint_span_open = new state.Token('span_open', 'span', 1)
+      lt_joint_span_open.attrJoin("class", "sc-" + sem.name + "-label-joint")
+      const lt_joint_content = new state.Token('text', '', 0)
+      lt_joint_content.content = labelJoint
+      const lt_joint_span_close = new state.Token('span_close', 'span', -1)
+      labelTokens.push(lt_joint_span_open, lt_joint_content, lt_joint_span_close)
+    }
+    labelTokens.push(lt_span_close)
+    ntChildren.splice(0, 0, ...labelTokens)
     nJump += 3
   }
 
@@ -600,7 +650,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
 const createContainerRunner = (walkContainers) => (state, optLocal) => {
   const tokens = state.tokens
   let n = 0
-  let cn = new Set()
+  const cn = new Set()
   let tokensLength = tokens.length
   while (n < tokensLength) {
     n = walkContainers(state, n, cn, optLocal)
@@ -624,6 +674,7 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
 
 const SAFE_CORE_ANCHORS = new Set([
   'inline',
+  'curly_attributes',
   'cjk_breaks',
   'text_join',
   'strong_ja_postprocess',
@@ -662,6 +713,7 @@ const mditSemanticContainer = (md, option) => {
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
     githubTypeContainer: false,
+    labelControl: false,
     // Additional languages to load on top of English
     languages: ['ja'],
   }

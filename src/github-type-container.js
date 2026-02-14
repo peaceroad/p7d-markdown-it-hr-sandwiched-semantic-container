@@ -1,5 +1,8 @@
+import { buildSemanticLeadCandidates } from './semantic-lead.js'
+import { resolveLabelControl } from './label-control.js'
+import { createContainerStartToken, createContainerEndToken } from './container-token.js'
+
 const createGitHubTypeContainer = (semantics) => {
-  const semanticsLength = semantics.length
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
   const CODE_TAB = 9
@@ -62,68 +65,6 @@ const createGitHubTypeContainer = (semantics) => {
 
     return trimLeadingWhitespace(value.slice(closeIndex + 1))
   }
-  const getLiteralLeadKey = (raw) => {
-    if (!raw) return null
-    const value = raw.trim()
-    if (!value) return null
-    const first = value[0]
-    if (!first) return null
-    if (first === '\\') {
-      return value[1] ? value[1].toLowerCase() : null
-    }
-    if (first === '(' || first === '[' || first === '{' || first === '|'
-      || first === '^' || first === '$' || first === '*' || first === '+'
-      || first === '?' || first === '.') {
-      return null
-    }
-    return first.toLowerCase()
-  }
-  const buildSemanticLeadCandidates = () => {
-    const byLead = new Map()
-    const fallback = []
-    for (let sn = 0; sn < semanticsLength; sn++) {
-      const sem = semantics[sn]
-      const keys = new Set()
-      const semKey = getLiteralLeadKey(sem.name)
-      if (semKey) keys.add(semKey)
-      let hasUnknown = false
-      for (let i = 0; i < sem.aliases.length; i++) {
-        const aliasKey = getLiteralLeadKey(sem.aliases[i])
-        if (!aliasKey) {
-          hasUnknown = true
-          continue
-        }
-        keys.add(aliasKey)
-      }
-      if (keys.size === 0 || hasUnknown) {
-        fallback.push(sn)
-      }
-      for (const key of keys) {
-        let list = byLead.get(key)
-        if (!list) {
-          list = []
-          byLead.set(key, list)
-        }
-        list.push(sn)
-      }
-    }
-    if (fallback.length === 0) {
-      return { candidatesByLead: byLead, fallback }
-    }
-    const candidatesByLead = new Map()
-    for (const [key, list] of byLead.entries()) {
-      const seen = new Set(list)
-      const merged = list.slice()
-      for (let i = 0; i < fallback.length; i++) {
-        const sn = fallback[i]
-        if (seen.has(sn)) continue
-        seen.add(sn)
-        merged.push(sn)
-      }
-      candidatesByLead.set(key, merged)
-    }
-    return { candidatesByLead, fallback }
-  }
   const semanticsGitHubAlertsReg = semantics.map((sem) => {
     const aliasStr = sem.aliases.length
       ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
@@ -136,7 +77,7 @@ const createGitHubTypeContainer = (semantics) => {
   let cachedBlockquoteRule = null
   let hasResolvedBlockquoteRule = false
   const matchCache = new Map()
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates()
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
       const firstKey = matchCache.keys().next().value
@@ -169,6 +110,15 @@ const createGitHubTypeContainer = (semantics) => {
     }
     return false
   }
+  const parseGitHubSemanticMatch = (sn, semanticMatch) => {
+    const isFullWidth = semanticMatch[0].charCodeAt(0) === CODE_FULLWIDTH_LEFT_BRACKET
+    return {
+      sn,
+      actualName: semanticMatch[1],
+      openBracket: isFullWidth ? '［' : '[',
+      closeBracket: isFullWidth ? '］' : ']',
+    }
+  }
 
   const findGitHubSemanticMatch = (content) => {
     if (!content || !hasAlertPrefix(content)) return null
@@ -180,24 +130,21 @@ const createGitHubTypeContainer = (semantics) => {
     let semanticMatch = null
     const semanticLead = content[2]
     const leadKey = semanticLead ? semanticLead.toLowerCase() : ''
-    const candidates = candidatesByLead.get(leadKey) || fallback
-    if (candidates.length > 0) {
-      for (let ci = 0; ci < candidates.length; ci++) {
-        const sn = candidates[ci]
-        semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
-        if (!semanticMatch) continue
-        const result = { sn, semanticMatch }
-        cacheSet(content, result)
-        return result
+    let candidates = candidatesByLead.get(leadKey)
+    if (!candidates) {
+      if (fallback.length === 0) {
+        cacheSet(content, CACHE_MISS)
+        return null
       }
-    } else {
-      for (let sn = 0; sn < semanticsLength; sn++) {
-        semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
-        if (!semanticMatch) continue
-        const result = { sn, semanticMatch }
-        cacheSet(content, result)
-        return result
-      }
+      candidates = fallback
+    }
+    for (let ci = 0; ci < candidates.length; ci++) {
+      const sn = candidates[ci]
+      semanticMatch = content.match(semanticsGitHubAlertsReg[sn])
+      if (!semanticMatch) continue
+      const result = parseGitHubSemanticMatch(sn, semanticMatch)
+      cacheSet(content, result)
+      return result
     }
     cacheSet(content, CACHE_MISS)
     return null
@@ -225,7 +172,7 @@ const createGitHubTypeContainer = (semantics) => {
         trimCount++
         continue
       }
-      if (token.type === 'text' && (!token.content || /^\s*$/.test(token.content))) {
+      if (token.type === 'text' && (!token.content || token.content.trim() === '')) {
         trimCount++
         continue
       }
@@ -260,8 +207,6 @@ const createGitHubTypeContainer = (semantics) => {
     if (!paragraphToken || paragraphToken.type !== 'inline') return false
     const semantic = findGitHubSemanticMatch(paragraphToken.content)
     if (!semantic) return false
-    const sn = semantic.sn
-    const semanticMatch = semantic.semanticMatch
 
     let blockquoteCloseIndex = -1
     let depth = 0
@@ -282,24 +227,19 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (blockquoteCloseIndex === -1) return false
 
-    const semanticType = semanticMatch[1]
-    const isFullWidth = semanticMatch[0].charCodeAt(0) === CODE_FULLWIDTH_LEFT_BRACKET
-    const openBracket = isFullWidth ? '［' : '['
-    const closeBracket = isFullWidth ? '］' : ']'
-
     sc.push({
       range: [n, blockquoteCloseIndex],
-      sn: sn,
-      actualName: semanticType,
-      openBracket: openBracket,
-      closeBracket: closeBracket,
+      sn: semantic.sn,
+      actualName: semantic.actualName,
+      openBracket: semantic.openBracket,
+      closeBracket: semantic.closeBracket,
       isGitHubAlert: true
     })
 
     return true
   }
 
-  const setGitHubAlertsSemanticContainer = (state, _n, _hrType, sc, _sci, _opt) => {
+  const setGitHubAlertsSemanticContainer = (state, _n, _hrType, sc, _sci, opt) => {
     const tokens = state.tokens
     const rs = sc.range[0]
     const re = sc.range[1]
@@ -335,28 +275,26 @@ const createGitHubTypeContainer = (semantics) => {
     const paragraphInlineToken = tokens[paragraphInlineIndex]
     const paragraphCloseToken = tokens[paragraphCloseIndex]
     const paragraphChildren = paragraphInlineToken.children
+    const labelControl = opt?.labelControl
+      ? resolveLabelControl(paragraphOpenToken, paragraphInlineToken)
+      : null
+    const hideLabel = !!labelControl?.hide
+    const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
 
-    const sToken = new state.Token('html_block', '', 0)
-    sToken.content = '<' + sem.tag
-    sToken.content += ' class="sc-' + sem.name + '"'
-    if (sem.attrs.length > 0) {
-      for (let ai = 0; ai < sem.attrs.length; ai++) {
-        sToken.content += ' ' + sem.attrs[ai][0] + '="' + sem.attrs[ai][1] + '"'
-      }
-    }
-    sToken.content += '>\n'
-    sToken.block = true
-    if (startRefToken && startRefToken.map) {
-      sToken.map = [startRefToken.map[0], startRefToken.map[1]]
-    }
+    const startMap = startRefToken?.map
+    const endMap = endRefToken?.map
+    const sToken = createContainerStartToken(
+      state,
+      sem,
+      'sc-' + sem.name,
+      labelText,
+      hideLabel,
+      sc.actualName,
+      startMap
+    )
     tokens[rs] = sToken
 
-    const eToken = new state.Token('html_block', '', 0)
-    eToken.content = '</' + sem.tag + '>\n'
-    eToken.block = true
-    if (endRefToken && endRefToken.map) {
-      eToken.map = [endRefToken.map[0], endRefToken.map[1]]
-    }
+    const eToken = createContainerEndToken(state, sem, endMap)
     tokens[re] = eToken
 
     for (let i = rs + 1; i < re; i++) {
@@ -370,55 +308,6 @@ const createGitHubTypeContainer = (semantics) => {
     }
 
     if (paragraphChildren && paragraphChildren.length > 0) {
-      const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
-      const labelParagraphInline = new state.Token('inline', '', 0)
-      const labelParagraphClose = new state.Token('paragraph_close', 'p', -1)
-      labelParagraphOpen.block = true
-      labelParagraphInline.block = true
-      labelParagraphClose.block = true
-      if (paragraphOpenToken?.map) {
-        labelParagraphOpen.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-      }
-      if (paragraphInlineToken?.map) {
-        labelParagraphInline.map = [paragraphInlineToken.map[0], paragraphInlineToken.map[1]]
-      } else if (paragraphOpenToken?.map) {
-        labelParagraphInline.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-      }
-      if (paragraphCloseToken?.map) {
-        labelParagraphClose.map = [paragraphCloseToken.map[0], paragraphCloseToken.map[1]]
-      } else if (paragraphOpenToken?.map) {
-        labelParagraphClose.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-      }
-
-      const strongOpen = new state.Token('strong_open', 'strong', 1)
-      strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
-
-      const openBracketSpan = new state.Token('span_open', 'span', 1)
-      openBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-      const openBracketContent = new state.Token('text', '', 0)
-      openBracketContent.content = sc.openBracket
-      const openBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-      const semanticNameContent = new state.Token('text', '', 0)
-      semanticNameContent.content = sc.actualName
-
-      const closeBracketSpan = new state.Token('span_open', 'span', 1)
-      closeBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
-      const closeBracketContent = new state.Token('text', '', 0)
-      closeBracketContent.content = sc.closeBracket
-      const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-      const strongClose = new state.Token('strong_close', 'strong', -1)
-
-      labelParagraphInline.children = [
-        strongOpen,
-        openBracketSpan, openBracketContent, openBracketSpanClose,
-        semanticNameContent,
-        closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-        strongClose
-      ]
-      labelParagraphInline.content = ''
-
       if (paragraphChildren[0] && paragraphChildren[0].type === 'text') {
         paragraphChildren[0].content = stripAlertMarkerPrefix(paragraphChildren[0].content)
       }
@@ -431,10 +320,69 @@ const createGitHubTypeContainer = (semantics) => {
 
       const shouldDropOriginalParagraph = !hasInlineContent(paragraphInlineToken, paragraphChildren)
 
-      tokens.splice(paragraphOpenIndex, 0, labelParagraphOpen, labelParagraphInline, labelParagraphClose)
+      if (!hideLabel) {
+        const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
+        const labelParagraphInline = new state.Token('inline', '', 0)
+        const labelParagraphClose = new state.Token('paragraph_close', 'p', -1)
+        labelParagraphOpen.block = true
+        labelParagraphInline.block = true
+        labelParagraphClose.block = true
+        if (paragraphOpenToken?.map) {
+          labelParagraphOpen.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+        }
+        if (paragraphInlineToken?.map) {
+          labelParagraphInline.map = [paragraphInlineToken.map[0], paragraphInlineToken.map[1]]
+        } else if (paragraphOpenToken?.map) {
+          labelParagraphInline.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+        }
+        if (paragraphCloseToken?.map) {
+          labelParagraphClose.map = [paragraphCloseToken.map[0], paragraphCloseToken.map[1]]
+        } else if (paragraphOpenToken?.map) {
+          labelParagraphClose.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
+        }
+
+        const strongOpen = new state.Token('strong_open', 'strong', 1)
+        strongOpen.attrJoin("class", "sc-" + sem.name + "-label")
+
+        const semanticNameContent = new state.Token('text', '', 0)
+        semanticNameContent.content = labelText
+
+        const strongClose = new state.Token('strong_close', 'strong', -1)
+
+        if (labelControl) {
+          labelParagraphInline.children = [
+            strongOpen,
+            semanticNameContent,
+            strongClose
+          ]
+        } else {
+          const openBracketSpan = new state.Token('span_open', 'span', 1)
+          openBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
+          const openBracketContent = new state.Token('text', '', 0)
+          openBracketContent.content = sc.openBracket
+          const openBracketSpanClose = new state.Token('span_close', 'span', -1)
+
+          const closeBracketSpan = new state.Token('span_open', 'span', 1)
+          closeBracketSpan.attrJoin("class", "sc-" + sem.name + "-label-joint")
+          const closeBracketContent = new state.Token('text', '', 0)
+          closeBracketContent.content = sc.closeBracket
+          const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
+
+          labelParagraphInline.children = [
+            strongOpen,
+            openBracketSpan, openBracketContent, openBracketSpanClose,
+            semanticNameContent,
+            closeBracketSpan, closeBracketContent, closeBracketSpanClose,
+            strongClose
+          ]
+        }
+        labelParagraphInline.content = ''
+
+        tokens.splice(paragraphOpenIndex, 0, labelParagraphOpen, labelParagraphInline, labelParagraphClose)
+      }
 
       if (shouldDropOriginalParagraph) {
-        tokens.splice(paragraphOpenIndex + 3, 3)
+        tokens.splice(paragraphOpenIndex + (hideLabel ? 0 : 3), 3)
       }
     }
 
@@ -449,7 +397,7 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (state.src.charCodeAt(pos) !== 0x3E) return false
 
-    let firstLineContent = trimLeadingWhitespace(state.src.slice(pos + 1, state.eMarks[start]))
+    const firstLineContent = trimLeadingWhitespace(state.src.slice(pos + 1, state.eMarks[start]))
     if (!findGitHubSemanticMatch(firstLineContent)) return false
     if (silent) return true
 

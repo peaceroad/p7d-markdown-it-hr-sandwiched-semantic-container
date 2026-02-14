@@ -2,6 +2,7 @@ import assert from 'assert'
 import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
+import mditAttrs from 'markdown-it-attrs'
 import mditSemanticContainer from '../index.js'
 import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
@@ -34,6 +35,12 @@ const mdAllFeatures = mdit().use(mditSemanticContainer, {allowBracketJoint: true
 const mdLanguagesEnOnly = mdit().use(mditSemanticContainer, {languages: []})
 const mdLanguagesString = mdit().use(mditSemanticContainer, {languages: 'ja'})
 const mdLanguagesDuplicate = mdit().use(mditSemanticContainer, {languages: ['ja', 'ja']})
+const mdLabelControl = mdit().use(mditAttrs).use(mditSemanticContainer, {labelControl: true})
+const mdLabelControlOff = mdit().use(mditAttrs).use(mditSemanticContainer, {labelControl: false})
+const mdLabelControlBracket = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: true})
+const mdLabelControlBracketOff = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: false})
+const mdLabelControlGitHub = mdit().use(mditAttrs).use(mditSemanticContainer, {githubTypeContainer: true, labelControl: true})
+const mdLabelControlGitHubOff = mdit().use(mditAttrs).use(mditSemanticContainer, {githubTypeContainer: true, labelControl: false})
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -54,6 +61,9 @@ const testData = {
   languagesEnOnly: __dirname + path.sep + 'examples-languages-en-only.txt',
   languagesNonArrayOrDuplicate: __dirname + path.sep + 'examples-languages-nonarray-and-duplicate.txt',
   strongJaWithFigure: __dirname + path.sep + 'examples-strong-ja-figure-with-p-caption.txt',
+  labelControl: __dirname + path.sep + 'examples-label-control.txt',
+  labelControlBracket: __dirname + path.sep + 'examples-label-control-bracket.txt',
+  labelControlGitHub: __dirname + path.sep + 'examples-label-control-github.txt',
 }
 
 const getTestData = (pat) => {
@@ -162,6 +172,12 @@ pass = runTest(md, testData.complex, pass)
 pass = runTest(mdLanguagesEnOnly, testData.languagesEnOnly, pass)
 pass = runTest(mdLanguagesString, testData.languagesNonArrayOrDuplicate, pass)
 pass = runTest(mdLanguagesDuplicate, testData.languagesNonArrayOrDuplicate, pass)
+pass = runTest(mdLabelControl, testData.labelControl, pass)
+pass = runTest(mdLabelControlOff, testData.labelControl, pass, undefined, 'labelControlOff')
+pass = runTest(mdLabelControlBracket, testData.labelControlBracket, pass)
+pass = runTest(mdLabelControlBracketOff, testData.labelControlBracket, pass, undefined, 'labelControlOff')
+pass = runTest(mdLabelControlGitHub, testData.labelControlGitHub, pass)
+pass = runTest(mdLabelControlGitHubOff, testData.labelControlGitHub, pass, undefined, 'labelControlOff')
 console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
 pass = runTest(mdJa, testData.noOption, pass)
 pass = runTest(mdRequireHrAtOneParagraphJa, testData.requireHrAtOneParagraph, pass)
