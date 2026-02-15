@@ -40,3 +40,21 @@ code block
 <section class="sc-caution" role="doc-notice">
 <p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong> これは注意です。</p>
 </section>
+
+
+[Markdown]
+> [!NOTE]
+> ## Heading
+> Content
+[HTML]
+<section class="sc-note" role="doc-notice">
+<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
+<h2>Heading</h2>
+<p>Content</p>
+</section>
+
+[HTML:mixin]
+<section class="sc-note" role="doc-notice">
+<h2><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> Heading</h2>
+<p>Content</p>
+</section>

@@ -213,11 +213,14 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
     const nextToken = tokens[n+1]
+    if (nextToken?.type !== 'inline') return false
 
     const content = nextToken?.content
     if (!content) return false
     let leadIndex = 0
-    if (content.startsWith('**') || content.startsWith('__')) {
+    const firstCode = content.charCodeAt(0)
+    const secondCode = content.charCodeAt(1)
+    if ((firstCode === CODE_STAR && secondCode === CODE_STAR) || (firstCode === CODE_UNDERSCORE && secondCode === CODE_UNDERSCORE)) {
       leadIndex = 2
     }
     const leadCode = content.charCodeAt(leadIndex)
@@ -357,7 +360,7 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   const labelControl = optLocal.labelControl ? resolveLabelControl(startToken, nt) : null
   const hideLabel = !!labelControl?.hide
   const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
-  const labelJoint = labelControl ? '' : sc.actualNameJoint
+  const labelJoint = hideLabel ? '' : sc.actualNameJoint
   const hasSemanticAriaLabel = !!sem.hasAriaLabel
 
   const sToken = createContainerStartToken(
@@ -395,7 +398,10 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   if (nt.content?.charCodeAt(0) === CODE_HASH) {
     nJump += 2
   }
-  if (nt.content?.startsWith('**') || nt.content?.startsWith('__')) {
+  if (nt.content && (
+    (nt.content.charCodeAt(0) === CODE_STAR && nt.content.charCodeAt(1) === CODE_STAR)
+    || (nt.content.charCodeAt(0) === CODE_UNDERSCORE && nt.content.charCodeAt(1) === CODE_UNDERSCORE)
+  )) {
     let foundLabelStrong = false
     
     for (let i = 0; i < ntChildren.length - 2; i++) {
@@ -695,11 +701,21 @@ const mditSemanticContainer = (md, option) => {
     // false: GitHub-like separate title paragraph (default)
     // true: inline label in the first paragraph
     githubTypeInlineLabel: false,
+    // false: keep heading and label as separate blocks in inline mode (default)
+    // true: when marker paragraph is empty and the next block is heading, prepend label to heading text
+    githubTypeInlineLabelHeadingMixin: false,
+    // Controls custom label suffix in GitHub inline mode.
+    // "none": no suffix
+    // "auto": CJK => "：", others => "."
+    githubTypeInlineLabelJoint: 'none',
     labelControl: false,
     // Additional languages to load on top of English
     languages: ['ja'],
   }
   if (option) Object.assign(opt, option)
+  if (opt.githubTypeInlineLabelJoint !== 'auto') {
+    opt.githubTypeInlineLabelJoint = 'none'
+  }
   
   const semantics = buildSemantics(opt.languages)
   const bracket = opt.allowBracketJoint ? createBracketFormat(semantics) : null

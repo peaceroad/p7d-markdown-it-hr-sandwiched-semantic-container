@@ -6,7 +6,7 @@
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<p><span class="sc-notice-label">重要</span> A notice body.</p>
+<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>重要<span class="sc-notice-label-joint">]</span></span> A notice body.</p>
 </section>
 
 [HTML:labelControlOff]
@@ -23,7 +23,7 @@
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">重要</strong> A body.</p>
+<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>重要<span class="sc-notice-label-joint">]</span></strong> A body.</p>
 </section>
 
 [HTML:labelControlOff]
@@ -57,7 +57,7 @@
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<h2><span class="sc-notice-label">見出しラベル</span> Heading body</h2>
+<h2><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>見出しラベル<span class="sc-notice-label-joint">]</span></span> Heading body</h2>
 </section>
 
 [HTML:labelControlOff]
@@ -80,4 +80,21 @@
 [HTML:labelControlOff]
 <section class="sc-notice" role="doc-notice">
 <h2 label=""><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Hidden heading</h2>
+</section>
+
+
+[Markdown]
+---
+
+［Notice］全角括弧本文。 {label="重要"}
+
+---
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label"><span class="sc-notice-label-joint">［</span>重要<span class="sc-notice-label-joint">］</span></span>全角括弧本文。</p>
+</section>
+
+[HTML:labelControlOff]
+<section class="sc-notice" role="doc-notice">
+<p label="重要"><span class="sc-notice-label"><span class="sc-notice-label-joint">［</span>Notice<span class="sc-notice-label-joint">］</span></span>全角括弧本文。</p>
 </section>

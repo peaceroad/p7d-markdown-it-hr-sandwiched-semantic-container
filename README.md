@@ -678,6 +678,42 @@ This produces:
 </section>
 ```
 
+`githubTypeInlineLabelJoint` controls suffix behavior for custom labels (when `labelControl: true` in inline mode):
+
+- `none` (default): no suffix. A separator space is inserted between label and content.
+  - Japanese labels use full-width space `　`.
+  - Non-Japanese labels use half-width space ` `.
+- `auto`: suffix and spacing are inferred from label text.
+  - Japanese labels: `：` (no extra space)
+  - Non-Japanese labels: `.` + half-width space
+
+```js
+mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelJoint: "auto"
+})
+```
+
+By default, inline mode does not merge the label into a following heading.  
+To merge label + heading text into one heading element, enable `githubTypeInlineLabelHeadingMixin: true`.
+
+```js
+mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelHeadingMixin: true
+})
+```
+
+When using heading mixin, put `label` on the heading line (not on `[!TYPE]` line):
+
+```markdown
+> [!NOTE]
+> ## Heading {label="重要メモ"}
+> Content
+```
+
 Supported GitHub alert types: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, and their Japanese equivalents.
 
 ### requireHrAtOneParagraph

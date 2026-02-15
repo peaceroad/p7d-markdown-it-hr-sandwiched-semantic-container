@@ -35,6 +35,11 @@ const mdGitHubAlertsInlineTitle = mdit().use(mditSemanticContainer, {
   githubTypeContainer: true,
   githubTypeInlineLabel: true,
 })
+const mdGitHubAlertsInlineTitleMixin = mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelHeadingMixin: true,
+})
 
 const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
 const mdAllFeatures = mdit().use(mditSemanticContainer, {
@@ -59,6 +64,25 @@ const mdLabelControlGitHubOff = mdit().use(mditAttrs).use(mditSemanticContainer,
 const mdLabelControlGitHubInlineTitle = mdit().use(mditAttrs).use(mditSemanticContainer, {
   githubTypeContainer: true,
   githubTypeInlineLabel: true,
+  labelControl: true
+})
+const mdLabelControlGitHubInlineTitleMixin = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelHeadingMixin: true,
+  labelControl: true
+})
+const mdLabelControlGitHubInlineTitleAuto = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelJoint: 'auto',
+  labelControl: true
+})
+const mdLabelControlGitHubInlineTitleMixinAuto = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  githubTypeInlineLabel: true,
+  githubTypeInlineLabelHeadingMixin: true,
+  githubTypeInlineLabelJoint: 'auto',
   labelControl: true
 })
 const mdLabelControlGitHubInlineTitleOff = mdit().use(mditAttrs).use(mditSemanticContainer, {
@@ -206,6 +230,9 @@ pass = runTest(mdLabelControlBracketOff, testData.labelControlBracket, pass, und
 pass = runTest(mdLabelControlGitHub, testData.labelControlGitHub, pass)
 pass = runTest(mdLabelControlGitHubOff, testData.labelControlGitHub, pass, undefined, 'labelControlOff')
 pass = runTest(mdLabelControlGitHubInlineTitle, testData.labelControlGitHubInlineTitle, pass)
+pass = runTest(mdLabelControlGitHubInlineTitleMixin, testData.labelControlGitHubInlineTitle, pass, undefined, 'mixin')
+pass = runTest(mdLabelControlGitHubInlineTitleAuto, testData.labelControlGitHubInlineTitle, pass, undefined, 'autoJoint')
+pass = runTest(mdLabelControlGitHubInlineTitleMixinAuto, testData.labelControlGitHubInlineTitle, pass, undefined, 'mixinAutoJoint')
 pass = runTest(mdLabelControlGitHubInlineTitleOff, testData.labelControlGitHubInlineTitle, pass, undefined, 'labelControlOff')
 console.log('\nstrongJa: true ::::::::::::::::::::::::::::::::::::::::::::')
 pass = runTest(mdJa, testData.noOption, pass)
@@ -217,6 +244,7 @@ pass = runTest(mdJaWithFigure, testData.strongJaWithFigure, pass)
 
 pass = runTest(mdGitHubAlerts, testData.githubAlerts, pass)
 pass = runTest(mdGitHubAlertsInlineTitle, testData.githubAlertsInlineTitle, pass)
+pass = runTest(mdGitHubAlertsInlineTitleMixin, testData.githubAlertsInlineTitle, pass, undefined, 'mixin')
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
 

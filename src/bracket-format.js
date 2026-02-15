@@ -7,6 +7,8 @@ const createBracketFormat = (semantics) => {
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
+  const CODE_STAR = 42
+  const CODE_UNDERSCORE = 95
   const CODE_SPACE = 32
   const CODE_LEFT_BRACKET = 91
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
@@ -27,11 +29,47 @@ const createBracketFormat = (semantics) => {
     for (let i = startIndex; i < children.length; i++) {
       const token = children[i]
       if (token?.type !== 'text' || !token.content) continue
-      if (!token.content.startsWith(' ')) {
+      if (token.content.charCodeAt(0) !== CODE_SPACE) {
         token.content = ' ' + token.content
       }
       return
     }
+  }
+  const prependBracketLabelTokens = (state, sem, children, labelText, sc, useStrongWrapper, spaceMode) => {
+    const wrapperOpen = new state.Token(useStrongWrapper ? 'strong_open' : 'span_open', useStrongWrapper ? 'strong' : 'span', 1)
+    wrapperOpen.attrJoin('class', sem.labelClass)
+    const openBracketSpan = new state.Token('span_open', 'span', 1)
+    openBracketSpan.attrJoin('class', sem.labelJointClass)
+    const openBracketContent = new state.Token('text', '', 0)
+    openBracketContent.content = sc.openBracket
+    const openBracketSpanClose = new state.Token('span_close', 'span', -1)
+    const labelContent = new state.Token('text', '', 0)
+    labelContent.content = labelText
+    const closeBracketSpan = new state.Token('span_open', 'span', 1)
+    closeBracketSpan.attrJoin('class', sem.labelJointClass)
+    const closeBracketContent = new state.Token('text', '', 0)
+    closeBracketContent.content = sc.closeBracket
+    const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
+    const wrapperClose = new state.Token(useStrongWrapper ? 'strong_close' : 'span_close', useStrongWrapper ? 'strong' : 'span', -1)
+    children.splice(0, 0,
+      wrapperOpen,
+      openBracketSpan, openBracketContent, openBracketSpanClose,
+      labelContent,
+      closeBracketSpan, closeBracketContent, closeBracketSpanClose,
+      wrapperClose
+    )
+
+    if (sc.openBracket !== '[') return 9
+
+    if (spaceMode === 'force') {
+      const spaceAfterLabel = new state.Token('text', '', 0)
+      spaceAfterLabel.content = ' '
+      children.splice(9, 0, spaceAfterLabel)
+      return 10
+    }
+
+    ensureLeadingSpaceAfterLabel(children, 9)
+    return 9
   }
   const stripBracketLabelPrefix = (inlineToken, children, sc) => {
     if (inlineToken?.content) {
@@ -159,11 +197,14 @@ const createBracketFormat = (semantics) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
     const nextToken = tokens[n+1]
+    if (nextToken?.type !== 'inline') return false
 
     const content = nextToken?.content
     if (!content) return false
     let startIndex = 0
-    if (content.startsWith('**') || content.startsWith('__')) {
+    const firstCode = content.charCodeAt(0)
+    const secondCode = content.charCodeAt(1)
+    if ((firstCode === CODE_STAR && secondCode === CODE_STAR) || (firstCode === CODE_UNDERSCORE && secondCode === CODE_UNDERSCORE)) {
       startIndex = 2
     }
     const leadCode = content.charCodeAt(startIndex)
@@ -285,62 +326,18 @@ const createBracketFormat = (semantics) => {
       if (hideLabel) return nJump
 
       if (sc.isStrongBracket) {
-        const strongOpen = new state.Token('strong_open', 'strong', 1)
-        strongOpen.attrJoin('class', sem.labelClass)
-        const labelContent = new state.Token('text', '', 0)
-        labelContent.content = labelText
-        const strongClose = new state.Token('strong_close', 'strong', -1)
-        ntChildren.splice(0, 0, strongOpen, labelContent, strongClose)
-        ensureLeadingSpaceAfterLabel(ntChildren, 3)
+        prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, true, 'ensure')
       } else {
-        const spanOpen = new state.Token('span_open', 'span', 1)
-        spanOpen.attrJoin('class', sem.labelClass)
-        const labelContent = new state.Token('text', '', 0)
-        labelContent.content = labelText
-        const spanClose = new state.Token('span_close', 'span', -1)
-        ntChildren.splice(0, 0, spanOpen, labelContent, spanClose)
-        ensureLeadingSpaceAfterLabel(ntChildren, 3)
+        prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, false, 'ensure')
       }
       nJump += 3
       return nJump
     }
 
     if (sc.isStrongBracket) {
-      const lt_strong_open = new state.Token('strong_open', 'strong', 1)
-      lt_strong_open.attrJoin('class', sem.labelClass)
+      const bodyStartIndex = prependBracketLabelTokens(state, sem, ntChildren, sc.actualName, sc, true, 'force')
 
-      const lt_open_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_open_bracket_span.attrJoin('class', sem.labelJointClass)
-      const lt_open_bracket_content = new state.Token('text', '', 0)
-      lt_open_bracket_content.content = sc.openBracket
-      const lt_open_bracket_span_close = new state.Token('span_close', 'span', -1)
-
-      const lt_span_content = new state.Token('text', '', 0)
-      lt_span_content.content = sc.actualName
-
-      const lt_close_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_close_bracket_span.attrJoin('class', sem.labelJointClass)
-      const lt_close_bracket_content = new state.Token('text', '', 0)
-      lt_close_bracket_content.content = sc.closeBracket
-      const lt_close_bracket_span_close = new state.Token('span_close', 'span', -1)
-
-      const lt_strong_close = new state.Token('strong_close', 'strong', -1)
-
-      ntChildren.splice(0, 0, 
-        lt_strong_open, 
-        lt_open_bracket_span, lt_open_bracket_content, lt_open_bracket_span_close,
-        lt_span_content,
-        lt_close_bracket_span, lt_close_bracket_content, lt_close_bracket_span_close,
-        lt_strong_close
-      )
-
-      if (sc.openBracket === '[') {
-        const spaceAfterLabel = new state.Token('text', '', 0)
-        spaceAfterLabel.content = ' '
-        ntChildren.splice(9, 0, spaceAfterLabel)
-      }
-
-      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length - 2; i++) {
+      for (let i = bodyStartIndex; i < ntChildren.length - 2; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'strong_open'
           && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
           && ntChildren[i + 1] && ntChildren[i + 1].content) {
@@ -364,48 +361,16 @@ const createBracketFormat = (semantics) => {
         }
       }
 
-      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length; i++) {
+      for (let i = bodyStartIndex; i < ntChildren.length; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
           ntChildren[i].content = trimLeadingAsciiSpaces(ntChildren[i].content)
           break
         }
       }
     } else {
-      const lt_span_open = new state.Token('span_open', 'span', 1)
-      lt_span_open.attrJoin('class', sem.labelClass)
+      const bodyStartIndex = prependBracketLabelTokens(state, sem, ntChildren, sc.actualName, sc, false, 'force')
 
-      const lt_open_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_open_bracket_span.attrJoin('class', sem.labelJointClass)
-      const lt_open_bracket_content = new state.Token('text', '', 0)
-      lt_open_bracket_content.content = sc.openBracket
-      const lt_open_bracket_span_close = new state.Token('span_close', 'span', -1)
-
-      const lt_span_content = new state.Token('text', '', 0)
-      lt_span_content.content = sc.actualName
-
-      const lt_close_bracket_span = new state.Token('span_open', 'span', 1)
-      lt_close_bracket_span.attrJoin('class', sem.labelJointClass)
-      const lt_close_bracket_content = new state.Token('text', '', 0)
-      lt_close_bracket_content.content = sc.closeBracket
-      const lt_close_bracket_span_close = new state.Token('span_close', 'span', -1)
-
-      const lt_span_close = new state.Token('span_close', 'span', -1)
-
-      ntChildren.splice(0, 0, 
-        lt_span_open, 
-        lt_open_bracket_span, lt_open_bracket_content, lt_open_bracket_span_close,
-        lt_span_content,
-        lt_close_bracket_span, lt_close_bracket_content, lt_close_bracket_span_close,
-        lt_span_close
-      )
-
-      if (sc.openBracket === '[') {
-        const spaceAfterLabel = new state.Token('text', '', 0)
-        spaceAfterLabel.content = ' '
-        ntChildren.splice(9, 0, spaceAfterLabel)
-      }
-
-      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length; i++) {
+      for (let i = bodyStartIndex; i < ntChildren.length; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'text' && ntChildren[i].content) {
           ntChildren[i].content = removeLiteralPrefix(ntChildren[i].content, sc.actualCont)
           break
@@ -414,7 +379,7 @@ const createBracketFormat = (semantics) => {
 
       nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
-      for (let i = (sc.openBracket === '[' ? 10 : 9); i < ntChildren.length - 2; i++) {
+      for (let i = bodyStartIndex; i < ntChildren.length - 2; i++) {
         if (ntChildren[i] && ntChildren[i].type === 'strong_open'
           && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
           && ntChildren[i + 1] && ntChildren[i + 1].content) {

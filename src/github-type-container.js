@@ -18,6 +18,9 @@ const createGitHubTypeContainer = (semantics) => {
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
   const CODE_FULLWIDTH_RIGHT_BRACKET = 65341
   const CODE_FULLWIDTH_BANG = 65281
+  const RE_JAPANESE_CHARS = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/
+  const INLINE_LABEL_JOINT_NONE = 'none'
+  const INLINE_LABEL_JOINT_AUTO = 'auto'
   const isTrimWhitespaceCode = (code) => (
     code === CODE_SPACE
     || code === CODE_TAB
@@ -34,6 +37,24 @@ const createGitHubTypeContainer = (semantics) => {
       index++
     }
     return index === 0 ? value : value.slice(index)
+  }
+  const hasNonWhitespace = (value) => {
+    if (!value) return false
+    for (let i = 0; i < value.length; i++) {
+      if (!isTrimWhitespaceCode(value.charCodeAt(i))) return true
+    }
+    return false
+  }
+  const normalizeInlineLabelJointMode = (mode) => mode === INLINE_LABEL_JOINT_AUTO ? INLINE_LABEL_JOINT_AUTO : INLINE_LABEL_JOINT_NONE
+  const isLikelyJapaneseText = (value) => !!value && RE_JAPANESE_CHARS.test(value)
+  const resolveCustomLabelStyle = (labelText, inlineLabelJointMode) => {
+    const isJapanese = isLikelyJapaneseText(labelText)
+    if (inlineLabelJointMode === INLINE_LABEL_JOINT_AUTO) {
+      return isJapanese
+        ? { joint: '：', spacer: '' }
+        : { joint: '.', spacer: ' ' }
+    }
+    return { joint: '', spacer: isJapanese ? '　' : ' ' }
   }
   const stripAlertMarkerPrefix = (value) => {
     if (!value) return value
@@ -151,14 +172,14 @@ const createGitHubTypeContainer = (semantics) => {
   }
 
   const hasInlineContent = (inlineToken, children) => {
-    if (inlineToken?.content && inlineToken.content.trim()) return true
+    if (hasNonWhitespace(inlineToken?.content)) return true
     if (!Array.isArray(children) || children.length === 0) return false
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
       if (!child) continue
-      if (child.type === 'text' && child.content && child.content.trim()) return true
-      if (child.type === 'code_inline' && child.content && child.content.trim()) return true
-      if (child.type === 'html_inline' && child.content && child.content.trim()) return true
+      if (child.type === 'text' && hasNonWhitespace(child.content)) return true
+      if (child.type === 'code_inline' && hasNonWhitespace(child.content)) return true
+      if (child.type === 'html_inline' && hasNonWhitespace(child.content)) return true
       if (child.type === 'image') return true
     }
     return false
@@ -173,7 +194,7 @@ const createGitHubTypeContainer = (semantics) => {
         trimCount++
         continue
       }
-      if (token.type === 'text' && (!token.content || token.content.trim() === '')) {
+      if (token.type === 'text' && !hasNonWhitespace(token.content)) {
         trimCount++
         continue
       }
@@ -187,7 +208,7 @@ const createGitHubTypeContainer = (semantics) => {
       children.splice(0, trimCount)
     }
   }
-  const buildGitHubLabelChildren = (state, sem, sc, labelText, labelControl) => {
+  const buildGitHubLabelChildren = (state, sem, sc, labelText, labelControl, inlineLabelJointMode) => {
     const strongOpen = new state.Token('strong_open', 'strong', 1)
     strongOpen.attrJoin('class', sem.labelClass)
     const semanticNameContent = new state.Token('text', '', 0)
@@ -195,7 +216,16 @@ const createGitHubTypeContainer = (semantics) => {
     const strongClose = new state.Token('strong_close', 'strong', -1)
 
     if (labelControl) {
-      return [strongOpen, semanticNameContent, strongClose]
+      const { joint, spacer } = resolveCustomLabelStyle(labelText, inlineLabelJointMode)
+      if (!joint) {
+        return { children: [strongOpen, semanticNameContent, strongClose], spacer }
+      }
+      const jointOpen = new state.Token('span_open', 'span', 1)
+      jointOpen.attrJoin('class', sem.labelJointClass)
+      const jointContent = new state.Token('text', '', 0)
+      jointContent.content = joint
+      const jointClose = new state.Token('span_close', 'span', -1)
+      return { children: [strongOpen, semanticNameContent, jointOpen, jointContent, jointClose, strongClose], spacer }
     }
 
     const openBracketSpan = new state.Token('span_open', 'span', 1)
@@ -210,28 +240,45 @@ const createGitHubTypeContainer = (semantics) => {
     closeBracketContent.content = sc.closeBracket
     const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
 
-    return [
-      strongOpen,
-      openBracketSpan, openBracketContent, openBracketSpanClose,
-      semanticNameContent,
-      closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-      strongClose
-    ]
+    return {
+      children: [
+        strongOpen,
+        openBracketSpan, openBracketContent, openBracketSpanClose,
+        semanticNameContent,
+        closeBracketSpan, closeBracketContent, closeBracketSpanClose,
+        strongClose
+      ],
+      spacer: ' ',
+    }
   }
-  const prependGitHubInlineLabel = (state, paragraphChildren, labelChildren) => {
-    paragraphChildren.splice(0, 0, ...labelChildren)
+  const prependInlineLabelWithSpacer = (state, children, labelChildren, spacerText) => {
+    children.splice(0, 0, ...labelChildren)
+    if (!spacerText) return
     const firstContentIndex = labelChildren.length
-    if (paragraphChildren.length <= firstContentIndex) return
-    const firstContent = paragraphChildren[firstContentIndex]
+    if (children.length <= firstContentIndex) return
+    const firstContent = children[firstContentIndex]
     if (firstContent?.type === 'text') {
-      if (!firstContent.content.startsWith(' ')) {
-        firstContent.content = ' ' + firstContent.content
+      const code0 = firstContent.content ? firstContent.content.charCodeAt(0) : 0
+      if (code0 !== CODE_SPACE && code0 !== CODE_FULLWIDTH_SPACE) {
+        firstContent.content = spacerText + firstContent.content
       }
       return
     }
     const spacer = new state.Token('text', '', 0)
-    spacer.content = ' '
-    paragraphChildren.splice(firstContentIndex, 0, spacer)
+    spacer.content = spacerText
+    children.splice(firstContentIndex, 0, spacer)
+  }
+  const findHeadingAfter = (tokens, start, end) => {
+    for (let i = start; i <= end - 2; i++) {
+      if (tokens[i]?.type !== 'heading_open') continue
+      if (tokens[i + 1]?.type !== 'inline') continue
+      if (tokens[i + 2]?.type !== 'heading_close') continue
+      return {
+        openIndex: i,
+        inlineIndex: i + 1,
+      }
+    }
+    return null
   }
 
   const checkGitHubAlertsCore = (state, n, hrType, sc, checked) => {
@@ -315,31 +362,15 @@ const createGitHubTypeContainer = (semantics) => {
     const paragraphChildren = Array.isArray(paragraphInlineToken.children)
       ? paragraphInlineToken.children
       : (paragraphInlineToken.children = [])
-    const labelControl = opt?.labelControl
-      ? resolveLabelControl(paragraphOpenToken, paragraphInlineToken)
-      : null
-    const hideLabel = !!labelControl?.hide
-    const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
+    const inlineLabelJointMode = normalizeInlineLabelJointMode(opt?.githubTypeInlineLabelJoint)
     const separateTitleParagraph = !opt?.githubTypeInlineLabel
-
-    const sToken = createContainerStartToken(
-      state,
-      sem,
-      labelText,
-      hideLabel,
-      sc.actualName,
-      startMap
-    )
-    tokens[rs] = sToken
-
-    const eToken = createContainerEndToken(state, sem, endMap)
-    tokens[re] = eToken
+    const inlineLabelHeadingMixin = !!opt?.githubTypeInlineLabelHeadingMixin
 
     for (let i = rs + 1; i < re; i++) {
       const token = tokens[i]
       if (!token) continue
       if (token.type === 'fence' || token.type === 'code_block') {
-        if (token.content && !token.content.startsWith('\n')) {
+        if (token.content && token.content.charCodeAt(0) !== CODE_LF) {
           token.content = '\n' + token.content
         }
       }
@@ -356,9 +387,34 @@ const createGitHubTypeContainer = (semantics) => {
     trimLeadingBreaks(paragraphChildren)
 
     const shouldDropOriginalParagraph = !hasInlineContent(paragraphInlineToken, paragraphChildren)
+    let firstHeading = null
+    if (shouldDropOriginalParagraph && (inlineLabelHeadingMixin || opt?.labelControl)) {
+      firstHeading = findHeadingAfter(tokens, paragraphCloseIndex + 1, re)
+    }
+    const useHeadingLabelControl = !!(opt?.labelControl && shouldDropOriginalParagraph && firstHeading)
+    const labelControl = !opt?.labelControl
+      ? null
+      : (useHeadingLabelControl
+          ? resolveLabelControl(tokens[firstHeading.openIndex], tokens[firstHeading.inlineIndex])
+          : resolveLabelControl(paragraphOpenToken, paragraphInlineToken))
+    const hideLabel = !!labelControl?.hide
+    const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
+    const sToken = createContainerStartToken(
+      state,
+      sem,
+      labelText,
+      hideLabel,
+      sc.actualName,
+      startMap
+    )
+    tokens[rs] = sToken
+    const eToken = createContainerEndToken(state, sem, endMap)
+    tokens[re] = eToken
+    let mixedIntoHeading = false
 
     if (!hideLabel) {
-      const labelChildren = buildGitHubLabelChildren(state, sem, sc, labelText, labelControl)
+      const labelBuild = buildGitHubLabelChildren(state, sem, sc, labelText, labelControl, inlineLabelJointMode)
+      const labelChildren = labelBuild.children
       if (separateTitleParagraph) {
         const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
         const labelParagraphInline = new state.Token('inline', '', 0)
@@ -383,12 +439,20 @@ const createGitHubTypeContainer = (semantics) => {
         labelParagraphInline.children = labelChildren
         labelParagraphInline.content = ''
         tokens.splice(paragraphOpenIndex, 0, labelParagraphOpen, labelParagraphInline, labelParagraphClose)
+      } else if (inlineLabelHeadingMixin && shouldDropOriginalParagraph && firstHeading) {
+        const headingInlineToken = tokens[firstHeading.inlineIndex]
+        const headingChildren = Array.isArray(headingInlineToken.children)
+          ? headingInlineToken.children
+          : (headingInlineToken.children = [])
+        const headingSpacer = labelBuild.spacer === '　' ? ' ' : labelBuild.spacer
+        prependInlineLabelWithSpacer(state, headingChildren, labelChildren, headingSpacer)
+        mixedIntoHeading = true
       } else {
-        prependGitHubInlineLabel(state, paragraphChildren, labelChildren)
+        prependInlineLabelWithSpacer(state, paragraphChildren, labelChildren, labelBuild.spacer)
       }
     }
 
-    if (shouldDropOriginalParagraph && (hideLabel || separateTitleParagraph)) {
+    if (shouldDropOriginalParagraph && (hideLabel || separateTitleParagraph || mixedIntoHeading)) {
       const originalParagraphIndex = (separateTitleParagraph && !hideLabel)
         ? paragraphOpenIndex + 3
         : paragraphOpenIndex

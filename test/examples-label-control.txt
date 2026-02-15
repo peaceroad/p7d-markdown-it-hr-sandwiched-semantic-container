@@ -11,7 +11,7 @@ A paragraph.
 [HTML]
 <p>A paragraph.</p>
 <section class="sc-notice" role="doc-notice">
-<p><span class="sc-notice-label">重要なお知らせ</span> A notice.</p>
+<p><span class="sc-notice-label">重要なお知らせ<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -48,7 +48,7 @@ Notice 1. A hidden label. {label=""}
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<h2><span class="sc-notice-label">ヘッダーラベル</span> The title</h2>
+<h2><span class="sc-notice-label">ヘッダーラベル<span class="sc-notice-label-joint">:</span></span> The title</h2>
 </section>
 
 [HTML:labelControlOff]
@@ -82,7 +82,7 @@ Notice 1. A hidden label. {label=""}
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">重要</strong> A notice.</p>
+<p><strong class="sc-notice-label">重要<span class="sc-notice-label-joint">.</span></strong> A notice.</p>
 </section>
 
 [HTML:labelControlOff]
@@ -116,7 +116,7 @@ Notice 1. A hidden label. {label=""}
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">強調ラベル外側</strong> A strong label with outer joint.</p>
+<p><strong class="sc-notice-label">強調ラベル外側<span class="sc-notice-label-joint">。</span></strong> A strong label with outer joint.</p>
 </section>
 
 [HTML:labelControlOff]
@@ -133,7 +133,7 @@ Notice 1. A hidden label. {label=""}
 ---
 [HTML]
 <section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">強調ラベル内側</strong> A strong label with inner joint.</p>
+<p><strong class="sc-notice-label">強調ラベル内側<span class="sc-notice-label-joint">。</span></strong> A strong label with inner joint.</p>
 </section>
 
 [HTML:labelControlOff]

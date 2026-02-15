@@ -3,7 +3,7 @@
 This plugin converts paragraph groups into semantic containers in markdown-it. Key flow (defined in `index.js`):
 
 1) **Options & data**
-   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `githubTypeContainer`, `githubTypeInlineLabel`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
 
 2) **Core factories**
@@ -23,6 +23,9 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - GitHub alert helpers are built in `src/github-type-container.js` and only instantiated when `githubTypeContainer` is true; block rule registered before `blockquote` but delegates actual parsing to the built-in blockquote rule.
      - Default emits a dedicated label paragraph before body paragraphs (GitHub-like).
      - `githubTypeInlineLabel: true` keeps inline label style (`<p><strong>label</strong> body...`).
+     - `githubTypeInlineLabelHeadingMixin: true` mixes inline label into a following heading when the marker paragraph has no body text.
+     - `githubTypeInlineLabelJoint` controls custom-label suffix/spacing in inline mode (`none`/`auto`).
+     - In heading-first cases, `labelControl` reads `{label=...}` from the heading line, not the `[!TYPE]` marker line.
      - The block rule only gates on the first line and then calls the core blockquote rule to preserve native Markdown structures (lists, headings, nested quotes, fences).
      - Core conversion trims the `[!TYPE]` marker from the first paragraph, removes leading breaks, and ensures inserted label paragraph tokens are block-level for renderer line breaks; label paragraph map is inherited from the original paragraph for editor jump accuracy.
       - GitHub alert range detection accounts for nested blockquotes by tracking depth.
