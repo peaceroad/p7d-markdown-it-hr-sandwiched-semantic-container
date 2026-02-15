@@ -3,7 +3,7 @@
 > Body text. {label="重要メモ"}
 [HTML]
 <section class="sc-note" role="doc-notice">
-<p><strong class="sc-note-label">重要メモ</strong>　Body text.</p>
+<p><strong class="sc-note-label">重要メモ</strong> Body text.</p>
 </section>
 
 [HTML:autoJoint]

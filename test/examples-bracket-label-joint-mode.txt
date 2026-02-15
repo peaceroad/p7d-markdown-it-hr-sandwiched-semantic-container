@@ -1,0 +1,49 @@
+[Markdown]
+---
+
+[Notice] A notice body.
+
+---
+[HTML:remove]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice</span> A notice body.</p>
+</section>
+
+[HTML:auto]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice body.</p>
+</section>
+
+
+[Markdown]
+---
+
+［注意］これは注意です。
+
+---
+[HTML:remove]
+<section class="sc-caution" role="doc-notice">
+<p><span class="sc-caution-label">注意</span> これは注意です。</p>
+</section>
+
+[HTML:auto]
+<section class="sc-caution" role="doc-notice">
+<p><span class="sc-caution-label">注意<span class="sc-caution-label-joint">：</span></span>これは注意です。</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Notice]** A body.
+
+---
+[HTML:remove]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice</strong> A body.</p>
+</section>
+
+[HTML:auto]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A body.</p>
+</section>

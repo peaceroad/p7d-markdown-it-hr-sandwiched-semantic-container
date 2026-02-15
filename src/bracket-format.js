@@ -9,9 +9,19 @@ const createBracketFormat = (semantics) => {
   const CACHE_MISS = 0
   const CODE_STAR = 42
   const CODE_UNDERSCORE = 95
+  const CODE_TAB = 9
+  const CODE_LF = 10
+  const CODE_VTAB = 11
+  const CODE_FF = 12
+  const CODE_CR = 13
   const CODE_SPACE = 32
+  const CODE_FULLWIDTH_SPACE = 12288
   const CODE_LEFT_BRACKET = 91
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
+  const RE_JAPANESE_CHARS = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/
+  const BRACKET_LABEL_JOINT_KEEP = 'keep'
+  const BRACKET_LABEL_JOINT_REMOVE = 'remove'
+  const BRACKET_LABEL_JOINT_AUTO = 'auto'
   const removeLiteralPrefix = (value, prefix) => {
     if (!value || !prefix) return value
     return value.startsWith(prefix) ? value.slice(prefix.length) : value
@@ -34,6 +44,22 @@ const createBracketFormat = (semantics) => {
       }
       return
     }
+  }
+  const isTrimWhitespaceCode = (code) => (
+    code === CODE_SPACE
+    || code === CODE_TAB
+    || code === CODE_LF
+    || code === CODE_VTAB
+    || code === CODE_FF
+    || code === CODE_CR
+    || code === CODE_FULLWIDTH_SPACE
+  )
+  const hasNonWhitespace = (value) => {
+    if (!value) return false
+    for (let i = 0; i < value.length; i++) {
+      if (!isTrimWhitespaceCode(value.charCodeAt(i))) return true
+    }
+    return false
   }
   const prependBracketLabelTokens = (state, sem, children, labelText, sc, useStrongWrapper, spaceMode) => {
     const wrapperOpen = new state.Token(useStrongWrapper ? 'strong_open' : 'span_open', useStrongWrapper ? 'strong' : 'span', 1)
@@ -70,6 +96,39 @@ const createBracketFormat = (semantics) => {
 
     ensureLeadingSpaceAfterLabel(children, 9)
     return 9
+  }
+  const isLikelyJapaneseText = (value) => !!value && RE_JAPANESE_CHARS.test(value)
+  const resolvePlainLabelStyle = (labelText, bracketLabelJointMode) => {
+    if (bracketLabelJointMode === BRACKET_LABEL_JOINT_AUTO) {
+      return isLikelyJapaneseText(labelText)
+        ? { joint: '：', spacer: '' }
+        : { joint: '.', spacer: ' ' }
+    }
+    return { joint: '', spacer: ' ' }
+  }
+  const prependPlainLabelTokens = (state, sem, children, labelText, useStrongWrapper, bracketLabelJointMode) => {
+    const wrapperOpen = new state.Token(useStrongWrapper ? 'strong_open' : 'span_open', useStrongWrapper ? 'strong' : 'span', 1)
+    wrapperOpen.attrJoin('class', sem.labelClass)
+    const labelContent = new state.Token('text', '', 0)
+    labelContent.content = labelText
+    const wrapperClose = new state.Token(useStrongWrapper ? 'strong_close' : 'span_close', useStrongWrapper ? 'strong' : 'span', -1)
+    const tokens = [wrapperOpen, labelContent]
+    const { joint, spacer } = resolvePlainLabelStyle(labelText, bracketLabelJointMode)
+    if (joint) {
+      const jointOpen = new state.Token('span_open', 'span', 1)
+      jointOpen.attrJoin('class', sem.labelJointClass)
+      const jointContent = new state.Token('text', '', 0)
+      jointContent.content = joint
+      const jointClose = new state.Token('span_close', 'span', -1)
+      tokens.push(jointOpen, jointContent, jointClose)
+    }
+    tokens.push(wrapperClose)
+    children.splice(0, 0, ...tokens)
+    const bodyStartIndex = tokens.length
+    if (spacer) {
+      ensureLeadingSpaceAfterLabel(children, bodyStartIndex)
+    }
+    return bodyStartIndex
   }
   const stripBracketLabelPrefix = (inlineToken, children, sc) => {
     if (inlineToken?.content) {
@@ -130,7 +189,7 @@ const createBracketFormat = (semantics) => {
           hasVisibleContent = true
           break
         }
-        if (token.content && token.content.trim()) {
+        if (hasNonWhitespace(token.content)) {
           hasVisibleContent = true
           break
         }
@@ -298,6 +357,9 @@ const createBracketFormat = (semantics) => {
     const labelControl = opt?.labelControl ? resolveLabelControl(startToken, nt) : null
     const hideLabel = !!labelControl?.hide
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
+    const bracketLabelJointMode = opt?.bracketLabelJointMode === BRACKET_LABEL_JOINT_REMOVE
+      ? BRACKET_LABEL_JOINT_REMOVE
+      : (opt?.bracketLabelJointMode === BRACKET_LABEL_JOINT_AUTO ? BRACKET_LABEL_JOINT_AUTO : BRACKET_LABEL_JOINT_KEEP)
     // Inline child tokens normally do not carry map; paragraph/inline token maps remain the sync anchor.
 
     const sToken = createContainerStartToken(
@@ -325,11 +387,22 @@ const createBracketFormat = (semantics) => {
       stripBracketLabelPrefix(nt, ntChildren, sc)
       if (hideLabel) return nJump
 
-      if (sc.isStrongBracket) {
-        prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, true, 'ensure')
+      if (bracketLabelJointMode === BRACKET_LABEL_JOINT_KEEP) {
+        if (sc.isStrongBracket) {
+          prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, true, 'ensure')
+        } else {
+          prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, false, 'ensure')
+        }
       } else {
-        prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, false, 'ensure')
+        prependPlainLabelTokens(state, sem, ntChildren, labelText, sc.isStrongBracket, bracketLabelJointMode)
       }
+      nJump += 3
+      return nJump
+    }
+
+    if (bracketLabelJointMode !== BRACKET_LABEL_JOINT_KEEP) {
+      stripBracketLabelPrefix(nt, ntChildren, sc)
+      prependPlainLabelTokens(state, sem, ntChildren, sc.actualName, sc.isStrongBracket, bracketLabelJointMode)
       nJump += 3
       return nJump
     }

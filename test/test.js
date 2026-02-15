@@ -42,6 +42,24 @@ const mdGitHubAlertsInlineTitleMixin = mdit().use(mditSemanticContainer, {
 })
 
 const mdBracketFormat = mdit().use(mditSemanticContainer, {allowBracketJoint: true})
+const mdBracketJointModeRemove = mdit().use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  bracketLabelJointMode: 'remove',
+})
+const mdBracketJointModeAuto = mdit().use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  bracketLabelJointMode: 'auto',
+})
+const mdBracketJointModeRemoveLabelControl = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  bracketLabelJointMode: 'remove',
+  labelControl: true,
+})
+const mdBracketJointModeAutoLabelControl = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  bracketLabelJointMode: 'auto',
+  labelControl: true,
+})
 const mdAllFeatures = mdit().use(mditSemanticContainer, {
   allowBracketJoint: true,
   githubTypeContainer: true,
@@ -113,6 +131,8 @@ const testData = {
   strongJaWithFigure: __dirname + path.sep + 'examples-strong-ja-figure-with-p-caption.txt',
   labelControl: __dirname + path.sep + 'examples-label-control.txt',
   labelControlBracket: __dirname + path.sep + 'examples-label-control-bracket.txt',
+  bracketJointMode: __dirname + path.sep + 'examples-bracket-label-joint-mode.txt',
+  bracketJointModeLabelControl: __dirname + path.sep + 'examples-bracket-label-joint-mode-label-control.txt',
   labelControlGitHub: __dirname + path.sep + 'examples-label-control-github.txt',
   labelControlGitHubInlineTitle: __dirname + path.sep + 'examples-label-control-github-inline-title.txt',
 }
@@ -227,6 +247,10 @@ pass = runTest(mdLabelControl, testData.labelControl, pass)
 pass = runTest(mdLabelControlOff, testData.labelControl, pass, undefined, 'labelControlOff')
 pass = runTest(mdLabelControlBracket, testData.labelControlBracket, pass)
 pass = runTest(mdLabelControlBracketOff, testData.labelControlBracket, pass, undefined, 'labelControlOff')
+pass = runTest(mdBracketJointModeRemove, testData.bracketJointMode, pass, undefined, 'remove')
+pass = runTest(mdBracketJointModeAuto, testData.bracketJointMode, pass, undefined, 'auto')
+pass = runTest(mdBracketJointModeRemoveLabelControl, testData.bracketJointModeLabelControl, pass, undefined, 'remove')
+pass = runTest(mdBracketJointModeAutoLabelControl, testData.bracketJointModeLabelControl, pass, undefined, 'auto')
 pass = runTest(mdLabelControlGitHub, testData.labelControlGitHub, pass)
 pass = runTest(mdLabelControlGitHubOff, testData.labelControlGitHub, pass, undefined, 'labelControlOff')
 pass = runTest(mdLabelControlGitHubInlineTitle, testData.labelControlGitHubInlineTitle, pass)

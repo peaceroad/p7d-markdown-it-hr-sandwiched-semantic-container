@@ -633,6 +633,48 @@ A paragraph.
 <p>A paragraph.</p>
 ```
 
+### bracketLabelJointMode
+
+Controls how bracket labels are rendered when `allowBracketJoint: true`.
+
+- `keep` (default): keep bracket joints (`[]` / `［］`).
+- `remove`: remove bracket joints and insert half-width space after label.
+- `auto`: remove bracket joints and infer joint style from label text.
+  - Japanese labels: `：` (no extra space)
+  - Non-Japanese labels: `.` + half-width space
+
+```js
+mdit().use(mditSemanticContainer, {
+  allowBracketJoint: true,
+  bracketLabelJointMode: "auto"
+})
+```
+
+Examples:
+
+```markdown
+[Markdown]
+---
+
+[Notice] A notice body.
+
+---
+[HTML:keep]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> A notice body.</p>
+</section>
+[HTML:remove]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice</span> A notice body.</p>
+</section>
+[HTML:auto]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice body.</p>
+</section>
+```
+
+`labelControl: true` also follows this mode for bracket label rendering.
+
 ### githubTypeContainer
 
 Enable GitHub-style alert containers using `> [!TYPE]` syntax or full-width `> ［！TYPE］` syntax.
@@ -681,8 +723,7 @@ This produces:
 `githubTypeInlineLabelJoint` controls suffix behavior for custom labels (when `labelControl: true` in inline mode):
 
 - `none` (default): no suffix. A separator space is inserted between label and content.
-  - Japanese labels use full-width space `　`.
-  - Non-Japanese labels use half-width space ` `.
+  - Half-width space ` ` is used.
 - `auto`: suffix and spacing are inferred from label text.
   - Japanese labels: `：` (no extra space)
   - Non-Japanese labels: `.` + half-width space

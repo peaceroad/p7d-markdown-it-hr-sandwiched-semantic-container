@@ -697,6 +697,11 @@ const mditSemanticContainer = (md, option) => {
     requireHrAtOneParagraph: false,
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
+    // Bracket label rendering mode when allowBracketJoint is true.
+    // "keep": keep [] / ［］ around labels (default)
+    // "remove": remove bracket joints
+    // "auto": remove bracket joints and use locale-aware label joints
+    bracketLabelJointMode: 'keep',
     githubTypeContainer: false,
     // false: GitHub-like separate title paragraph (default)
     // true: inline label in the first paragraph
@@ -713,6 +718,9 @@ const mditSemanticContainer = (md, option) => {
     languages: ['ja'],
   }
   if (option) Object.assign(opt, option)
+  if (opt.bracketLabelJointMode !== 'remove' && opt.bracketLabelJointMode !== 'auto') {
+    opt.bracketLabelJointMode = 'keep'
+  }
   if (opt.githubTypeInlineLabelJoint !== 'auto') {
     opt.githubTypeInlineLabelJoint = 'none'
   }

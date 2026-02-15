@@ -54,7 +54,7 @@ const createGitHubTypeContainer = (semantics) => {
         ? { joint: '：', spacer: '' }
         : { joint: '.', spacer: ' ' }
     }
-    return { joint: '', spacer: isJapanese ? '　' : ' ' }
+    return { joint: '', spacer: ' ' }
   }
   const stripAlertMarkerPrefix = (value) => {
     if (!value) return value
@@ -444,8 +444,7 @@ const createGitHubTypeContainer = (semantics) => {
         const headingChildren = Array.isArray(headingInlineToken.children)
           ? headingInlineToken.children
           : (headingInlineToken.children = [])
-        const headingSpacer = labelBuild.spacer === '　' ? ' ' : labelBuild.spacer
-        prependInlineLabelWithSpacer(state, headingChildren, labelChildren, headingSpacer)
+        prependInlineLabelWithSpacer(state, headingChildren, labelChildren, labelBuild.spacer)
         mixedIntoHeading = true
       } else {
         prependInlineLabelWithSpacer(state, paragraphChildren, labelChildren, labelBuild.spacer)

@@ -1,0 +1,49 @@
+[Markdown]
+---
+
+[Notice] A notice body. {label="重要"}
+
+---
+[HTML:remove]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">重要</span> A notice body.</p>
+</section>
+
+[HTML:auto]
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">重要<span class="sc-notice-label-joint">：</span></span>A notice body.</p>
+</section>
+
+
+[Markdown]
+---
+
+**[Notice]** A body. {label="Changed Label"}
+
+---
+[HTML:remove]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Changed Label</strong> A body.</p>
+</section>
+
+[HTML:auto]
+<section class="sc-notice" role="doc-notice">
+<p><strong class="sc-notice-label">Changed Label<span class="sc-notice-label-joint">.</span></strong> A body.</p>
+</section>
+
+
+[Markdown]
+---
+
+[Notice] Hidden body. {label=""}
+
+---
+[HTML:remove]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>Hidden body.</p>
+</section>
+
+[HTML:auto]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<p>Hidden body.</p>
+</section>

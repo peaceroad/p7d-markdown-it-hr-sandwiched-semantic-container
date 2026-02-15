@@ -3,7 +3,7 @@
 This plugin converts paragraph groups into semantic containers in markdown-it. Key flow (defined in `index.js`):
 
 1) **Options & data**
-   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
 
 2) **Core factories**
@@ -20,6 +20,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 
 3) **Feature helpers**
    - Bracket format helpers are built in `src/bracket-format.js` and only instantiated when `allowBracketJoint` is true.
+     - `bracketLabelJointMode` controls bracket-label rendering (`keep`/`remove`/`auto`).
    - GitHub alert helpers are built in `src/github-type-container.js` and only instantiated when `githubTypeContainer` is true; block rule registered before `blockquote` but delegates actual parsing to the built-in blockquote rule.
      - Default emits a dedicated label paragraph before body paragraphs (GitHub-like).
      - `githubTypeInlineLabel: true` keeps inline label style (`<p><strong>label</strong> body...`).
