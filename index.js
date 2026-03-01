@@ -2,9 +2,8 @@ import { buildSemantics } from './src/semantics.js'
 import { createBracketFormat } from './src/bracket-format.js'
 import { createGitHubTypeContainer } from './src/github-type-container.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
-import { resolveLabelControl } from './src/label-control.js'
-import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './src/container-token.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
+import { createStandardContainerApplier } from './src/standard-applier.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -17,8 +16,6 @@ const SC_ENGINE_CACHE_MAX = 32
 const CACHE_MISS = 0
 const CODE_STAR = 42
 const CODE_UNDERSCORE = 95
-const CODE_HASH = 35
-const CODE_SPACE = 32
 const CODE_DOT = 46
 const CODE_COLON = 58
 const CODE_LEFT_BRACKET = 91
@@ -37,110 +34,6 @@ const EMPTY_RUNTIME_PLAN = Object.freeze({
   githubCandidateLineSet: null,
 })
 
-const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const isSemanticJointChar = (char) => char === ':' || char === '.' || char === '　' || char === '：' || char === '。' || char === '．'
-const removeLiteralPrefix = (value, prefix) => {
-  if (!value || !prefix) return value
-  return value.startsWith(prefix) ? value.slice(prefix.length) : value
-}
-const removeLiteralPrefixAndFollowingSpaces = (value, prefix) => {
-  if (!value || !prefix || !value.startsWith(prefix)) return value
-  let index = prefix.length
-  while (index < value.length && value.charCodeAt(index) === CODE_SPACE) {
-    index++
-  }
-  return value.slice(index)
-}
-const trimLeadingAsciiSpaces = (value) => {
-  if (!value) return value
-  let index = 0
-  while (index < value.length && value.charCodeAt(index) === CODE_SPACE) {
-    index++
-  }
-  return index === 0 ? value : value.slice(index)
-}
-const isAsciiSpacesOnly = (value) => {
-  if (!value) return true
-  for (let i = 0; i < value.length; i++) {
-    if (value.charCodeAt(i) !== CODE_SPACE) return false
-  }
-  return true
-}
-const parseStrongLabelContent = (strongContent, actualName) => {
-  if (!strongContent || !actualName || !strongContent.startsWith(actualName)) return null
-
-  let index = actualName.length
-  let joint = ''
-  const jointChar = strongContent[index]
-  if (isSemanticJointChar(jointChar)) {
-    joint = jointChar
-    index++
-  }
-
-  for (let i = index; i < strongContent.length; i++) {
-    if (strongContent.charCodeAt(i) !== CODE_SPACE) return null
-  }
-
-  return {
-    joint,
-    trailingSpaces: strongContent.slice(index),
-  }
-}
-const stripLeadingLabelFromChildren = (children, sc) => {
-  if (!Array.isArray(children) || children.length === 0) return
-
-  const first = children[0]
-  if (first?.type === 'text' && first.content) {
-    first.content = removeLiteralPrefixAndFollowingSpaces(first.content, sc.actualContNoStrong)
-    if (sc.hasLastJoint && first.content) {
-      first.content = removeLiteralPrefixAndFollowingSpaces(first.content, sc.actualNameJoint)
-    }
-    return
-  }
-
-  for (let i = 0; i < children.length - 2; i++) {
-    const open = children[i]
-    const text = children[i + 1]
-    const close = children[i + 2]
-    if (open?.type !== 'strong_open' || text?.type !== 'text' || close?.type !== 'strong_close') {
-      continue
-    }
-    const strongLabel = parseStrongLabelContent(text.content, sc.actualName)
-    if (!strongLabel) continue
-
-    children.splice(i, 3)
-
-    if (sc.hasLastJoint) {
-      for (let j = i; j < children.length; j++) {
-        const token = children[j]
-        if (token?.type !== 'text' || !token.content) continue
-        token.content = removeLiteralPrefix(token.content, sc.actualNameJoint)
-        break
-      }
-    }
-
-    for (let j = i; j < children.length; j++) {
-      const token = children[j]
-      if (token?.type !== 'text' || !token.content) continue
-      token.content = trimLeadingAsciiSpaces(token.content)
-      break
-    }
-    return
-  }
-
-  for (let i = 0; i < children.length; i++) {
-    const token = children[i]
-    if (token?.type !== 'text' || !token.content) continue
-    const original = token.content
-    token.content = removeLiteralPrefixAndFollowingSpaces(token.content, sc.actualContNoStrong)
-    if (token.content === original && sc.hasLastJoint) {
-      token.content = removeLiteralPrefixAndFollowingSpaces(token.content, sc.actualNameJoint)
-    }
-    if (token.content !== original) {
-      return
-    }
-  }
-}
 const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
 const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
 const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key)
@@ -401,7 +294,12 @@ const buildRuntimePlan = (state) => {
     hrStartLineKeySet.add(createHrCandidateKey(line, hrType))
   }
   if (hrStartLineKeySet.size === 0) {
-    return EMPTY_RUNTIME_PLAN
+    if (!activeGitHubCandidateLineSet) return EMPTY_RUNTIME_PLAN
+    return {
+      hrStartLineKeySet: null,
+      hrCandidates: null,
+      githubCandidateLineSet: activeGitHubCandidateLineSet,
+    }
   }
 
   return {
@@ -631,6 +529,14 @@ const isAppliedHrCandidateParagraph = (token, appliedHrCandidateStartLineSet) =>
   && appliedHrCandidateStartLineSet.has(token.map[0])
 )
 
+const isAppliedGitHubCandidateBlockquote = (token, appliedGitHubCandidateLineSet) => (
+  !!appliedGitHubCandidateLineSet
+  && token?.type === 'blockquote_open'
+  && token?.map
+  && Number.isInteger(token.map[0])
+  && appliedGitHubCandidateLineSet.has(token.map[0])
+)
+
 const isNonGitHubCandidateBlockquote = (token, githubCandidateLineSet) => (
   !!githubCandidateLineSet
   && token?.type === 'blockquote_open'
@@ -639,9 +545,60 @@ const isNonGitHubCandidateBlockquote = (token, githubCandidateLineSet) => (
   && !githubCandidateLineSet.has(token.map[0])
 )
 
+const tryApplyStandaloneContainer = (
+  state,
+  tokens,
+  n,
+  token,
+  cn,
+  optLocal,
+  activeCheck,
+  applyContainer,
+  hrType,
+  githubCandidateLineSet,
+  appliedHrCandidateStartLineSet,
+  appliedGitHubCandidateLineSet,
+  checkParagraphGuards
+) => {
+  if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+    if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
+      return n + 1
+    }
+    if (checkParagraphGuards) {
+      if (cn.has(n - 1)) return n + 1
+      if (tokens[n - 1].type === 'list_item_open') return n + 1
+    }
+    const sc = []
+    if (activeCheck(state, n, hrType, sc, false)) {
+      const firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+      return n + (firstJump > 0 ? firstJump : 1)
+    }
+    return n + 1
+  }
+
+  if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
+    if (isAppliedGitHubCandidateBlockquote(token, appliedGitHubCandidateLineSet)) {
+      return n + 1
+    }
+    if (isNonGitHubCandidateBlockquote(token, githubCandidateLineSet)) {
+      return n + 1
+    }
+    const sc = []
+    if (activeCheck(state, n, hrType, sc, false)) {
+      const firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+      return n + (firstJump > 0 ? firstJump : 1)
+    }
+    return n + 1
+  }
+
+  return null
+}
+
 const createActiveCheck = ({ githubCheck, bracketCheck, defaultCheck }) => {
   return (state, n, hrType, sc, checked) => {
     const token = state.tokens[n]
+    // Priority contract: github > bracket > standard.
+    // GitHub checks are exclusive on blockquote_open tokens.
     if (githubCheck && token.type === 'blockquote_open') {
       return githubCheck(state, n, hrType, sc, checked)
     }
@@ -668,234 +625,17 @@ const createContainerRangeChecker = (activeCheck) => (state, n, hrType, sc) => {
   return true
 }
 
-const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType, sc, sci , optLocal) => {
-  const tokens = state.tokens
-  let nJump = 0
-  let rs = sc.range[0]
-  let re = sc.range[1]
-  const sn = sc.sn
-  const sem = semantics[sn]
-
-  if (sc.isGitHubAlert && featureHelpers.github?.setGitHubAlertsSemanticContainer) {
-    return featureHelpers.github.setGitHubAlertsSemanticContainer(state, n, hrType, sc, sci, optLocal)
-  }
-
-  if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
-    return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
-  }
-
-  // for continued semantic container.
-  if(sci > 1) {
-    rs += sci - 1
-    re += sci - 1
-  }
-  const { startMap, endMap } = resolveContainerMaps(tokens, rs, re, hrType)
-  const nt = tokens[rs+1]
-  const ntChildren = nt.children
-  const startToken = tokens[rs]
-  const defaultHideLabel = !!optLocal.scHideSet?.has(sem.name)
-  const labelControl = optLocal.labelControl ? resolveLabelControl(startToken, nt) : null
-  const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
-  const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
-  const labelJoint = hideLabel ? '' : sc.actualNameJoint
-  const hasSemanticAriaLabel = !!sem.hasAriaLabel
-
-  const sToken = createContainerStartToken(
-    state,
-    sem,
-    labelText,
-    hideLabel,
-    sc.actualName,
-    startMap
-  )
-  tokens.splice(rs, 0, sToken)
-
-  const eToken = createContainerEndToken(state, sem, endMap)
-
-  if(sci !== -1) {
-    tokens.splice(re+1, 1, eToken); // ending hr delete too.
-    if (!sc.continued) {
-      tokens.splice(rs-1, 1)// starting hr delete.
+const createContainerApplier = (semantics, featureHelpers) => {
+  const applyStandardContainer = createStandardContainerApplier(semantics)
+  return (state, n, hrType, sc, sci, optLocal) => {
+    if (sc.isGitHubAlert && featureHelpers.github?.setGitHubAlertsSemanticContainer) {
+      return featureHelpers.github.setGitHubAlertsSemanticContainer(state, n, hrType, sc, sci, optLocal)
     }
-  } else {
-    tokens.splice(re+1, 0, eToken)
+    if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
+      return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
+    }
+    return applyStandardContainer(state, hrType, sc, sci, optLocal)
   }
-
-  if(hideLabel || hasSemanticAriaLabel) {
-    nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
-    nt.content = removeLiteralPrefix(nt.content, sc.actualContNoStrong)
-    if (sc.hasLastJoint) {
-      nt.content = removeLiteralPrefix(nt.content, sc.actualNameJoint)
-    }
-    stripLeadingLabelFromChildren(ntChildren, sc)
-    nt.content = trimLeadingAsciiSpaces(nt.content)
-    return nJump
-  }
-
-  if (nt.content?.charCodeAt(0) === CODE_HASH) {
-    nJump += 2
-  }
-  if (nt.content && (
-    (nt.content.charCodeAt(0) === CODE_STAR && nt.content.charCodeAt(1) === CODE_STAR)
-    || (nt.content.charCodeAt(0) === CODE_UNDERSCORE && nt.content.charCodeAt(1) === CODE_UNDERSCORE)
-  )) {
-    let foundLabelStrong = false
-    
-    for (let i = 0; i < ntChildren.length - 2; i++) {
-      if (ntChildren[i] && ntChildren[i].type === 'strong_open'
-        && ntChildren[i + 2] && ntChildren[i + 2].type === 'strong_close'
-        && ntChildren[i + 1] && ntChildren[i + 1].content) {
-        
-        const strongContent = ntChildren[i + 1].content
-        const strongLabel = parseStrongLabelContent(strongContent, sc.actualName)
-        
-        if (strongLabel) {
-          foundLabelStrong = true
-          
-          let textAfterStrongIndex = -1
-          for (let j = i + 3; j < ntChildren.length; j++) {
-            if (ntChildren[j] && ntChildren[j].type === 'text') {
-              textAfterStrongIndex = j
-              break
-            }
-          }
-          
-          ntChildren[i].attrJoin('class', sem.labelClass)
-          ntChildren[i + 1].content = labelText
-          let hasDisplayJoint = false
-          let jointSpan
-          let jointContent
-          let jointSpanClose
-          if (labelJoint) {
-            hasDisplayJoint = true
-            jointSpan = new state.Token('span_open', 'span', 1)
-            jointSpan.attrJoin('class', sem.labelJointClass)
-            jointContent = new state.Token('text', '', 0)
-            jointContent.content = labelJoint
-            jointSpanClose = new state.Token('span_close', 'span', -1)
-          }
-          
-          if (strongLabel.joint) {
-            const trailingSpaces = strongLabel.trailingSpaces || ''
-            if (hasDisplayJoint) {
-              ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
-            }
-            
-            if (textAfterStrongIndex !== -1) {
-              const adjustedTextIndex = textAfterStrongIndex + (hasDisplayJoint ? 3 : 0)
-              if (trailingSpaces) {
-                if (ntChildren[adjustedTextIndex].content === '') {
-                  ntChildren[adjustedTextIndex].content = ' '
-                } else {
-                  ntChildren[adjustedTextIndex].content = ' ' + trimLeadingAsciiSpaces(ntChildren[adjustedTextIndex].content)
-                }
-              }
-            }
-          } else if (sc.hasLastJoint) {
-            if (ntChildren[i + 3] && ntChildren[i + 3].content) {
-              ntChildren[i + 3].content = removeLiteralPrefix(ntChildren[i + 3].content, sc.actualNameJoint)
-            }
-            if (hasDisplayJoint) {
-              ntChildren.splice(i + 2, 0, jointSpan, jointContent, jointSpanClose)
-            }
-          }
-          break
-        }
-      }
-    }
-    
-    if (!foundLabelStrong) {
-      const strongBefore = new state.Token('text', '', 0)
-      const strongOpen = new state.Token('strong_open', 'strong', 1)
-      const strongContent = new state.Token('text', '', 0)
-      strongContent.content = labelText
-      const strongClose = new state.Token('strong_close', 'strong', -1)
-      strongOpen.attrJoin('class', sem.labelClass)
-
-      const firstChild = ntChildren?.[0]
-      if (firstChild?.content) {
-        const escapedActualName = escapeRegExp(sc.actualName)
-        const regStrongPattern = new RegExp('\\*\\* *?' + escapedActualName + '(' + semanticsHalfJoint + '|' + semanticsFullJoint + ')? *\\*\\* *')
-        const originalContent = firstChild.content
-        const match = originalContent.match(regStrongPattern)
-        
-        if (match && match[0]) {
-          const trailingSpaces = match[0].match(/ +$/);
-          const replacement = trailingSpaces ? trailingSpaces[0] : '';
-          firstChild.content = firstChild.content.replace(regStrongPattern, replacement)
-        }
-        firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualCont)
-      }
-      nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
-
-      const labelTokens = [strongBefore, strongOpen, strongContent]
-      if (labelJoint) {
-        const jointSpan = new state.Token('span_open', 'span', 1)
-        jointSpan.attrJoin('class', sem.labelJointClass)
-        const jointContent = new state.Token('text', '', 0)
-        jointContent.content = labelJoint
-        const jointSpanClose = new state.Token('span_close', 'span', -1)
-        labelTokens.push(jointSpan, jointContent, jointSpanClose)
-      }
-      labelTokens.push(strongClose)
-      ntChildren.splice(0, 0, ...labelTokens)
-    }
-    nJump += 3
-  } else {
-    const lt_first = new state.Token('text', '', 0)
-    const lt_span_open = new state.Token('span_open', 'span', 1)
-    lt_span_open.attrJoin('class', sem.labelClass)
-    const lt_span_content = new state.Token('text', '', 0)
-    lt_span_content.content = labelText
-    const lt_span_close = new state.Token('span_close', 'span', -1)
-
-    const firstChild = ntChildren?.[0]
-    if (sc.hasHalfJoint && firstChild?.content) {
-      firstChild.content = ' ' + removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
-    } else if (firstChild?.content) {
-      firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
-    }
-
-    const labelTokens = [lt_first, lt_span_open, lt_span_content]
-    if (labelJoint) {
-      const lt_joint_span_open = new state.Token('span_open', 'span', 1)
-      lt_joint_span_open.attrJoin('class', sem.labelJointClass)
-      const lt_joint_content = new state.Token('text', '', 0)
-      lt_joint_content.content = labelJoint
-      const lt_joint_span_close = new state.Token('span_close', 'span', -1)
-      labelTokens.push(lt_joint_span_open, lt_joint_content, lt_joint_span_close)
-    }
-    labelTokens.push(lt_span_close)
-    ntChildren.splice(0, 0, ...labelTokens)
-    nJump += 3
-  }
-
-  if (optLocal.removeJointAtLineEnd) {
-    let jointIsAtLineEnd = false
-    if (ntChildren && ntChildren.length > 0) {
-      const lastToken = ntChildren[ntChildren.length - 1]
-      if (lastToken.type === 'text' && isAsciiSpacesOnly(lastToken.content)) {
-        jointIsAtLineEnd = true
-        lastToken.content = ''
-      } else if (lastToken.type === 'strong_close') {
-        jointIsAtLineEnd = true
-      } else if (lastToken.type === 'span_close') {
-        jointIsAtLineEnd = true
-      }
-    }
-
-    if (jointIsAtLineEnd) {
-      for (let i = 0; i < ntChildren.length - 2; i++) {
-        const className = ntChildren[i] && ntChildren[i].attrGet ? ntChildren[i].attrGet('class') : ''
-        if (className && className.includes('-label-joint')) {
-          ntChildren.splice(i, 3) // Remove joint span open, content, and close
-          break
-        }
-      }
-    }
-  }
-
-  return nJump
 }
 
 const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer) => (
@@ -904,72 +644,36 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   cn,
   optLocal,
   runtimePlan,
-  appliedHrCandidateStartLineSet
+  appliedHrCandidateStartLineSet,
+  appliedGitHubCandidateLineSet
 ) => {
   const tokens = state.tokens
-  let sc = []
-  let sci = 0
-  let hrType = ''
-  let firstJump = 0
   const hrStartLineKeySet = runtimePlan?.hrStartLineKeySet
   const githubCandidateLineSet = runtimePlan?.githubCandidateLineSet
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
+  let hrType = ''
 
-  if (n === 0 || n === tokens.length -1) {
-    if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-      if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
-        n++
-        return n
-      }
-      if(activeCheck(state, n, hrType, sc, false)) {
-        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n + (firstJump > 0 ? firstJump : 1)
-      }
-    } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
-      if (isNonGitHubCandidateBlockquote(token, githubCandidateLineSet)) {
-        n++
-        return n
-      }
-      if(activeCheck(state, n, hrType, sc, false)) {
-        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n + (firstJump > 0 ? firstJump : 1)
-      }
-    }
-    n++
-    return n
-  }
-  if (prevToken.type !== 'hr') {
-    if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-      if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
-        n++
-        return n
-      }
-      if (cn.has(n - 1)) {
-        n++; return n
-      }
-
-      if (tokens[n - 1].type === 'list_item_open') {
-        n++; return n
-      }
-
-      if(activeCheck(state, n, hrType, sc, false)) {
-        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n + (firstJump > 0 ? firstJump : 1)
-      }
-    } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
-      if (isNonGitHubCandidateBlockquote(token, githubCandidateLineSet)) {
-        n++
-        return n
-      }
-      if(activeCheck(state, n, hrType, sc, false)) {
-        firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return n + (firstJump > 0 ? firstJump : 1)
-      }
-    }
-    n++
-    return n
+  const isEdge = (n === 0 || n === tokens.length - 1)
+  if (isEdge || prevToken.type !== 'hr') {
+    const nextIndex = tryApplyStandaloneContainer(
+      state,
+      tokens,
+      n,
+      token,
+      cn,
+      optLocal,
+      activeCheck,
+      applyContainer,
+      hrType,
+      githubCandidateLineSet,
+      appliedHrCandidateStartLineSet,
+      appliedGitHubCandidateLineSet,
+      !isEdge
+    )
+    if (nextIndex !== null) return nextIndex
+    return n + 1
   }
 
   hrType = getHrTypeFromMarkup(prevToken.markup || '')
@@ -982,12 +686,14 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     }
   }
 
+  const sc = []
   if (!checkContainerRanges(state, n, hrType, sc)) {
     n++
     return n
   }
 
-  for (sci = 0; sci < sc.length; sci++) {
+  let firstJump = 0
+  for (let sci = 0; sci < sc.length; sci++) {
     const jump = applyContainer(state, n, hrType, sc[sci], sci, optLocal)
     if (sci === 0) firstJump = jump
     cn.add(sc[sci].range[1] + sci + 1)
@@ -1039,10 +745,41 @@ const buildBlockquoteTokenIndexByLine = (tokens) => {
   return indexByLine
 }
 
-const createHrCandidateRunner = (findHrCandidateSemantic, applyContainer) => (state, optLocal, runtimePlan) => {
+const mergePlannedEditsDescending = (left, right) => {
+  const leftLength = Array.isArray(left) ? left.length : 0
+  const rightLength = Array.isArray(right) ? right.length : 0
+  if (leftLength === 0) return rightLength ? right : null
+  if (rightLength === 0) return left
+
+  const merged = new Array(leftLength + rightLength)
+  let li = 0
+  let ri = 0
+  let mi = 0
+  while (li < leftLength && ri < rightLength) {
+    if (left[li].groupTokenStart >= right[ri].groupTokenStart) {
+      merged[mi++] = left[li++]
+    } else {
+      merged[mi++] = right[ri++]
+    }
+  }
+  while (li < leftLength) merged[mi++] = left[li++]
+  while (ri < rightLength) merged[mi++] = right[ri++]
+  return merged
+}
+
+const applyPlannedEdits = (state, optLocal, applyContainer, plannedEdits) => {
+  if (!Array.isArray(plannedEdits) || plannedEdits.length === 0) return
+
+  for (let i = 0; i < plannedEdits.length; i++) {
+    const edit = plannedEdits[i]
+    applyContainer(state, edit.groupTokenStart, edit.hrType, edit.sc, edit.sci, optLocal)
+  }
+}
+
+const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePlan) => {
   const candidates = runtimePlan?.hrCandidates
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    return { handledAll: true, appliedStartLineSet: null }
+    return { handledAll: true, appliedStartLineSet: null, plannedEdits: null }
   }
 
   const tokenIndex = buildHrCandidateTokenIndex(state.tokens)
@@ -1146,11 +883,11 @@ const createHrCandidateRunner = (findHrCandidateSemantic, applyContainer) => (st
   }
 
   if (groups.length === 0) {
-    return { handledAll, appliedStartLineSet: null }
+    return { handledAll, appliedStartLineSet: null, plannedEdits: null }
   }
 
   const appliedStartLineSet = new Set()
-  // Apply from tail to head so precomputed token indexes remain valid.
+  const plannedEdits = []
   for (let gi = groups.length - 1; gi >= 0; gi--) {
     const group = groups[gi]
     for (let sci = 0; sci < group.scGroup.length; sci++) {
@@ -1158,27 +895,26 @@ const createHrCandidateRunner = (findHrCandidateSemantic, applyContainer) => (st
       if (Number.isInteger(startLine)) {
         appliedStartLineSet.add(startLine)
       }
-      applyContainer(
-        state,
-        group.groupTokenStart,
-        group.scGroup[sci].hrType,
-        group.scGroup[sci],
+      plannedEdits.push({
+        groupTokenStart: group.groupTokenStart,
+        hrType: group.scGroup[sci].hrType,
+        sc: group.scGroup[sci],
         sci,
-        optLocal
-      )
+      })
     }
   }
 
   return {
     handledAll,
     appliedStartLineSet: appliedStartLineSet.size > 0 ? appliedStartLineSet : null,
+    plannedEdits,
   }
 }
 
-const createGitHubCandidateRunner = (githubCheck, applyContainer) => (state, optLocal, runtimePlan) => {
-  if (typeof githubCheck !== 'function') return { handledAll: true }
+const createGitHubCandidatePlanner = (githubCheck) => (state, runtimePlan) => {
+  if (typeof githubCheck !== 'function') return { handledAll: true, appliedLineSet: null, plannedEdits: null }
   const candidateLineSet = runtimePlan?.githubCandidateLineSet
-  if (!candidateLineSet || candidateLineSet.size === 0) return { handledAll: true }
+  if (!candidateLineSet || candidateLineSet.size === 0) return { handledAll: true, appliedLineSet: null, plannedEdits: null }
 
   const tokenIndexByLine = buildBlockquoteTokenIndexByLine(state.tokens)
   const matchedCandidates = []
@@ -1199,49 +935,74 @@ const createGitHubCandidateRunner = (githubCheck, applyContainer) => (state, opt
     matchedCandidates.push({ tokenIndex, sc: sc[0] })
   }
 
-  if (matchedCandidates.length === 0) {
-    return { handledAll }
-  }
+  if (matchedCandidates.length === 0) return { handledAll, appliedLineSet: null, plannedEdits: null }
 
-  for (let i = matchedCandidates.length - 1; i >= 0; i--) {
+  const appliedLineSet = new Set()
+  const plannedEdits = new Array(matchedCandidates.length)
+  for (let i = matchedCandidates.length - 1, pi = 0; i >= 0; i--, pi++) {
     const candidate = matchedCandidates[i]
-    applyContainer(state, candidate.tokenIndex, '', candidate.sc, -1, optLocal)
+    const token = state.tokens[candidate.tokenIndex]
+    const line = token?.map?.[0]
+    if (Number.isInteger(line)) appliedLineSet.add(line)
+    plannedEdits[pi] = {
+      groupTokenStart: candidate.tokenIndex,
+      hrType: '',
+      sc: candidate.sc,
+      sci: -1,
+    }
   }
 
-  return { handledAll }
+  return {
+    handledAll,
+    appliedLineSet: appliedLineSet.size > 0 ? appliedLineSet : null,
+    plannedEdits,
+  }
 }
 
-const createContainerRunner = (walkContainers, runHrCandidates, runGitHubCandidates) => (state, optLocal, runtimePlan = EMPTY_RUNTIME_PLAN) => {
-  const hrCandidateResult = runHrCandidates(state, optLocal, runtimePlan)
-  const githubCandidateResult = (
+const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandidates, applyContainer) => (state, optLocal, runtimePlan = EMPTY_RUNTIME_PLAN) => {
+  const hrCandidatePlan = planHrCandidates(state, runtimePlan)
+  const githubCandidatePlan = (
     optLocal.githubTypeContainer
-    && runGitHubCandidates(state, optLocal, runtimePlan)
+    ? planGitHubCandidates(state, runtimePlan)
+    : null
   )
-  const appliedHrCandidateStartLineSet = hrCandidateResult?.appliedStartLineSet || null
+  const plannedEdits = mergePlannedEditsDescending(
+    hrCandidatePlan?.plannedEdits,
+    githubCandidatePlan?.plannedEdits
+  )
+  applyPlannedEdits(state, optLocal, applyContainer, plannedEdits)
+
+  const appliedHrCandidateStartLineSet = hrCandidatePlan?.appliedStartLineSet || null
+  const appliedGitHubCandidateLineSet = githubCandidatePlan?.appliedLineSet || null
 
   if (optLocal.requireHrAtOneParagraph) {
     const hrHandled = (
       !runtimePlan.hrStartLineKeySet
       || runtimePlan.hrStartLineKeySet.size === 0
-      || (hrCandidateResult && hrCandidateResult.handledAll)
+      || !!hrCandidatePlan?.handledAll
     )
-    if (!optLocal.githubTypeContainer) {
-      if (hrHandled) return true
-    } else {
-      const githubHandled = (
-        !runtimePlan.githubCandidateLineSet
-        || runtimePlan.githubCandidateLineSet.size === 0
-        || (githubCandidateResult && githubCandidateResult.handledAll)
-      )
-      if (hrHandled && githubHandled) return true
-    }
+    const githubHandled = (
+      !optLocal.githubTypeContainer
+      || !runtimePlan.githubCandidateLineSet
+      || runtimePlan.githubCandidateLineSet.size === 0
+      || !!githubCandidatePlan?.handledAll
+    )
+    if (hrHandled && githubHandled) return true
   }
 
   let n = 0
   const cn = new Set()
   let tokensLength = state.tokens.length
   while (n < tokensLength) {
-    n = walkContainers(state, n, cn, optLocal, runtimePlan, appliedHrCandidateStartLineSet)
+    n = walkContainers(
+      state,
+      n,
+      cn,
+      optLocal,
+      runtimePlan,
+      appliedHrCandidateStartLineSet,
+      appliedGitHubCandidateLineSet
+    )
     tokensLength = state.tokens.length
   }
   return true
@@ -1261,15 +1022,26 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
     findMatchedSemantic,
     findBracketSemanticMatch,
   ])
-  const runHrCandidates = createHrCandidateRunner(findHrCandidateSemantic, applyContainer)
-  const runGitHubCandidates = createGitHubCandidateRunner(githubCheck, applyContainer)
-  const semanticContainer = createContainerRunner(walkContainers, runHrCandidates, runGitHubCandidates)
+  const planHrCandidates = createHrCandidatePlanner(findHrCandidateSemantic)
+  const planGitHubCandidates = createGitHubCandidatePlanner(githubCheck)
+  const semanticContainer = createContainerRunner(
+    walkContainers,
+    planHrCandidates,
+    planGitHubCandidates,
+    applyContainer
+  )
   return { semanticContainer }
 }
 const SAFE_CORE_ANCHOR_FALLBACK_ORDER = [
   'text_join',
   'inline',
 ]
+
+const hasCoreRule = (md, name) => (
+  !!name
+  && Array.isArray(md?.core?.ruler?.__rules__)
+  && md.core.ruler.__rules__.some((rule) => rule?.name === name)
+)
 
 const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
   for (let i = 0; i < SAFE_CORE_ANCHOR_FALLBACK_ORDER.length; i++) {
@@ -1306,6 +1078,10 @@ const mditSemanticContainer = (md, option) => {
     // "auto": CJK => "：", others => "."
     githubTypeInlineLabelJoint: 'none',
     labelControl: false,
+    // true: parse trailing {label=...} from inline text when attrs are unavailable
+    // false: attrs-only label control
+    // "auto": enable fallback when curly_attributes is not registered
+    labelControlInlineFallback: 'auto',
     // Additional languages to load on top of English
     languages: ['ja'],
   }
@@ -1315,6 +1091,12 @@ const mditSemanticContainer = (md, option) => {
   }
   if (opt.githubTypeInlineLabelJoint !== 'auto') {
     opt.githubTypeInlineLabelJoint = 'none'
+  }
+  if (opt.labelControlInlineFallback !== true && opt.labelControlInlineFallback !== false) {
+    opt.labelControlInlineFallback = 'auto'
+  }
+  if (opt.labelControlInlineFallback === 'auto') {
+    opt.labelControlInlineFallback = !hasCoreRule(md, 'curly_attributes')
   }
   
   const baseSemantics = buildSemantics(opt.languages)

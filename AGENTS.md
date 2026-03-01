@@ -3,7 +3,7 @@
 This plugin converts paragraph groups into semantic containers in markdown-it. Key flow (defined in `index.js`):
 
 1) **Options & data**
-   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
    - Per-render SC input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
    - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
@@ -12,21 +12,27 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `createHrBlockCandidateCollector(...)` (in `src/semantic-hr-candidates.js`): lightweight block-stage collector that records hr-sandwich candidates (`openHrLine`, `startLine`, `endHrLine`, `hrType`) into `env.semanticContainerHrCandidates` and precomputed candidate keys into `env.semanticContainerHrCandidateKeySet` (append-only in block phase; env stores are prepared/reset in core before block).
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
    - `buildSemanticLeadCandidates(semantics)` (in `src/semantic-lead.js`): pre-buckets semantic candidates by leading label character for faster checks.
-   - `resolveLabelControl(...)` / `escapeHtmlForAttr(...)` (in `src/label-control.js`): shared `label` attr extraction/removal and safe attribute escaping.
+   - `resolveLabelControl(...)` / `escapeHtmlForAttr(...)` (in `src/label-control.js`): shared `label` extraction/removal and safe attribute escaping. Supports attrs-based extraction and optional inline-tail fallback (`{label=...}`) when attrs are unavailable.
    - `createContainerStartToken(...)` / `createContainerEndToken(...)` (in `src/container-token.js`): shared HTML container start/end token generation for standard, bracket, and GitHub paths.
+   - `createWrappedLabelTokens(...)` / `createBracketWrappedLabelTokens(...)` (in `src/label-token-builder.js`): shared inline label token builders reused by bracket/GitHub appliers.
    - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
-   - `createContainerApplier(...)`: wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens for scroll sync (delegates to GitHub/bracket setters when applicable). With `labelControl`, empty/whitespace `label` means "hide visible label" while accessibility label fallback is preserved.
+   - `createContainerApplier(...)`: dispatches to GitHub/bracket setters, otherwise delegates standard behavior to `createStandardContainerApplier(...)` in `src/standard-applier.js`. Standard path wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens.
+   - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for paragraph/blockquote checks; consolidates skip guards (`applied hr candidate`, list-item exclusion, GitHub candidate gating) and applies single-container conversions without duplicating walker branches.
    - `createContainerWalker(...)`: main token walker; skips non-target tokens and uses a Set of checked positions to avoid reprocessing.
-   - `createHrCandidateRunner(...)`: resolves semantic matches with standard+bracket matchers on hr candidates, pre-indexes start/end token positions by line+hrType, and applies groups from tail-to-head so token index shifts do not require repeated rescans.
-   - For `requireHrAtOneParagraph: false`, hr-candidate application records applied start lines; walker skips those paragraph starts to avoid double-application.
-   - `createGitHubCandidateRunner(...)`: resolves GitHub alert candidates from block-collected start lines and applies them from tail-to-head before the general walker.
-   - `createContainerRunner(...)`: orchestrates candidate runners first (hr/github) and runs the walker only when needed.
+   - `createHrCandidatePlanner(...)`: resolves semantic matches with standard+bracket matchers on hr candidates and produces descending planned edits + applied start-line sets.
+   - `createGitHubCandidatePlanner(...)`: resolves GitHub alert candidates and produces descending planned edits + applied candidate-line sets.
+   - `mergePlannedEditsDescending(...)`: linearly merges hr/github descending edit lists.
+   - `applyPlannedEdits(...)`: applies merged planned edits as-is (no per-render sort), localizing splice-shift impact.
+   - For `requireHrAtOneParagraph: false`, planned hr-candidate application records applied start lines; walker skips those paragraph starts to avoid double-application.
+   - `createContainerRunner(...)`: orchestrates candidate planners, applies planned edits, then runs the fallback walker only when needed.
    - Render-time SC helpers in `index.js` resolve SC input, normalize aliases/hide flags, collect conflicts, build runtime plans, and cache per-alias semantic engines.
    - `buildRuntimePlan(...)` reuses block-stage key sets when available (`hr` and GitHub alert line candidates), avoiding per-render reconstruction in core.
 
 3) **Feature helpers**
+   - Label style helpers are shared in `src/label-style.js` and reused by bracket/github auto-joint modes.
+   - Label token construction helpers are shared in `src/label-token-builder.js` and reused by bracket/github to reduce duplicated token-shape logic.
    - Bracket format helpers are built in `src/bracket-format.js` and only instantiated when `allowBracketJoint` is true.
      - `bracketLabelJointMode` controls bracket-label rendering (`keep`/`remove`/`auto`).
    - GitHub alert helpers are built in `src/github-type-container.js` and only instantiated when `githubTypeContainer` is true; block rule registered before `blockquote`.
@@ -40,7 +46,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
      - Core conversion trims the `[!TYPE]` marker from the first paragraph, removes leading breaks, and ensures inserted label paragraph tokens are block-level for renderer line breaks; label paragraph map is inherited from the original paragraph for editor jump accuracy.
       - GitHub alert range detection accounts for nested blockquotes by tracking depth.
       - End `map` is resolved from the nearest mapped token within the blockquote, because `blockquote_close` has no map.
-   - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic (typically with `markdown-it-attrs`).
+   - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic.
+     - With `labelControlInlineFallback`, trailing inline `{label=...}` can be consumed safely even without `markdown-it-attrs`.
      - Empty/whitespace `label` values are treated as hide-label directives in all three paths.
    - `semanticContainerSc` default hide flags are applied in standard/bracket/GitHub appliers; inline `label` (when `labelControl` is enabled) takes precedence.
 
@@ -54,9 +61,11 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
+- Non-hr standalone detection for paragraph/blockquote paths is centralized in one helper, reducing duplicated branch logic and keeping skip guards consistent across edge/non-edge positions.
 - Per-render env reset is done once in core (`semantic_container_prepare_env`), then block collectors only append matched candidates; this avoids stale candidate leakage when `env` is reused and removes per-line init checks.
 - Candidate gating is based on hr-sandwich structure only (not semantic name matching), so it can be applied safely before semantic regex checks across standard/bracket/github enabled renders.
 - Hr candidates are applied before the general walker in both require/non-require modes; in non-require mode the walker skips applied candidate-start paragraphs.
+- Candidate-based edits are collected first and then applied in descending token-index order, reducing forward index-shift risk and centralizing splice behavior.
 - With GitHub enabled, candidate-based GitHub conversion is also attempted before deciding whether a full walk is still necessary.
 - Hr candidate application pre-indexes hr start/end token locations once per render and applies groups in reverse order, reducing repeated token scans on hr-heavy documents.
 - GitHub blockquote checks in walker are gated by block-stage candidate start lines when available, reducing scans over non-alert blockquotes.

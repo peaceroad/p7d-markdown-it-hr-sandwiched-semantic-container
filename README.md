@@ -569,7 +569,7 @@ sc:
 ### labelControl
 
 Enable label override/hide via `label` attribute on the first paragraph or heading in a semantic container.
-This option is intended to be used with `markdown-it-attrs`.
+Works with `markdown-it-attrs`, and can also work without it via inline-tail fallback.
 
 ```bash
 npm install markdown-it-attrs
@@ -583,6 +583,15 @@ import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic
 const md = mdit()
   .use(mditAttrs)
   .use(mditSemanticContainer, { labelControl: true })
+```
+
+Without `markdown-it-attrs`, you can still enable label parsing from trailing inline text:
+
+```js
+const md = mdit().use(mditSemanticContainer, {
+  labelControl: true,
+  labelControlInlineFallback: true
+})
 ```
 
 Examples:
@@ -619,6 +628,10 @@ Notes:
 - This applies to standard labels, bracket format (`allowBracketJoint`), and GitHub alert format (`githubTypeContainer`).
 - Strong-label forms are also supported, including both `**Notice**。 body` and `**Notice。** body`.
 - If `labelControl` is disabled (or `label` is not parsed by another plugin), behavior is unchanged.
+- `labelControlInlineFallback` controls attrs-less parsing of trailing `{label=...}`:
+  - `true`: always enable fallback parser
+  - `false`: attrs-only mode
+  - `"auto"` (default): enable fallback when `curly_attributes` rule is not registered
 - With `markdown-it-attrs` and `labelControl: false`, `{label="..."}` is passed through as a raw HTML `label` attribute on the original element; if HTML validity is important, prefer `data-*` attributes when not using label control.
 
 ### removeJointAtLineEnd

@@ -13,7 +13,7 @@ const parseHrTypeAtLine = (state, line) => {
   const max = state.eMarks[line]
   if (start >= max) return ''
 
-  let marker = state.src.charCodeAt(start)
+  const marker = state.src.charCodeAt(start)
   if (marker !== CODE_STAR && marker !== CODE_MINUS && marker !== CODE_UNDERSCORE) return ''
   let count = 0
 

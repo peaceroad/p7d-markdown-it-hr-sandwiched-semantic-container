@@ -1,6 +1,8 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { resolveAutoJointLabelStyle } from './label-style.js'
+import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
 const createBracketFormat = (semantics) => {
   const strongMark = '[*_]{2}'
@@ -18,7 +20,6 @@ const createBracketFormat = (semantics) => {
   const CODE_FULLWIDTH_SPACE = 12288
   const CODE_LEFT_BRACKET = 91
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
-  const RE_JAPANESE_CHARS = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/
   const BRACKET_LABEL_JOINT_KEEP = 'keep'
   const BRACKET_LABEL_JOINT_REMOVE = 'remove'
   const BRACKET_LABEL_JOINT_AUTO = 'auto'
@@ -62,34 +63,21 @@ const createBracketFormat = (semantics) => {
     return false
   }
   const prependBracketLabelTokens = (state, sem, children, labelText, sc, useStrongWrapper, spaceMode) => {
-    const wrapperOpen = new state.Token(useStrongWrapper ? 'strong_open' : 'span_open', useStrongWrapper ? 'strong' : 'span', 1)
-    wrapperOpen.attrJoin('class', sem.labelClass)
-    const openBracketSpan = new state.Token('span_open', 'span', 1)
-    openBracketSpan.attrJoin('class', sem.labelJointClass)
-    const openBracketContent = new state.Token('text', '', 0)
-    openBracketContent.content = sc.openBracket
-    const openBracketSpanClose = new state.Token('span_close', 'span', -1)
-    const labelContent = new state.Token('text', '', 0)
-    labelContent.content = labelText
-    const closeBracketSpan = new state.Token('span_open', 'span', 1)
-    closeBracketSpan.attrJoin('class', sem.labelJointClass)
-    const closeBracketContent = new state.Token('text', '', 0)
-    closeBracketContent.content = sc.closeBracket
-    const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
-    const wrapperClose = new state.Token(useStrongWrapper ? 'strong_close' : 'span_close', useStrongWrapper ? 'strong' : 'span', -1)
-    children.splice(0, 0,
-      wrapperOpen,
-      openBracketSpan, openBracketContent, openBracketSpanClose,
-      labelContent,
-      closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-      wrapperClose
+    const labelTokens = createBracketWrappedLabelTokens(
+      state,
+      useStrongWrapper,
+      sem.labelClass,
+      sem.labelJointClass,
+      sc.openBracket,
+      labelText,
+      sc.closeBracket
     )
+    children.splice(0, 0, ...labelTokens)
 
     if (sc.openBracket !== '[') return 9
 
     if (spaceMode === 'force') {
-      const spaceAfterLabel = new state.Token('text', '', 0)
-      spaceAfterLabel.content = ' '
+      const spaceAfterLabel = createTextToken(state, ' ')
       children.splice(9, 0, spaceAfterLabel)
       return 10
     }
@@ -97,32 +85,19 @@ const createBracketFormat = (semantics) => {
     ensureLeadingSpaceAfterLabel(children, 9)
     return 9
   }
-  const isLikelyJapaneseText = (value) => !!value && RE_JAPANESE_CHARS.test(value)
   const resolvePlainLabelStyle = (labelText, bracketLabelJointMode) => {
-    if (bracketLabelJointMode === BRACKET_LABEL_JOINT_AUTO) {
-      return isLikelyJapaneseText(labelText)
-        ? { joint: '：', spacer: '' }
-        : { joint: '.', spacer: ' ' }
-    }
-    return { joint: '', spacer: ' ' }
+    return resolveAutoJointLabelStyle(labelText, bracketLabelJointMode === BRACKET_LABEL_JOINT_AUTO)
   }
   const prependPlainLabelTokens = (state, sem, children, labelText, useStrongWrapper, bracketLabelJointMode) => {
-    const wrapperOpen = new state.Token(useStrongWrapper ? 'strong_open' : 'span_open', useStrongWrapper ? 'strong' : 'span', 1)
-    wrapperOpen.attrJoin('class', sem.labelClass)
-    const labelContent = new state.Token('text', '', 0)
-    labelContent.content = labelText
-    const wrapperClose = new state.Token(useStrongWrapper ? 'strong_close' : 'span_close', useStrongWrapper ? 'strong' : 'span', -1)
-    const tokens = [wrapperOpen, labelContent]
     const { joint, spacer } = resolvePlainLabelStyle(labelText, bracketLabelJointMode)
-    if (joint) {
-      const jointOpen = new state.Token('span_open', 'span', 1)
-      jointOpen.attrJoin('class', sem.labelJointClass)
-      const jointContent = new state.Token('text', '', 0)
-      jointContent.content = joint
-      const jointClose = new state.Token('span_close', 'span', -1)
-      tokens.push(jointOpen, jointContent, jointClose)
-    }
-    tokens.push(wrapperClose)
+    const tokens = createWrappedLabelTokens(
+      state,
+      useStrongWrapper,
+      sem.labelClass,
+      labelText,
+      sem.labelJointClass,
+      joint
+    )
     children.splice(0, 0, ...tokens)
     const bodyStartIndex = tokens.length
     if (spacer) {
@@ -359,7 +334,9 @@ const createBracketFormat = (semantics) => {
     const ntChildren = nt.children
     const startToken = tokens[rs]
     const defaultHideLabel = !!opt?.scHideSet?.has(sem.name)
-    const labelControl = opt?.labelControl ? resolveLabelControl(startToken, nt) : null
+    const labelControl = opt?.labelControl
+      ? resolveLabelControl(startToken, nt, undefined, !!opt?.labelControlInlineFallback)
+      : null
     const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     const bracketLabelJointMode = opt?.bracketLabelJointMode === BRACKET_LABEL_JOINT_REMOVE

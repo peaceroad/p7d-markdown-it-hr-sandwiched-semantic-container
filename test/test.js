@@ -76,11 +76,19 @@ const mdLanguagesString = mdit().use(mditSemanticContainer, {languages: 'ja'})
 const mdLanguagesDuplicate = mdit().use(mditSemanticContainer, {languages: ['ja', 'ja']})
 const mdLabelControl = mdit().use(mditAttrs).use(mditSemanticContainer, {labelControl: true})
 const mdLabelControlOff = mdit().use(mditAttrs).use(mditSemanticContainer, {labelControl: false})
+const mdLabelControlNoAttrs = mdit().use(mditSemanticContainer, { labelControl: true, labelControlInlineFallback: true })
+const mdLabelControlNoAttrsFallbackOff = mdit().use(mditSemanticContainer, { labelControl: true, labelControlInlineFallback: false })
 const mdLabelControlBracket = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: true})
 const mdLabelControlBracketOff = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: false})
+const mdLabelControlBracketNoAttrs = mdit().use(mditSemanticContainer, { allowBracketJoint: true, labelControl: true, labelControlInlineFallback: true })
 const mdLabelControlGitHub = mdit().use(mditAttrs).use(mditSemanticContainer, {
   githubTypeContainer: true,
   labelControl: true
+})
+const mdLabelControlGitHubNoAttrs = mdit().use(mditSemanticContainer, {
+  githubTypeContainer: true,
+  labelControl: true,
+  labelControlInlineFallback: true
 })
 const mdLabelControlGitHubOff = mdit().use(mditAttrs).use(mditSemanticContainer, {
   githubTypeContainer: true,
@@ -339,6 +347,44 @@ pass = runDirectTest('inline label overrides sc hide', pass, () => {
   assert.strictEqual(html, expected)
 })
 
+pass = runDirectTest('labelControl works without markdown-it-attrs (standard)', pass, () => {
+  const markdown = '---\n\nNotice. Body. {label="Custom"}\n\n---\n'
+  const html = mdLabelControlNoAttrs.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Custom<span class="sc-notice-label-joint">.</span></span> Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('labelControl fallback can be disabled without markdown-it-attrs', pass, () => {
+  const markdown = '---\n\nNotice. Body. {label="Custom"}\n\n---\n'
+  const html = mdLabelControlNoAttrsFallbackOff.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Body. {label=&quot;Custom&quot;}</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('labelControl works without markdown-it-attrs (bracket)', pass, () => {
+  const markdown = '---\n\n[Notice] Body. {label="通知"}\n\n---\n'
+  const html = mdLabelControlBracketNoAttrs.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>通知<span class="sc-notice-label-joint">]</span></span> Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('labelControl works without markdown-it-attrs (github)', pass, () => {
+  const markdown = '> [!NOTE] {label="通知"}\n>\n> Body.\n'
+  const html = mdLabelControlGitHubNoAttrs.render(markdown)
+  const expected = '<section class="sc-note" role="doc-notice">\n'
+    + '<p><strong class="sc-note-label">通知</strong></p>\n'
+    + '<p></p>\n'
+    + '<p>Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
 pass = runDirectTest('sc alias bracket', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }
   const markdown = '---\n\n[お知らせ] 本文。\n\n---\n'
@@ -536,6 +582,30 @@ pass = runDirectTest('semantic core rule is after text_join and after curly_attr
   assert.strictEqual(attrsIndex > -1, true)
   assert.strictEqual(semanticIndex > textJoinIndex, true)
   assert.strictEqual(semanticIndex > attrsIndex, true)
+})
+
+pass = runDirectTest('semantic core rule falls back to inline anchor when text_join rule is absent', pass, () => {
+  const mdOrder = mdit()
+  mdOrder.core.ruler.__rules__ = mdOrder.core.ruler.__rules__.filter((rule) => rule.name !== 'text_join')
+  mdOrder.use(mditSemanticContainer)
+  const names = mdOrder.core.ruler.__rules__.map((rule) => rule.name)
+  const semanticIndex = names.indexOf('semantic_container')
+  const inlineIndex = names.indexOf('inline')
+  assert.strictEqual(names.includes('text_join'), false)
+  assert.strictEqual(semanticIndex > -1, true)
+  assert.strictEqual(inlineIndex > -1, true)
+  assert.strictEqual(semanticIndex > inlineIndex, true)
+})
+
+pass = runDirectTest('detection priority keeps github alerts deterministic over other modes', pass, () => {
+  const mdPriority = mdit().use(mditSemanticContainer, {
+    allowBracketJoint: true,
+    githubTypeContainer: true,
+  })
+  const html = mdPriority.render('> [!NOTE]\n> Body.\n')
+  const sectionCount = (html.match(/<section class=\"sc-note\"/g) || []).length
+  assert.strictEqual(sectionCount, 1)
+  assert.strictEqual(html.includes('<strong class="sc-note-label">'), true)
 })
 
 pass = runDirectTest('cjk/attrs plugin order keeps rendered output stable', pass, () => {

@@ -1,6 +1,8 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { resolveAutoJointLabelStyle } from './label-style.js'
+import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
 const createGitHubTypeContainer = (semantics) => {
   const MATCH_CACHE_MAX = 128
@@ -18,7 +20,6 @@ const createGitHubTypeContainer = (semantics) => {
   const CODE_FULLWIDTH_LEFT_BRACKET = 65339
   const CODE_FULLWIDTH_RIGHT_BRACKET = 65341
   const CODE_FULLWIDTH_BANG = 65281
-  const RE_JAPANESE_CHARS = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/
   const INLINE_LABEL_JOINT_NONE = 'none'
   const INLINE_LABEL_JOINT_AUTO = 'auto'
   const isTrimWhitespaceCode = (code) => (
@@ -46,15 +47,8 @@ const createGitHubTypeContainer = (semantics) => {
     return false
   }
   const normalizeInlineLabelJointMode = (mode) => mode === INLINE_LABEL_JOINT_AUTO ? INLINE_LABEL_JOINT_AUTO : INLINE_LABEL_JOINT_NONE
-  const isLikelyJapaneseText = (value) => !!value && RE_JAPANESE_CHARS.test(value)
   const resolveCustomLabelStyle = (labelText, inlineLabelJointMode) => {
-    const isJapanese = isLikelyJapaneseText(labelText)
-    if (inlineLabelJointMode === INLINE_LABEL_JOINT_AUTO) {
-      return isJapanese
-        ? { joint: '：', spacer: '' }
-        : { joint: '.', spacer: ' ' }
-    }
-    return { joint: '', spacer: ' ' }
+    return resolveAutoJointLabelStyle(labelText, inlineLabelJointMode === INLINE_LABEL_JOINT_AUTO)
   }
   const stripAlertMarkerPrefix = (value) => {
     if (!value) return value
@@ -194,45 +188,31 @@ const createGitHubTypeContainer = (semantics) => {
   }
   const cloneMap = (map) => map ? [map[0], map[1]] : null
   const buildGitHubLabelChildren = (state, sem, sc, labelText, labelControl, inlineLabelJointMode) => {
-    const strongOpen = new state.Token('strong_open', 'strong', 1)
-    strongOpen.attrJoin('class', sem.labelClass)
-    const semanticNameContent = new state.Token('text', '', 0)
-    semanticNameContent.content = labelText
-    const strongClose = new state.Token('strong_close', 'strong', -1)
-
     if (labelControl) {
       const { joint, spacer } = resolveCustomLabelStyle(labelText, inlineLabelJointMode)
-      if (!joint) {
-        return { children: [strongOpen, semanticNameContent, strongClose], spacer }
+      return {
+        children: createWrappedLabelTokens(
+          state,
+          true,
+          sem.labelClass,
+          labelText,
+          sem.labelJointClass,
+          joint
+        ),
+        spacer,
       }
-      const jointOpen = new state.Token('span_open', 'span', 1)
-      jointOpen.attrJoin('class', sem.labelJointClass)
-      const jointContent = new state.Token('text', '', 0)
-      jointContent.content = joint
-      const jointClose = new state.Token('span_close', 'span', -1)
-      return { children: [strongOpen, semanticNameContent, jointOpen, jointContent, jointClose, strongClose], spacer }
     }
 
-    const openBracketSpan = new state.Token('span_open', 'span', 1)
-    openBracketSpan.attrJoin('class', sem.labelJointClass)
-    const openBracketContent = new state.Token('text', '', 0)
-    openBracketContent.content = sc.openBracket
-    const openBracketSpanClose = new state.Token('span_close', 'span', -1)
-
-    const closeBracketSpan = new state.Token('span_open', 'span', 1)
-    closeBracketSpan.attrJoin('class', sem.labelJointClass)
-    const closeBracketContent = new state.Token('text', '', 0)
-    closeBracketContent.content = sc.closeBracket
-    const closeBracketSpanClose = new state.Token('span_close', 'span', -1)
-
     return {
-      children: [
-        strongOpen,
-        openBracketSpan, openBracketContent, openBracketSpanClose,
-        semanticNameContent,
-        closeBracketSpan, closeBracketContent, closeBracketSpanClose,
-        strongClose
-      ],
+      children: createBracketWrappedLabelTokens(
+        state,
+        true,
+        sem.labelClass,
+        sem.labelJointClass,
+        sc.openBracket,
+        labelText,
+        sc.closeBracket
+      ),
       spacer: ' ',
     }
   }
@@ -249,8 +229,7 @@ const createGitHubTypeContainer = (semantics) => {
       }
       return
     }
-    const spacer = new state.Token('text', '', 0)
-    spacer.content = spacerText
+    const spacer = createTextToken(state, spacerText)
     children.splice(firstContentIndex, 0, spacer)
   }
   const findHeadingAfter = (tokens, start, end) => {
@@ -407,8 +386,18 @@ const createGitHubTypeContainer = (semantics) => {
     const labelControl = !opt?.labelControl
       ? null
       : (useHeadingLabelControl
-          ? resolveLabelControl(tokens[firstHeading.openIndex], tokens[firstHeading.inlineIndex])
-          : resolveLabelControl(paragraphOpenToken, paragraphInlineToken))
+          ? resolveLabelControl(
+              tokens[firstHeading.openIndex],
+              tokens[firstHeading.inlineIndex],
+              undefined,
+              !!opt?.labelControlInlineFallback
+            )
+          : resolveLabelControl(
+              paragraphOpenToken,
+              paragraphInlineToken,
+              undefined,
+              !!opt?.labelControlInlineFallback
+            ))
     const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     const sToken = createContainerStartToken(
