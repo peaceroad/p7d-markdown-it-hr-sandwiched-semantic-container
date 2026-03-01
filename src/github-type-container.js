@@ -208,6 +208,7 @@ const createGitHubTypeContainer = (semantics) => {
       children.splice(0, trimCount)
     }
   }
+  const cloneMap = (map) => map ? [map[0], map[1]] : null
   const buildGitHubLabelChildren = (state, sem, sc, labelText, labelControl, inlineLabelJointMode) => {
     const strongOpen = new state.Token('strong_open', 'strong', 1)
     strongOpen.attrJoin('class', sem.labelClass)
@@ -288,49 +289,75 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (currentToken.type !== 'blockquote_open') return false
 
-    let paragraphToken = null
-    
-    for (let i = n + 1; i < tokensLength; i++) {
-      if (tokens[i].type === 'paragraph_open') {
-        paragraphToken = tokens[i + 1]
-        break
+    // Fast path: marker paragraph is usually the first child block.
+    const firstParagraphOpen = tokens[n + 1]
+    const firstParagraphInline = tokens[n + 2]
+    if (firstParagraphOpen?.type === 'paragraph_open' && firstParagraphInline?.type === 'inline') {
+      const semantic = findGitHubSemanticMatch(firstParagraphInline.content)
+      if (!semantic) return false
+
+      let depth = 0
+      for (let i = n; i < tokensLength; i++) {
+        const token = tokens[i]
+        if (token.type === 'blockquote_open') {
+          depth++
+        } else if (token.type === 'blockquote_close') {
+          depth--
+          if (depth === 0) {
+            sc.push({
+              range: [n, i],
+              sn: semantic.sn,
+              actualName: semantic.actualName,
+              openBracket: semantic.openBracket,
+              closeBracket: semantic.closeBracket,
+              isGitHubAlert: true
+            })
+            return true
+          }
+        }
       }
-      if (tokens[i].type === 'blockquote_close') break
+      return false
     }
 
-    if (!paragraphToken || paragraphToken.type !== 'inline') return false
-    const semantic = findGitHubSemanticMatch(paragraphToken.content)
-    if (!semantic) return false
-
-    let blockquoteCloseIndex = -1
+    // Fallback: keep nested-depth-safe scan for uncommon structures.
     let depth = 0
+    let semantic = null
+    let hasParagraphMarker = false
     for (let i = n; i < tokensLength; i++) {
       const token = tokens[i]
       if (token.type === 'blockquote_open') {
         depth++
         continue
       }
+      if (!hasParagraphMarker) {
+        if (depth === 1 && token.type === 'paragraph_open') {
+          const paragraphToken = tokens[i + 1]
+          if (!paragraphToken || paragraphToken.type !== 'inline') return false
+          semantic = findGitHubSemanticMatch(paragraphToken.content)
+          if (!semantic) return false
+          hasParagraphMarker = true
+        } else if (token.type === 'blockquote_close') {
+          return false
+        }
+      }
       if (token.type === 'blockquote_close') {
         depth--
         if (depth === 0) {
-          blockquoteCloseIndex = i
-          break
+          if (!semantic) return false
+          sc.push({
+            range: [n, i],
+            sn: semantic.sn,
+            actualName: semantic.actualName,
+            openBracket: semantic.openBracket,
+            closeBracket: semantic.closeBracket,
+            isGitHubAlert: true
+          })
+          return true
         }
       }
     }
 
-    if (blockquoteCloseIndex === -1) return false
-
-    sc.push({
-      range: [n, blockquoteCloseIndex],
-      sn: semantic.sn,
-      actualName: semantic.actualName,
-      openBracket: semantic.openBracket,
-      closeBracket: semantic.closeBracket,
-      isGitHubAlert: true
-    })
-
-    return true
+    return false
   }
 
   const setGitHubAlertsSemanticContainer = (state, _n, _hrType, sc, _sci, opt) => {
@@ -416,25 +443,18 @@ const createGitHubTypeContainer = (semantics) => {
       const labelBuild = buildGitHubLabelChildren(state, sem, sc, labelText, labelControl, inlineLabelJointMode)
       const labelChildren = labelBuild.children
       if (separateTitleParagraph) {
+        const openMap = paragraphOpenToken?.map || null
+        const inlineMap = paragraphInlineToken?.map || openMap
+        const closeMap = paragraphCloseToken?.map || openMap
         const labelParagraphOpen = new state.Token('paragraph_open', 'p', 1)
         const labelParagraphInline = new state.Token('inline', '', 0)
         const labelParagraphClose = new state.Token('paragraph_close', 'p', -1)
         labelParagraphOpen.block = true
         labelParagraphInline.block = true
         labelParagraphClose.block = true
-        if (paragraphOpenToken?.map) {
-          labelParagraphOpen.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-        }
-        if (paragraphInlineToken?.map) {
-          labelParagraphInline.map = [paragraphInlineToken.map[0], paragraphInlineToken.map[1]]
-        } else if (paragraphOpenToken?.map) {
-          labelParagraphInline.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-        }
-        if (paragraphCloseToken?.map) {
-          labelParagraphClose.map = [paragraphCloseToken.map[0], paragraphCloseToken.map[1]]
-        } else if (paragraphOpenToken?.map) {
-          labelParagraphClose.map = [paragraphOpenToken.map[0], paragraphOpenToken.map[1]]
-        }
+        if (openMap) labelParagraphOpen.map = cloneMap(openMap)
+        if (inlineMap) labelParagraphInline.map = cloneMap(inlineMap)
+        if (closeMap) labelParagraphClose.map = cloneMap(closeMap)
 
         labelParagraphInline.children = labelChildren
         labelParagraphInline.content = ''

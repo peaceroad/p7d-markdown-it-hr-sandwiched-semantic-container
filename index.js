@@ -567,7 +567,6 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   let sci = 0
   let hrType = ''
   let firstJump = 0
-  const advanceAfterApply = (index, jump) => index + (jump > 0 ? jump : 1)
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
@@ -576,12 +575,12 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return advanceAfterApply(n, firstJump)
+        return n + (firstJump > 0 ? firstJump : 1)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return advanceAfterApply(n, firstJump)
+        return n + (firstJump > 0 ? firstJump : 1)
       }
     }
     n++
@@ -599,12 +598,12 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
 
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return advanceAfterApply(n, firstJump)
+        return n + (firstJump > 0 ? firstJump : 1)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
-        return advanceAfterApply(n, firstJump)
+        return n + (firstJump > 0 ? firstJump : 1)
       }
     }
     n++
@@ -630,7 +629,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     if (sci === 0) firstJump = jump
     cn.add(sc[sci].range[1] + sci + 1)
   }
-  return advanceAfterApply(n, firstJump)
+  return n + (firstJump > 0 ? firstJump : 1)
 }
 
 const createContainerRunner = (walkContainers) => (state, optLocal) => {

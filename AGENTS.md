@@ -14,7 +14,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
-   - `createContainerApplier(...)`: wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens for scroll sync (delegates to GitHub/bracket setters when applicable).
+   - `createContainerApplier(...)`: wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens for scroll sync (delegates to GitHub/bracket setters when applicable). With `labelControl`, empty/whitespace `label` means "hide visible label" while accessibility label fallback is preserved.
    - `createContainerWalker(...)`: main token walker; skips non-target tokens and uses a Set of checked positions to avoid reprocessing.
    - `createContainerRunner(...)`: runs the walker over all tokens.
 
@@ -28,10 +28,12 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
      - `githubTypeInlineLabelJoint` controls custom-label suffix/spacing in inline mode (`none`/`auto`).
      - In heading-first cases, `labelControl` reads `{label=...}` from the heading line, not the `[!TYPE]` marker line.
      - The block rule only gates on the first line and then calls the core blockquote rule to preserve native Markdown structures (lists, headings, nested quotes, fences).
+     - Core detection uses a fast path when the first child block is marker paragraph (`> [!TYPE]`), with a depth-safe fallback scan for uncommon structures.
      - Core conversion trims the `[!TYPE]` marker from the first paragraph, removes leading breaks, and ensures inserted label paragraph tokens are block-level for renderer line breaks; label paragraph map is inherited from the original paragraph for editor jump accuracy.
       - GitHub alert range detection accounts for nested blockquotes by tracking depth.
       - End `map` is resolved from the nearest mapped token within the blockquote, because `blockquote_close` has no map.
    - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic (typically with `markdown-it-attrs`).
+     - Empty/whitespace `label` values are treated as hide-label directives in all three paths.
 
 4) **Initialization**
    - `createSemanticEngine` wires the factories: builds regexes, picks the checker, builds the setter and walker, and returns `semanticContainer`.
