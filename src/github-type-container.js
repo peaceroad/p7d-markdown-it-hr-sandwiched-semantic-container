@@ -95,8 +95,6 @@ const createGitHubTypeContainer = (semantics) => {
     return new RegExp(ghPattern, 'i')
   })
 
-  let cachedBlockquoteRule = null
-  let hasResolvedBlockquoteRule = false
   const matchCache = new Map()
   const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
   const cacheSet = (key, value) => {
@@ -105,20 +103,6 @@ const createGitHubTypeContainer = (semantics) => {
       matchCache.delete(firstKey)
     }
     matchCache.set(key, value)
-  }
-
-  const getBlockquoteRule = (state) => {
-    if (hasResolvedBlockquoteRule) return cachedBlockquoteRule
-    const rules = state?.md?.block?.ruler?.__rules__
-    if (!Array.isArray(rules)) {
-      hasResolvedBlockquoteRule = true
-      cachedBlockquoteRule = null
-      return null
-    }
-    const blockquoteRule = rules.find((rule) => rule?.name === 'blockquote' && typeof rule?.fn === 'function')
-    cachedBlockquoteRule = blockquoteRule ? blockquoteRule.fn : null
-    hasResolvedBlockquoteRule = true
-    return cachedBlockquoteRule
   }
 
   const hasAlertPrefix = (content) => {
@@ -282,7 +266,7 @@ const createGitHubTypeContainer = (semantics) => {
     return null
   }
 
-  const checkGitHubAlertsCore = (state, n, hrType, sc, checked) => {
+  const checkGitHubAlertsCore = (state, n, _hrType, sc, _checked) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
     const currentToken = tokens[n]
@@ -482,7 +466,8 @@ const createGitHubTypeContainer = (semantics) => {
     return 0
   }
 
-  const githubAlertsBlock = (state, start, end, silent) => {
+  const githubAlertsBlock = (state, start, _end, silent) => {
+    if (silent) return false
     if (state.sCount[start] - state.blkIndent >= 4) return false
 
     const pos = state.bMarks[start] + state.tShift[start]
@@ -492,12 +477,15 @@ const createGitHubTypeContainer = (semantics) => {
 
     const firstLineContent = trimLeadingWhitespace(state.src.slice(pos + 1, state.eMarks[start]))
     if (!findGitHubSemanticMatch(firstLineContent)) return false
-    if (silent) return true
 
-    const blockquoteRule = getBlockquoteRule(state)
-    if (!blockquoteRule) return false
+    const env = state.env || (state.env = {})
+    const lineSet = env.semanticContainerGitHubCandidateLineSet instanceof Set
+      ? env.semanticContainerGitHubCandidateLineSet
+      : (env.semanticContainerGitHubCandidateLineSet = new Set())
+    lineSet.add(start)
 
-    return blockquoteRule(state, start, end, false)
+    // Let the native blockquote rule parse tokens.
+    return false
   }
 
   return { checkGitHubAlertsCore, setGitHubAlertsSemanticContainer, githubAlertsBlock }

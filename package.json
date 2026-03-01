@@ -18,6 +18,7 @@
     "performance": "node test/performance/performance-test.js full",
     "performance:quick": "node test/performance/performance-test.js quick",
     "performance:ab": "node test/performance/performance-test.js ab",
+    "performance:order": "node test/performance/performance-test.js order",
     "performance:features": "node test/performance/performance-test.js features",
     "performance:memory": "node --expose-gc test/performance/performance-test.js full"
   },

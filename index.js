@@ -4,6 +4,7 @@ import { createGitHubTypeContainer } from './src/github-type-container.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { resolveLabelControl } from './src/label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './src/container-token.js'
+import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -29,6 +30,12 @@ const CODE_FULLWIDTH_COLON = 65306
 const CODE_IDEOGRAPHIC_FULL_STOP = 12290
 const CODE_FULLWIDTH_DOT = 65294
 const SEMANTIC_PREFIX_SCAN_MAX = 96
+const HR_CANDIDATE_KEY_SEP = ':'
+const EMPTY_RUNTIME_PLAN = Object.freeze({
+  hrStartLineKeySet: null,
+  hrCandidates: null,
+  githubCandidateLineSet: null,
+})
 
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const isSemanticJointChar = (char) => char === ':' || char === '.' || char === '　' || char === '：' || char === '。' || char === '．'
@@ -344,6 +351,66 @@ const withScHideSet = (opt, hideSet) => {
   return renderOpt
 }
 
+const getHrTypeFromMarkup = (markup) => {
+  if (!markup) return ''
+  if (markup.includes('*')) return '*'
+  if (markup.includes('-')) return '-'
+  if (markup.includes('_')) return '_'
+  return ''
+}
+
+const createHrCandidateKey = (line, hrType) => String(line) + HR_CANDIDATE_KEY_SEP + hrType
+
+const buildRuntimePlan = (state) => {
+  const candidates = Array.isArray(state?.env?.semanticContainerHrCandidates)
+    ? state.env.semanticContainerHrCandidates
+    : null
+  const keySet = state?.env?.semanticContainerHrCandidateKeySet
+  const githubCandidateLineSet = state?.env?.semanticContainerGitHubCandidateLineSet
+  const activeGitHubCandidateLineSet = (
+    githubCandidateLineSet && typeof githubCandidateLineSet.size === 'number' && githubCandidateLineSet.size > 0
+      ? githubCandidateLineSet
+      : null
+  )
+  if (keySet && typeof keySet.size === 'number' && keySet.size > 0) {
+    return {
+      hrStartLineKeySet: keySet,
+      hrCandidates: candidates,
+      githubCandidateLineSet: activeGitHubCandidateLineSet,
+    }
+  }
+
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    if (!activeGitHubCandidateLineSet) {
+      return EMPTY_RUNTIME_PLAN
+    }
+    return {
+      hrStartLineKeySet: null,
+      hrCandidates: null,
+      githubCandidateLineSet: activeGitHubCandidateLineSet,
+    }
+  }
+
+  const hrStartLineKeySet = new Set()
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i]
+    const line = candidate?.startLine
+    const hrType = candidate?.hrType
+    if (!Number.isInteger(line)) continue
+    if (hrType !== '*' && hrType !== '-' && hrType !== '_') continue
+    hrStartLineKeySet.add(createHrCandidateKey(line, hrType))
+  }
+  if (hrStartLineKeySet.size === 0) {
+    return EMPTY_RUNTIME_PLAN
+  }
+
+  return {
+    hrStartLineKeySet,
+    hrCandidates: candidates,
+    githubCandidateLineSet: activeGitHubCandidateLineSet,
+  }
+}
+
 const resolveRawScInput = (state, md, mdStateRef) => {
   const env = state?.env
   const mdMeta = md?.meta
@@ -439,14 +506,13 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     matchCache.set(key, value)
   }
 
-  return (state, n, hrType, sc, checked) => {
+  const findMatchedSemantic = (state, n) => {
     const tokens = state.tokens
-    const tokensLength = tokens.length
     const nextToken = tokens[n+1]
-    if (nextToken?.type !== 'inline') return false
+    if (nextToken?.type !== 'inline') return null
 
     const content = nextToken?.content
-    if (!content) return false
+    if (!content) return null
     let leadIndex = 0
     const firstCode = content.charCodeAt(0)
     const secondCode = content.charCodeAt(1)
@@ -454,19 +520,19 @@ const createLabelMatcher = (semantics, semanticsReg) => {
       leadIndex = 2
     }
     const leadCode = content.charCodeAt(leadIndex)
-    if (!leadCode) return false
-    if (leadCode === CODE_LEFT_BRACKET || leadCode === CODE_FULLWIDTH_LEFT_BRACKET) return false
+    if (!leadCode) return null
+    if (leadCode === CODE_LEFT_BRACKET || leadCode === CODE_FULLWIDTH_LEFT_BRACKET) return null
     if (!isPotentialLabelLeadCode(leadCode)) {
-      return false
+      return null
     }
     if (!hasSemanticJointInPrefix(content, leadIndex)) {
-      return false
+      return null
     }
 
     let matchedSemantic = null
     const cached = matchCache.get(content)
     if (cached !== undefined) {
-      if (cached === CACHE_MISS) return false
+      if (cached === CACHE_MISS) return null
       matchedSemantic = cached
     } else {
       let sn = 0
@@ -476,7 +542,7 @@ const createLabelMatcher = (semantics, semanticsReg) => {
       if (!candidates) {
         if (fallback.length === 0) {
           cacheSet(content, CACHE_MISS)
-          return false
+          return null
         }
         candidates = fallback
       }
@@ -487,11 +553,19 @@ const createLabelMatcher = (semantics, semanticsReg) => {
       }
       if(!actualName) {
         cacheSet(content, CACHE_MISS)
-        return false
+        return null
       }
       matchedSemantic = parseMatchedSemantic(sn, actualName)
       cacheSet(content, matchedSemantic)
     }
+    return matchedSemantic
+  }
+
+  const checkStandardLabel = (state, n, hrType, sc, checked) => {
+    const tokens = state.tokens
+    const tokensLength = tokens.length
+    const matchedSemantic = findMatchedSemantic(state, n)
+    if (!matchedSemantic) return false
 
     let en = n
     let hasEndSemanticsHr = false
@@ -531,7 +605,39 @@ const createLabelMatcher = (semantics, semanticsReg) => {
     })
     return true
   }
+
+  return { checkStandardLabel, findMatchedSemantic }
 }
+
+const createHrCandidateSemanticFinder = (matchers) => {
+  const activeMatchers = []
+  for (let i = 0; i < matchers.length; i++) {
+    if (typeof matchers[i] === 'function') activeMatchers.push(matchers[i])
+  }
+  return (state, n) => {
+    for (let i = 0; i < activeMatchers.length; i++) {
+      const matched = activeMatchers[i](state, n)
+      if (matched) return matched
+    }
+    return null
+  }
+}
+
+const isAppliedHrCandidateParagraph = (token, appliedHrCandidateStartLineSet) => (
+  !!appliedHrCandidateStartLineSet
+  && token?.type === 'paragraph_open'
+  && token?.map
+  && Number.isInteger(token.map[0])
+  && appliedHrCandidateStartLineSet.has(token.map[0])
+)
+
+const isNonGitHubCandidateBlockquote = (token, githubCandidateLineSet) => (
+  !!githubCandidateLineSet
+  && token?.type === 'blockquote_open'
+  && token?.map
+  && Number.isInteger(token.map[0])
+  && !githubCandidateLineSet.has(token.map[0])
+)
 
 const createActiveCheck = ({ githubCheck, bracketCheck, defaultCheck }) => {
   return (state, n, hrType, sc, checked) => {
@@ -792,23 +898,40 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   return nJump
 }
 
-const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer) => (state, n, cn, optLocal) => {
+const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer) => (
+  state,
+  n,
+  cn,
+  optLocal,
+  runtimePlan,
+  appliedHrCandidateStartLineSet
+) => {
   const tokens = state.tokens
   let sc = []
   let sci = 0
   let hrType = ''
   let firstJump = 0
+  const hrStartLineKeySet = runtimePlan?.hrStartLineKeySet
+  const githubCandidateLineSet = runtimePlan?.githubCandidateLineSet
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
 
   if (n === 0 || n === tokens.length -1) {
     if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+      if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
+        n++
+        return n
+      }
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
         return n + (firstJump > 0 ? firstJump : 1)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
+      if (isNonGitHubCandidateBlockquote(token, githubCandidateLineSet)) {
+        n++
+        return n
+      }
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
         return n + (firstJump > 0 ? firstJump : 1)
@@ -819,6 +942,10 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   }
   if (prevToken.type !== 'hr') {
     if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
+      if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
+        n++
+        return n
+      }
       if (cn.has(n - 1)) {
         n++; return n
       }
@@ -832,6 +959,10 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
         return n + (firstJump > 0 ? firstJump : 1)
       }
     } else if (optLocal.githubTypeContainer && token.type === 'blockquote_open') {
+      if (isNonGitHubCandidateBlockquote(token, githubCandidateLineSet)) {
+        n++
+        return n
+      }
       if(activeCheck(state, n, hrType, sc, false)) {
         firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
         return n + (firstJump > 0 ? firstJump : 1)
@@ -841,13 +972,14 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     return n
   }
 
-  const prevMarkup = prevToken.markup || ''
-  if (prevMarkup.includes('*')) {
-    hrType = '*'
-  } else if (prevMarkup.includes('-')) {
-    hrType = '-'
-  } else if (prevMarkup.includes('_')) {
-    hrType = '_'
+  hrType = getHrTypeFromMarkup(prevToken.markup || '')
+
+  if (hrStartLineKeySet && token?.map && Number.isInteger(token.map[0])) {
+    const hrCandidateKey = createHrCandidateKey(token.map[0], hrType)
+    if (!hrStartLineKeySet.has(hrCandidateKey)) {
+      n++
+      return n
+    }
   }
 
   if (!checkContainerRanges(state, n, hrType, sc)) {
@@ -863,12 +995,253 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   return n + (firstJump > 0 ? firstJump : 1)
 }
 
-const createContainerRunner = (walkContainers) => (state, optLocal) => {
+const buildHrCandidateTokenIndex = (tokens) => {
+  const startIndexByKey = new Map()
+  const endIndexByKey = new Map()
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (token?.type === 'hr' && token?.map && Number.isInteger(token.map[0])) {
+      const hrType = getHrTypeFromMarkup(token.markup || '')
+      if (hrType) {
+        const key = createHrCandidateKey(token.map[0], hrType)
+        endIndexByKey.set(key, i)
+      }
+    }
+
+    if (i === 0) continue
+    const prev = tokens[i - 1]
+    if (prev?.type !== 'hr') continue
+    if (!token?.map || !Number.isInteger(token.map[0])) continue
+    const hrType = getHrTypeFromMarkup(prev.markup || '')
+    if (!hrType) continue
+
+    const key = createHrCandidateKey(token.map[0], hrType)
+    if (!startIndexByKey.has(key)) {
+      startIndexByKey.set(key, i)
+    }
+  }
+
+  return { startIndexByKey, endIndexByKey }
+}
+
+const buildBlockquoteTokenIndexByLine = (tokens) => {
+  const indexByLine = new Map()
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (token?.type !== 'blockquote_open') continue
+    if (!token?.map || !Number.isInteger(token.map[0])) continue
+    const line = token.map[0]
+    if (!indexByLine.has(line)) {
+      indexByLine.set(line, i)
+    }
+  }
+  return indexByLine
+}
+
+const createHrCandidateRunner = (findHrCandidateSemantic, applyContainer) => (state, optLocal, runtimePlan) => {
+  const candidates = runtimePlan?.hrCandidates
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return { handledAll: true, appliedStartLineSet: null }
+  }
+
+  const tokenIndex = buildHrCandidateTokenIndex(state.tokens)
+  const matchedByCandidate = new Array(candidates.length)
+  let handledAll = true
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i]
+    const startLine = candidate?.startLine
+    const endHrLine = candidate?.endHrLine
+    const hrType = candidate?.hrType
+    if (!Number.isInteger(startLine) || !Number.isInteger(endHrLine)) {
+      handledAll = false
+      continue
+    }
+    if (hrType !== '*' && hrType !== '-' && hrType !== '_') {
+      handledAll = false
+      continue
+    }
+
+    const startKey = createHrCandidateKey(startLine, hrType)
+    const n = tokenIndex.startIndexByKey.get(startKey)
+    if (n === undefined) {
+      handledAll = false
+      continue
+    }
+
+    const endKey = createHrCandidateKey(endHrLine, hrType)
+    const re = tokenIndex.endIndexByKey.get(endKey)
+    if (re === undefined || re < n) {
+      handledAll = false
+      continue
+    }
+
+    const matchedSemantic = findHrCandidateSemantic(state, n)
+    if (!matchedSemantic) {
+      continue
+    }
+
+    matchedByCandidate[i] = {
+      groupTokenStart: n,
+      startLine,
+      sc: {
+        ...matchedSemantic,
+        range: [n, re],
+        hrType,
+      },
+    }
+  }
+
+  const groups = []
+  let runStart = -1
+  for (let i = 0; i <= matchedByCandidate.length; i++) {
+    const current = i < matchedByCandidate.length ? matchedByCandidate[i] : null
+    if (current) {
+      if (runStart === -1) {
+        runStart = i
+        continue
+      }
+      const prevMatched = matchedByCandidate[i - 1]
+      const prevCandidate = candidates[i - 1]
+      const currentCandidate = candidates[i]
+      const isContiguous = (
+        !!prevMatched
+        && !!prevCandidate
+        && !!currentCandidate
+        && prevCandidate.endHrLine === currentCandidate.openHrLine
+        && prevCandidate.hrType === currentCandidate.hrType
+      )
+      if (isContiguous) {
+        continue
+      }
+    }
+
+    if (runStart !== -1) {
+      const runEnd = i - 1
+      const first = matchedByCandidate[runStart]
+      if (first) {
+        const scGroup = []
+        for (let ri = runStart; ri <= runEnd; ri++) {
+          const matched = matchedByCandidate[ri]
+          if (!matched) continue
+          scGroup.push({
+            ...matched.sc,
+            startLine: matched.startLine,
+            continued: ri > runStart,
+          })
+        }
+        if (scGroup.length > 0) {
+          groups.push({
+            groupTokenStart: first.groupTokenStart,
+            scGroup,
+          })
+        }
+      }
+      runStart = -1
+    }
+    if (current) {
+      runStart = i
+    }
+  }
+
+  if (groups.length === 0) {
+    return { handledAll, appliedStartLineSet: null }
+  }
+
+  const appliedStartLineSet = new Set()
+  // Apply from tail to head so precomputed token indexes remain valid.
+  for (let gi = groups.length - 1; gi >= 0; gi--) {
+    const group = groups[gi]
+    for (let sci = 0; sci < group.scGroup.length; sci++) {
+      const startLine = group.scGroup[sci].startLine
+      if (Number.isInteger(startLine)) {
+        appliedStartLineSet.add(startLine)
+      }
+      applyContainer(
+        state,
+        group.groupTokenStart,
+        group.scGroup[sci].hrType,
+        group.scGroup[sci],
+        sci,
+        optLocal
+      )
+    }
+  }
+
+  return {
+    handledAll,
+    appliedStartLineSet: appliedStartLineSet.size > 0 ? appliedStartLineSet : null,
+  }
+}
+
+const createGitHubCandidateRunner = (githubCheck, applyContainer) => (state, optLocal, runtimePlan) => {
+  if (typeof githubCheck !== 'function') return { handledAll: true }
+  const candidateLineSet = runtimePlan?.githubCandidateLineSet
+  if (!candidateLineSet || candidateLineSet.size === 0) return { handledAll: true }
+
+  const tokenIndexByLine = buildBlockquoteTokenIndexByLine(state.tokens)
+  const matchedCandidates = []
+  let handledAll = true
+
+  for (const line of candidateLineSet) {
+    const tokenIndex = tokenIndexByLine.get(line)
+    if (tokenIndex === undefined) {
+      handledAll = false
+      continue
+    }
+
+    const sc = []
+    if (!githubCheck(state, tokenIndex, '', sc, false) || sc.length === 0) {
+      handledAll = false
+      continue
+    }
+    matchedCandidates.push({ tokenIndex, sc: sc[0] })
+  }
+
+  if (matchedCandidates.length === 0) {
+    return { handledAll }
+  }
+
+  for (let i = matchedCandidates.length - 1; i >= 0; i--) {
+    const candidate = matchedCandidates[i]
+    applyContainer(state, candidate.tokenIndex, '', candidate.sc, -1, optLocal)
+  }
+
+  return { handledAll }
+}
+
+const createContainerRunner = (walkContainers, runHrCandidates, runGitHubCandidates) => (state, optLocal, runtimePlan = EMPTY_RUNTIME_PLAN) => {
+  const hrCandidateResult = runHrCandidates(state, optLocal, runtimePlan)
+  const githubCandidateResult = (
+    optLocal.githubTypeContainer
+    && runGitHubCandidates(state, optLocal, runtimePlan)
+  )
+  const appliedHrCandidateStartLineSet = hrCandidateResult?.appliedStartLineSet || null
+
+  if (optLocal.requireHrAtOneParagraph) {
+    const hrHandled = (
+      !runtimePlan.hrStartLineKeySet
+      || runtimePlan.hrStartLineKeySet.size === 0
+      || (hrCandidateResult && hrCandidateResult.handledAll)
+    )
+    if (!optLocal.githubTypeContainer) {
+      if (hrHandled) return true
+    } else {
+      const githubHandled = (
+        !runtimePlan.githubCandidateLineSet
+        || runtimePlan.githubCandidateLineSet.size === 0
+        || (githubCandidateResult && githubCandidateResult.handledAll)
+      )
+      if (hrHandled && githubHandled) return true
+    }
+  }
+
   let n = 0
   const cn = new Set()
   let tokensLength = state.tokens.length
   while (n < tokensLength) {
-    n = walkContainers(state, n, cn, optLocal)
+    n = walkContainers(state, n, cn, optLocal, runtimePlan, appliedHrCandidateStartLineSet)
     tokensLength = state.tokens.length
   }
   return true
@@ -876,53 +1249,39 @@ const createContainerRunner = (walkContainers) => (state, optLocal) => {
 
 const createSemanticEngine = (semantics, opt, featureHelpers) => {
   const semanticsReg = buildSemanticsReg(semantics)
-  const semanticLabelMatcher = createLabelMatcher(semantics, semanticsReg)
+  const { checkStandardLabel: semanticLabelMatcher, findMatchedSemantic } = createLabelMatcher(semantics, semanticsReg)
   const githubCheck = opt.githubTypeContainer ? featureHelpers.github?.checkGitHubAlertsCore : null
   const bracketCheck = opt.allowBracketJoint ? featureHelpers.bracket?.checkBracketSemanticContainerCore : null
   const activeCheck = createActiveCheck({ githubCheck, bracketCheck, defaultCheck: semanticLabelMatcher })
   const checkContainerRanges = createContainerRangeChecker(activeCheck)
   const applyContainer = createContainerApplier(semantics, featureHelpers)
   const walkContainers = createContainerWalker(activeCheck, checkContainerRanges, applyContainer)
-  const semanticContainer = createContainerRunner(walkContainers)
+  const findBracketSemanticMatch = opt.allowBracketJoint ? featureHelpers.bracket?.findBracketSemanticMatch : null
+  const findHrCandidateSemantic = createHrCandidateSemanticFinder([
+    findMatchedSemantic,
+    findBracketSemanticMatch,
+  ])
+  const runHrCandidates = createHrCandidateRunner(findHrCandidateSemantic, applyContainer)
+  const runGitHubCandidates = createGitHubCandidateRunner(githubCheck, applyContainer)
+  const semanticContainer = createContainerRunner(walkContainers, runHrCandidates, runGitHubCandidates)
   return { semanticContainer }
 }
-
-const SAFE_CORE_ANCHORS = new Set([
-  'inline',
-  'curly_attributes',
-  'cjk_breaks',
+const SAFE_CORE_ANCHOR_FALLBACK_ORDER = [
   'text_join',
-  'strong_ja_token_postprocess',
-  'strong_ja_postprocess',
-  'strong_ja_softbreak_spacing',
-  'strong_ja_trim_trailing_spaces',
-  'footnote_anchor',
-  'endnotes_move',
-])
-
-const getSafeCoreAnchor = (md) => {
-  const rules = md?.core?.ruler?.__rules__
-  if (!Array.isArray(rules)) return 'inline'
-  let maxIndex = -1
-  let anchorName = 'inline'
-  for (let i = 0; i < rules.length; i++) {
-    const name = rules[i]?.name
-    if (!name || !SAFE_CORE_ANCHORS.has(name)) continue
-    if (i > maxIndex) {
-      maxIndex = i
-      anchorName = name
-    }
-  }
-  return anchorName
-}
+  'inline',
+]
 
 const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
-  const anchor = getSafeCoreAnchor(md)
-  try {
-    md.core.ruler.after(anchor, ruleName, handler)
-  } catch (err) {
-    md.core.ruler.push(ruleName, handler)
+  for (let i = 0; i < SAFE_CORE_ANCHOR_FALLBACK_ORDER.length; i++) {
+    const anchor = SAFE_CORE_ANCHOR_FALLBACK_ORDER[i]
+    try {
+      md.core.ruler.after(anchor, ruleName, handler)
+      return
+    } catch (err) {
+      // Try the next known anchor.
+    }
   }
+  md.core.ruler.push(ruleName, handler)
 }
 
 const mditSemanticContainer = (md, option) => {
@@ -959,6 +1318,7 @@ const mditSemanticContainer = (md, option) => {
   }
   
   const baseSemantics = buildSemantics(opt.languages)
+  const hrBlockCandidateCollector = createHrBlockCandidateCollector()
   const baseBracket = opt.allowBracketJoint ? createBracketFormat(baseSemantics) : null
   const baseGithub = opt.githubTypeContainer ? createGitHubTypeContainer(baseSemantics) : null
   const baseFeatureHelpers = { bracket: baseBracket, github: baseGithub }
@@ -990,12 +1350,38 @@ const mditSemanticContainer = (md, option) => {
     return semanticContainer
   }
 
+  md.core.ruler.before('block', 'semantic_container_prepare_env', (state) => {
+    const env = state.env || (state.env = {})
+
+    const hrCandidates = Array.isArray(env.semanticContainerHrCandidates)
+      ? env.semanticContainerHrCandidates
+      : (env.semanticContainerHrCandidates = [])
+    hrCandidates.length = 0
+
+    const hrCandidateKeySet = env.semanticContainerHrCandidateKeySet instanceof Set
+      ? env.semanticContainerHrCandidateKeySet
+      : (env.semanticContainerHrCandidateKeySet = new Set())
+    hrCandidateKeySet.clear()
+
+    const githubCandidateLineSet = env.semanticContainerGitHubCandidateLineSet
+    if (githubCandidateLineSet instanceof Set) {
+      githubCandidateLineSet.clear()
+    } else if (opt.githubTypeContainer) {
+      env.semanticContainerGitHubCandidateLineSet = new Set()
+    }
+
+    if (Array.isArray(env.semanticContainerWarnings)) {
+      env.semanticContainerWarnings.length = 0
+    }
+  })
+
   if (opt.githubTypeContainer && baseGithub) {
     md.block.ruler.before('blockquote', 'github_alerts', baseGithub.githubAlertsBlock)
   }
+  md.block.ruler.before('hr', 'semantic_container_hr_candidates', hrBlockCandidateCollector)
 
-  // Run after index-sensitive plugins (footnote/strong-ja) and after inline processing.
-  // If SemanticContainer runs too early, tokens.splice() can shift recorded indices.
+  // Run late in core (after text_join when available).
+  // Running too early can shift token positions for later core transforms.
   registerCoreRuleAfterSafeAnchor(md, 'semantic_container', (state) => {
     const rawScInput = resolveRawScInput(state, md, mdStateRef)
     const scConfig = resolveSemanticContainerSc(
@@ -1008,7 +1394,8 @@ const mditSemanticContainer = (md, option) => {
     }
     const semanticContainer = getSemanticContainerWithSc(scConfig)
     const renderOpt = withScHideSet(opt, scConfig?.hideSet)
-    semanticContainer(state, renderOpt)
+    const runtimePlan = buildRuntimePlan(state)
+    semanticContainer(state, renderOpt, runtimePlan)
   })
 }
 

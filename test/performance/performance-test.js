@@ -8,6 +8,8 @@
 
 import MarkdownIt from 'markdown-it'
 import mditSemanticContainer from '../../index.js'
+import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
+import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import { performance } from 'perf_hooks'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -114,6 +116,81 @@ const deterministicAbCorpus = [
   {
     name: 'xlarge-scalability',
     content: contentTemplates.scalability(36000, 13),
+    batch: 2
+  }
+]
+
+const orderConfigurations = {
+  sfSemanticLast: {
+    name: 'strong-ja -> footnote -> semantic (reference)',
+    setup: () => new MarkdownIt().use(mditStrongJa).use(mditFootnoteHere).use(mditSemanticContainer),
+  },
+  fsSemanticLast: {
+    name: 'footnote -> strong-ja -> semantic',
+    setup: () => new MarkdownIt().use(mditFootnoteHere).use(mditStrongJa).use(mditSemanticContainer),
+  },
+  semanticFirstSf: {
+    name: 'semantic -> strong-ja -> footnote',
+    setup: () => new MarkdownIt().use(mditSemanticContainer).use(mditStrongJa).use(mditFootnoteHere),
+  },
+  semanticFirstFs: {
+    name: 'semantic -> footnote -> strong-ja',
+    setup: () => new MarkdownIt().use(mditSemanticContainer).use(mditFootnoteHere).use(mditStrongJa),
+  },
+}
+
+const pluginOrderCorpus = [
+  {
+    name: 'order-small',
+    content: `導入文[^a]。
+
+---
+
+**Notice.** 本文です。
+
+---
+
+後続文。
+
+[^a]: 脚注です。`,
+    batch: 30
+  },
+  {
+    name: 'order-medium',
+    content: `前文。
+
+---
+
+Notice. 本文[^b]。
+
+---
+
+> [!NOTE]
+> アラート本文[^c]
+
+---
+
+**Notice.** 追記。
+
+[^b]: 脚注B
+[^c]: 脚注C
+`.repeat(4),
+    batch: 8
+  },
+  {
+    name: 'order-large',
+    content: (`段落。
+
+---
+
+Notice. 本文[^x]。
+
+---
+
+**Notice.** 強調本文。
+
+[^x]: 参照脚注。
+`).repeat(45),
     batch: 2
   }
 ]
@@ -302,6 +379,61 @@ function runDeterministicABBenchmark({
   })
 }
 
+function runPluginOrderBenchmark({
+  iterations = 50,
+  warmup = 12,
+  referenceKey = 'sfSemanticLast'
+} = {}) {
+  console.log('\n=== Plugin Order Benchmark (strong-ja / footnote) ===')
+  console.log('Fixed corpus + ratio against a reference order.')
+  console.log(`Cases: ${pluginOrderCorpus.length}, Iterations: ${iterations}, Warmup: ${warmup}`)
+
+  const keys = Object.keys(orderConfigurations)
+  if (!orderConfigurations[referenceKey]) {
+    throw new Error(`Unknown referenceKey: ${referenceKey}`)
+  }
+  const totals = {}
+  for (let i = 0; i < keys.length; i++) {
+    totals[keys[i]] = 0
+  }
+
+  pluginOrderCorpus.forEach((testCase, index) => {
+    const batch = testCase.batch || 1
+    const renderBatch = (md) => {
+      for (let i = 0; i < batch; i++) {
+        md.render(testCase.content)
+      }
+    }
+
+    console.log(`\n--- Case ${index + 1}: ${testCase.name} (${testCase.content.length} chars, batch=${batch}) ---`)
+    const caseValues = {}
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const md = orderConfigurations[key].setup()
+      const result = measurePerformance(() => renderBatch(md), iterations, warmup)
+      const medianPerRender = result.median / batch
+      caseValues[key] = medianPerRender
+      totals[key] += medianPerRender
+    }
+
+    const referenceValue = caseValues[referenceKey]
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const value = caseValues[key]
+      const ratio = referenceValue > 0 ? (value / referenceValue) : 0
+      console.log(`  ${orderConfigurations[key].name}: ${value.toFixed(3)}ms median/render (${ratio.toFixed(3)}x ref)`)
+    }
+  })
+
+  const referenceTotal = totals[referenceKey]
+  console.log('\n--- Order Score (lower is better) ---')
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]
+    const ratio = referenceTotal > 0 ? (totals[key] / referenceTotal) : 0
+    console.log(`  ${orderConfigurations[key].name}: ${totals[key].toFixed(3)}ms total (${ratio.toFixed(3)}x ref)`)
+  }
+}
+
 // Main comprehensive test
 function runComprehensiveTest({ iterations = 50, sizes = { small: 1000, medium: 5000, large: 10000, xlarge: 50000 }, saveResults = true } = {}) {
   console.log('markdown-it-hr-sandwiched-semantic-container Comprehensive Performance Test')
@@ -402,6 +534,9 @@ function main() {
     case 'ab':
       runDeterministicABBenchmark()
       break
+    case 'order':
+      runPluginOrderBenchmark()
+      break
     case 'comprehensive':
     case 'full':
       runComprehensiveTest()
@@ -409,6 +544,7 @@ function main() {
       runScalabilityTest()
       runTokenDensityTest()
       runDeterministicABBenchmark()
+      runPluginOrderBenchmark()
       break
     case 'quick':
     default: {
@@ -439,5 +575,6 @@ export {
   runScalabilityTest, 
   runTokenDensityTest, 
   runComprehensiveTest,
-  runDeterministicABBenchmark
+  runDeterministicABBenchmark,
+  runPluginOrderBenchmark
 }

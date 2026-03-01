@@ -6,6 +6,7 @@ import mditAttrs from 'markdown-it-attrs'
 import mditFrontMatter from 'markdown-it-front-matter'
 import mditMeta from 'markdown-it-meta'
 import mditSemanticContainer from '../index.js'
+import mditCjkBreaks from '@peaceroad/markdown-it-cjk-breaks-mod'
 import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import mditFigureWithPCaption from '@peaceroad/markdown-it-figure-with-p-caption'
@@ -21,6 +22,10 @@ const mdJaWithFigure = mdit()
 
 const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
 const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true})
+const mdRequireHrBracket = mdit().use(mditSemanticContainer, {
+  requireHrAtOneParagraph: true,
+  allowBracketJoint: true,
+})
 const mdRequireHrAllFeatures = mdit().use(mditSemanticContainer, {
   requireHrAtOneParagraph: true,
   allowBracketJoint: true,
@@ -387,6 +392,18 @@ pass = runDirectTest('sc alias conflict warning', pass, () => {
   assert.strictEqual(env.semanticContainerWarnings.length > 0, true)
 })
 
+pass = runDirectTest('semanticContainerWarnings reset on env reuse', pass, () => {
+  const env = { semanticContainerSc: { note: 'Notice' } }
+  md.render('---\n\nNotice. Body.\n\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerWarnings), true)
+  assert.strictEqual(env.semanticContainerWarnings.length > 0, true)
+
+  env.semanticContainerSc = { notice: 'お知らせ' }
+  md.render('---\n\nお知らせ：本文。\n\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerWarnings), true)
+  assert.strictEqual(env.semanticContainerWarnings.length, 0)
+})
+
 pass = runDirectTest('sc alias via env.frontmatter.sc', pass, () => {
   const env = { frontmatter: { sc: { notice: '特別通知' } } }
   const markdown = '---\n\n特別通知：本文。\n\n---\n'
@@ -445,6 +462,116 @@ pass = runDirectTest('markdown-it-front-matter md.meta.sc does not leak to next 
   mdFrontMatterMetaSc.render('---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n')
   const html = mdFrontMatterMetaSc.render('---\n\n特別通知：本文。\n\n---\n')
   assert.strictEqual(html.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('block hr candidates are collected', pass, () => {
+  const env = {}
+  md.render('---\n\nNotice. Body.\n\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerHrCandidates), true)
+  assert.strictEqual(env.semanticContainerHrCandidates.length > 0, true)
+  assert.strictEqual(env.semanticContainerHrCandidates[0].hrType, '-')
+  assert.strictEqual(env.semanticContainerHrCandidates[0].openHrLine, 0)
+  assert.strictEqual(env.semanticContainerHrCandidates[0].startLine, 2)
+  assert.strictEqual(env.semanticContainerHrCandidates[0].endHrLine, 4)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet.has('2:-'), true)
+})
+
+pass = runDirectTest('block hr candidates reset on env reuse', pass, () => {
+  const env = {}
+  md.render('---\n\nNotice. Body.\n\n---\n', env)
+  assert.strictEqual(env.semanticContainerHrCandidates.length > 0, true)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet.size > 0, true)
+  md.render('A paragraph only.\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerHrCandidates), true)
+  assert.strictEqual(env.semanticContainerHrCandidates.length, 0)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet.size, 0)
+})
+
+pass = runDirectTest('requireHr hr-candidate runner handles standard + bracket mixed', pass, () => {
+  const markdown = '---\n\nNotice. Standard body.\n\n---\n\n[Notice] Bracket body.\n\n---\n'
+  const html = mdRequireHrBracket.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Standard body.</p>\n'
+    + '</section>\n'
+    + '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Bracket body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('non-requireHr hr candidates are applied once and skip re-apply', pass, () => {
+  const mdDefault = mdit().use(mditSemanticContainer)
+  const markdown = '---\n\nNotice. Hr body.\n\n---\n\nNotice. One body.\n'
+  const html = mdDefault.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Hr body.</p>\n'
+    + '</section>\n'
+    + '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> One body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('github candidate lines are collected and reset on env reuse', pass, () => {
+  const env = {}
+  mdGitHubAlerts.render('> [!NOTE]\n> body\n', env)
+  assert.strictEqual(env.semanticContainerGitHubCandidateLineSet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerGitHubCandidateLineSet.has(0), true)
+
+  mdGitHubAlerts.render('Paragraph only.\n', env)
+  assert.strictEqual(env.semanticContainerGitHubCandidateLineSet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerGitHubCandidateLineSet.size, 0)
+})
+
+pass = runDirectTest('semantic core rule is after text_join and after curly_attributes when attrs is used', pass, () => {
+  const mdOrder = mdit().use(mditAttrs).use(mditSemanticContainer)
+  const names = mdOrder.core.ruler.__rules__.map((rule) => rule.name)
+  const semanticIndex = names.indexOf('semantic_container')
+  const textJoinIndex = names.indexOf('text_join')
+  const attrsIndex = names.indexOf('curly_attributes')
+  assert.strictEqual(semanticIndex > -1, true)
+  assert.strictEqual(textJoinIndex > -1, true)
+  assert.strictEqual(attrsIndex > -1, true)
+  assert.strictEqual(semanticIndex > textJoinIndex, true)
+  assert.strictEqual(semanticIndex > attrsIndex, true)
+})
+
+pass = runDirectTest('cjk/attrs plugin order keeps rendered output stable', pass, () => {
+  const markdown = '---\n\nNotice. これは\nテストです。 {label="通知"}\n\n---\n'
+  const mdA = mdit().use(mditAttrs).use(mditCjkBreaks).use(mditSemanticContainer, { labelControl: true })
+  const mdB = mdit().use(mditSemanticContainer, { labelControl: true }).use(mditAttrs).use(mditCjkBreaks)
+  const mdC = mdit().use(mditCjkBreaks).use(mditSemanticContainer, { labelControl: true }).use(mditAttrs)
+  const htmlA = mdA.render(markdown)
+  const htmlB = mdB.render(markdown)
+  const htmlC = mdC.render(markdown)
+  assert.strictEqual(htmlA, htmlB)
+  assert.strictEqual(htmlA, htmlC)
+})
+
+pass = runDirectTest('standard container html_block maps are propagated from hr bounds', pass, () => {
+  const tokens = md.parse('---\n\nNotice. Body.\n\n---\n', {})
+  const htmlBlocks = tokens.filter((token) => token.type === 'html_block')
+  const open = htmlBlocks.find((token) => token.content.startsWith('<section class="sc-notice"'))
+  const close = htmlBlocks.find((token) => token.content.startsWith('</section>'))
+  assert.strictEqual(!!open, true)
+  assert.strictEqual(!!close, true)
+  assert.deepStrictEqual(open.map, [0, 1])
+  assert.deepStrictEqual(close.map, [4, 5])
+})
+
+pass = runDirectTest('github container html_block maps are present', pass, () => {
+  const tokens = mdGitHubAlerts.parse('> [!NOTE]\n> body\n', {})
+  const htmlBlocks = tokens.filter((token) => token.type === 'html_block')
+  const open = htmlBlocks.find((token) => token.content.startsWith('<section class="sc-note"'))
+  const close = htmlBlocks.find((token) => token.content.startsWith('</section>'))
+  assert.strictEqual(!!open, true)
+  assert.strictEqual(!!close, true)
+  assert.strictEqual(Array.isArray(open.map), true)
+  assert.strictEqual(Array.isArray(close.map), true)
+  assert.strictEqual(open.map[0] <= open.map[1], true)
+  assert.strictEqual(close.map[0] <= close.map[1], true)
 })
 
 if (pass) console.log('Passed all test.')

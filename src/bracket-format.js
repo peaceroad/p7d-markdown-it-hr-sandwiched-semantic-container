@@ -251,15 +251,13 @@ const createBracketFormat = (semantics) => {
     matchCache.set(key, value)
   }
 
-  // Bracket format check function
-  const checkBracketSemanticContainerCore = (state, n, hrType, sc, checked) => {
+  const findBracketSemanticMatch = (state, n) => {
     const tokens = state.tokens
-    const tokensLength = tokens.length
     const nextToken = tokens[n+1]
-    if (nextToken?.type !== 'inline') return false
+    if (nextToken?.type !== 'inline') return null
 
     const content = nextToken?.content
-    if (!content) return false
+    if (!content) return null
     let startIndex = 0
     const firstCode = content.charCodeAt(0)
     const secondCode = content.charCodeAt(1)
@@ -267,12 +265,12 @@ const createBracketFormat = (semantics) => {
       startIndex = 2
     }
     const leadCode = content.charCodeAt(startIndex)
-    if (leadCode !== CODE_LEFT_BRACKET && leadCode !== CODE_FULLWIDTH_LEFT_BRACKET) return false
+    if (leadCode !== CODE_LEFT_BRACKET && leadCode !== CODE_FULLWIDTH_LEFT_BRACKET) return null
 
     let matchedSemantic = null
     const cached = matchCache.get(content)
     if (cached !== undefined) {
-      if (cached === CACHE_MISS) return false
+      if (cached === CACHE_MISS) return null
       matchedSemantic = cached
     } else {
       let sn = 0
@@ -283,7 +281,7 @@ const createBracketFormat = (semantics) => {
       if (!candidates) {
         if (fallback.length === 0) {
           cacheSet(content, CACHE_MISS)
-          return false
+          return null
         }
         candidates = fallback
       }
@@ -294,11 +292,23 @@ const createBracketFormat = (semantics) => {
       }
       if(!actualName) {
         cacheSet(content, CACHE_MISS)
-        return false
+        return null
       }
       matchedSemantic = parseBracketMatchedSemantic(sn, actualName)
       cacheSet(content, matchedSemantic)
     }
+    return {
+      ...matchedSemantic,
+      isBracketFormat: true,
+    }
+  }
+
+  // Bracket format check function
+  const checkBracketSemanticContainerCore = (state, n, hrType, sc, checked) => {
+    const tokens = state.tokens
+    const tokensLength = tokens.length
+    const matchedSemantic = findBracketSemanticMatch(state, n)
+    if (!matchedSemantic) return false
 
     let en = n
     let hasEndSemanticsHr = false
@@ -325,13 +335,7 @@ const createBracketFormat = (semantics) => {
     sc.push({
       range: [n, rangeEnd],
       continued: checked,
-      sn: matchedSemantic.sn,
-      actualCont: matchedSemantic.actualCont,
-      actualName: matchedSemantic.actualName,
-      isBracketFormat: true,
-      isStrongBracket: matchedSemantic.isStrongBracket,
-      openBracket: matchedSemantic.openBracket,
-      closeBracket: matchedSemantic.closeBracket,
+      ...matchedSemantic,
     })
     return true
   }
@@ -479,7 +483,7 @@ const createBracketFormat = (semantics) => {
     return nJump
   }
 
-  return { checkBracketSemanticContainerCore, setBracketSemanticContainer }
+  return { checkBracketSemanticContainerCore, setBracketSemanticContainer, findBracketSemanticMatch }
 }
 
 export { createBracketFormat }
