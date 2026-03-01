@@ -418,13 +418,14 @@ const createGitHubTypeContainer = (semantics) => {
     if (shouldDropOriginalParagraph && (inlineLabelHeadingMixin || opt?.labelControl)) {
       firstHeading = findHeadingAfter(tokens, paragraphCloseIndex + 1, re)
     }
+    const defaultHideLabel = !!opt?.scHideSet?.has(sem.name)
     const useHeadingLabelControl = !!(opt?.labelControl && shouldDropOriginalParagraph && firstHeading)
     const labelControl = !opt?.labelControl
       ? null
       : (useHeadingLabelControl
           ? resolveLabelControl(tokens[firstHeading.openIndex], tokens[firstHeading.inlineIndex])
           : resolveLabelControl(paragraphOpenToken, paragraphInlineToken))
-    const hideLabel = !!labelControl?.hide
+    const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     const sToken = createContainerStartToken(
       state,

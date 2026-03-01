@@ -12,6 +12,7 @@ const semanticsHalfJoint = '[:.]'
 const semanticsFullJoint = '[　：。．]'
 const STRONG_MARK_GLOBAL_REG = /[*_]{2}/g
 const MATCH_CACHE_MAX = 256
+const SC_ENGINE_CACHE_MAX = 32
 const CACHE_MISS = 0
 const CODE_STAR = 42
 const CODE_UNDERSCORE = 95
@@ -135,6 +136,7 @@ const stripLeadingLabelFromChildren = (children, sc) => {
 }
 const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
 const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
+const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key)
 const hasSemanticJointInPrefix = (content, startIndex) => {
   const end = Math.min(content.length, startIndex + SEMANTIC_PREFIX_SCAN_MAX)
   for (let i = startIndex; i < end; i++) {
@@ -152,6 +154,234 @@ const hasSemanticJointInPrefix = (content, startIndex) => {
     if (code === CODE_LF || code === CODE_CR) break
   }
   return false
+}
+
+const normalizeAliasToken = (value) => {
+  if (value === undefined || value === null) return ''
+  const token = String(value).trim()
+  return token ? token.toLowerCase() : ''
+}
+
+const buildSemanticNameMap = (semantics) => {
+  const semanticNameByLower = new Map()
+  for (let i = 0; i < semantics.length; i++) {
+    const name = semantics[i]?.name
+    if (!name) continue
+    semanticNameByLower.set(name.toLowerCase(), name)
+  }
+  return semanticNameByLower
+}
+
+const buildBaseAliasOwnerMap = (semantics) => {
+  const ownerMap = new Map()
+  for (let i = 0; i < semantics.length; i++) {
+    const sem = semantics[i]
+    const semName = sem?.name
+    if (!semName) continue
+    const nameToken = normalizeAliasToken(semName)
+    if (nameToken && !ownerMap.has(nameToken)) {
+      ownerMap.set(nameToken, semName)
+    }
+    const aliases = Array.isArray(sem.aliases) ? sem.aliases : []
+    for (let ai = 0; ai < aliases.length; ai++) {
+      const aliasToken = normalizeAliasToken(aliases[ai])
+      if (!aliasToken || ownerMap.has(aliasToken)) continue
+      ownerMap.set(aliasToken, semName)
+    }
+  }
+  return ownerMap
+}
+
+const parseScEntry = (rawValue, warnings, semanticName) => {
+  if (rawValue === null || rawValue === undefined) {
+    return { hide: true, aliases: [] }
+  }
+  if (typeof rawValue === 'string') {
+    const alias = rawValue.trim()
+    if (!alias) {
+      return { hide: true, aliases: [] }
+    }
+    return { hide: false, aliases: [alias] }
+  }
+  if (Array.isArray(rawValue)) {
+    const aliases = []
+    for (let i = 0; i < rawValue.length; i++) {
+      const item = rawValue[i]
+      if (item === null || item === undefined) continue
+      const alias = String(item).trim()
+      if (!alias) continue
+      aliases.push(alias)
+    }
+    return { hide: false, aliases }
+  }
+  warnings.push('semanticContainerSc: invalid value type for "' + semanticName + '" is ignored')
+  return { hide: false, aliases: [] }
+}
+
+const resolveSemanticContainerSc = (rawSc, semanticNameByLower, baseAliasOwnerMap) => {
+  if (!rawSc || typeof rawSc !== 'object' || Array.isArray(rawSc)) return null
+
+  const warnings = []
+  const hideSet = new Set()
+  const aliasBySemantic = new Map()
+  let aliasOwnerMap = null
+  let scAliasOwner = null
+  const keys = Object.keys(rawSc)
+
+  for (let i = 0; i < keys.length; i++) {
+    const rawKey = keys[i]
+    const key = String(rawKey).trim().toLowerCase()
+    if (!key) continue
+
+    const semanticName = semanticNameByLower.get(key)
+    if (!semanticName) {
+      warnings.push('semanticContainerSc: unknown semantic "' + rawKey + '" is ignored')
+      continue
+    }
+
+    const { hide, aliases } = parseScEntry(rawSc[rawKey], warnings, semanticName)
+    if (hide) {
+      hideSet.add(semanticName)
+    }
+    if (!aliases.length) continue
+    if (!aliasOwnerMap) {
+      aliasOwnerMap = new Map(baseAliasOwnerMap)
+      scAliasOwner = new Map()
+    }
+    let semanticAliases = aliasBySemantic.get(semanticName)
+
+    for (let ai = 0; ai < aliases.length; ai++) {
+      const alias = aliases[ai]
+      const aliasToken = normalizeAliasToken(alias)
+      if (!aliasToken) continue
+
+      const owner = aliasOwnerMap.get(aliasToken)
+      if (owner && owner !== semanticName) {
+        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with "' + owner + '" and is ignored for "' + semanticName + '"')
+        continue
+      }
+
+      const scOwner = scAliasOwner.get(aliasToken)
+      if (scOwner && scOwner !== semanticName) {
+        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with another sc entry ("' + scOwner + '") and is ignored for "' + semanticName + '"')
+        continue
+      }
+
+      if (!semanticAliases) {
+        semanticAliases = new Set()
+        aliasBySemantic.set(semanticName, semanticAliases)
+      }
+      aliasOwnerMap.set(aliasToken, semanticName)
+      scAliasOwner.set(aliasToken, semanticName)
+      semanticAliases.add(alias)
+    }
+  }
+
+  if (aliasBySemantic.size === 0 && hideSet.size === 0 && warnings.length === 0) {
+    return null
+  }
+
+  const semanticNames = Array.from(aliasBySemantic.keys()).sort()
+  const keyParts = []
+  for (let i = 0; i < semanticNames.length; i++) {
+    const semanticName = semanticNames[i]
+    const aliases = Array.from(aliasBySemantic.get(semanticName)).sort()
+    keyParts.push(semanticName + '=' + aliases.join('\u0001'))
+  }
+
+  return {
+    aliasBySemantic,
+    aliasKey: keyParts.join('\u0002'),
+    hideSet,
+    warnings,
+  }
+}
+
+const mergeSemanticsWithScAliases = (baseSemantics, aliasBySemantic) => {
+  if (!aliasBySemantic || aliasBySemantic.size === 0) return baseSemantics
+
+  const semantics = baseSemantics.slice()
+
+  for (let i = 0; i < baseSemantics.length; i++) {
+    const sem = baseSemantics[i]
+    const additions = aliasBySemantic.get(sem.name)
+    if (!additions || additions.size === 0) continue
+    const aliases = sem.aliases.length ? sem.aliases.slice() : []
+    const seen = new Set(aliases)
+    let changed = false
+    for (const alias of additions) {
+      if (seen.has(alias)) continue
+      seen.add(alias)
+      aliases.push(alias)
+      changed = true
+    }
+    if (changed) {
+      semantics[i] = {
+        ...sem,
+        aliases,
+      }
+    }
+  }
+
+  return semantics
+}
+
+const pushScWarnings = (state, warnings) => {
+  if (!warnings || warnings.length === 0) return
+  const env = state.env || (state.env = {})
+  const list = Array.isArray(env.semanticContainerWarnings)
+    ? env.semanticContainerWarnings
+    : (env.semanticContainerWarnings = [])
+  for (let i = 0; i < warnings.length; i++) {
+    list.push(warnings[i])
+  }
+}
+
+const withScHideSet = (opt, hideSet) => {
+  if (!hideSet || hideSet.size === 0) return opt
+  const renderOpt = Object.create(opt)
+  renderOpt.scHideSet = hideSet
+  return renderOpt
+}
+
+const resolveRawScInput = (state, md, mdStateRef) => {
+  const env = state?.env
+  const mdMeta = md?.meta
+  const mdFrontmatter = md?.frontmatter
+  const metaChangedInThisRender = mdMeta !== mdStateRef.meta
+  const frontmatterChangedInThisRender = mdFrontmatter !== mdStateRef.frontmatter
+  mdStateRef.meta = mdMeta
+  mdStateRef.frontmatter = mdFrontmatter
+
+  if (hasOwn(env, 'semanticContainerSc')) {
+    return env.semanticContainerSc
+  }
+
+  const envFrontmatter = env?.frontmatter
+  if (hasOwn(envFrontmatter, 'sc')) {
+    return envFrontmatter.sc
+  }
+
+  const envMeta = env?.meta
+  if (hasOwn(envMeta, 'sc')) {
+    return envMeta.sc
+  }
+
+  const firstTokenType = state?.tokens?.[0]?.type
+  const hasFrontMatterToken = firstTokenType === 'front_matter'
+  if (hasFrontMatterToken) {
+    if (hasOwn(mdFrontmatter, 'sc')) return mdFrontmatter.sc
+    if (hasOwn(mdMeta, 'sc')) return mdMeta.sc
+  }
+
+  if (frontmatterChangedInThisRender && hasOwn(mdFrontmatter, 'sc')) {
+    return mdFrontmatter.sc
+  }
+  if (metaChangedInThisRender && hasOwn(mdMeta, 'sc')) {
+    return mdMeta.sc
+  }
+
+  return null
 }
 
 const buildSemanticsReg = (semantics) => semantics.map((sem) => {
@@ -357,8 +587,9 @@ const createContainerApplier = (semantics, featureHelpers) => (state, n, hrType,
   const nt = tokens[rs+1]
   const ntChildren = nt.children
   const startToken = tokens[rs]
+  const defaultHideLabel = !!optLocal.scHideSet?.has(sem.name)
   const labelControl = optLocal.labelControl ? resolveLabelControl(startToken, nt) : null
-  const hideLabel = !!labelControl?.hide
+  const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
   const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
   const labelJoint = hideLabel ? '' : sc.actualNameJoint
   const hasSemanticAriaLabel = !!sem.hasAriaLabel
@@ -661,7 +892,10 @@ const SAFE_CORE_ANCHORS = new Set([
   'curly_attributes',
   'cjk_breaks',
   'text_join',
+  'strong_ja_token_postprocess',
   'strong_ja_postprocess',
+  'strong_ja_softbreak_spacing',
+  'strong_ja_trim_trailing_spaces',
   'footnote_anchor',
   'endnotes_move',
 ])
@@ -724,20 +958,57 @@ const mditSemanticContainer = (md, option) => {
     opt.githubTypeInlineLabelJoint = 'none'
   }
   
-  const semantics = buildSemantics(opt.languages)
-  const bracket = opt.allowBracketJoint ? createBracketFormat(semantics) : null
-  const github = opt.githubTypeContainer ? createGitHubTypeContainer(semantics) : null
-  const featureHelpers = { bracket, github }
-  const { semanticContainer } = createSemanticEngine(semantics, opt, featureHelpers)
+  const baseSemantics = buildSemantics(opt.languages)
+  const baseBracket = opt.allowBracketJoint ? createBracketFormat(baseSemantics) : null
+  const baseGithub = opt.githubTypeContainer ? createGitHubTypeContainer(baseSemantics) : null
+  const baseFeatureHelpers = { bracket: baseBracket, github: baseGithub }
+  const { semanticContainer: baseSemanticContainer } = createSemanticEngine(baseSemantics, opt, baseFeatureHelpers)
+  const semanticNameByLower = buildSemanticNameMap(baseSemantics)
+  const baseAliasOwnerMap = buildBaseAliasOwnerMap(baseSemantics)
+  const scEngineCache = new Map()
+  const mdStateRef = { meta: md?.meta, frontmatter: md?.frontmatter }
 
-  if (opt.githubTypeContainer && github) {
-    md.block.ruler.before('blockquote', 'github_alerts', github.githubAlertsBlock)
+  const getSemanticContainerWithSc = (scConfig) => {
+    if (!scConfig || !scConfig.aliasBySemantic || scConfig.aliasBySemantic.size === 0) {
+      return baseSemanticContainer
+    }
+    const cacheKey = scConfig.aliasKey
+    const cached = scEngineCache.get(cacheKey)
+    if (cached) return cached
+
+    const semanticsWithSc = mergeSemanticsWithScAliases(baseSemantics, scConfig.aliasBySemantic)
+    const bracket = opt.allowBracketJoint ? createBracketFormat(semanticsWithSc) : null
+    const github = opt.githubTypeContainer ? createGitHubTypeContainer(semanticsWithSc) : null
+    const featureHelpers = { bracket, github }
+    const { semanticContainer } = createSemanticEngine(semanticsWithSc, opt, featureHelpers)
+
+    if (scEngineCache.size >= SC_ENGINE_CACHE_MAX) {
+      const firstKey = scEngineCache.keys().next().value
+      scEngineCache.delete(firstKey)
+    }
+    scEngineCache.set(cacheKey, semanticContainer)
+    return semanticContainer
+  }
+
+  if (opt.githubTypeContainer && baseGithub) {
+    md.block.ruler.before('blockquote', 'github_alerts', baseGithub.githubAlertsBlock)
   }
 
   // Run after index-sensitive plugins (footnote/strong-ja) and after inline processing.
   // If SemanticContainer runs too early, tokens.splice() can shift recorded indices.
   registerCoreRuleAfterSafeAnchor(md, 'semantic_container', (state) => {
-    semanticContainer(state, opt)
+    const rawScInput = resolveRawScInput(state, md, mdStateRef)
+    const scConfig = resolveSemanticContainerSc(
+      rawScInput,
+      semanticNameByLower,
+      baseAliasOwnerMap
+    )
+    if (scConfig?.warnings?.length) {
+      pushScWarnings(state, scConfig.warnings)
+    }
+    const semanticContainer = getSemanticContainerWithSc(scConfig)
+    const renderOpt = withScHideSet(opt, scConfig?.hideSet)
+    semanticContainer(state, renderOpt)
   })
 }
 

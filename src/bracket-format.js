@@ -354,8 +354,9 @@ const createBracketFormat = (semantics) => {
     const nt = tokens[rs+1]
     const ntChildren = nt.children
     const startToken = tokens[rs]
+    const defaultHideLabel = !!opt?.scHideSet?.has(sem.name)
     const labelControl = opt?.labelControl ? resolveLabelControl(startToken, nt) : null
-    const hideLabel = !!labelControl?.hide
+    const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
     const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
     const bracketLabelJointMode = opt?.bracketLabelJointMode === BRACKET_LABEL_JOINT_REMOVE
       ? BRACKET_LABEL_JOINT_REMOVE
@@ -383,16 +384,12 @@ const createBracketFormat = (semantics) => {
       tokens.splice(re+1, 0, eToken)
     }
 
-    if (labelControl) {
+    if (labelControl || hideLabel) {
       stripBracketLabelPrefix(nt, ntChildren, sc)
       if (hideLabel) return nJump
 
       if (bracketLabelJointMode === BRACKET_LABEL_JOINT_KEEP) {
-        if (sc.isStrongBracket) {
-          prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, true, 'ensure')
-        } else {
-          prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, false, 'ensure')
-        }
+        prependBracketLabelTokens(state, sem, ntChildren, labelText, sc, sc.isStrongBracket, 'ensure')
       } else {
         prependPlainLabelTokens(state, sem, ntChildren, labelText, sc.isStrongBracket, bracketLabelJointMode)
       }

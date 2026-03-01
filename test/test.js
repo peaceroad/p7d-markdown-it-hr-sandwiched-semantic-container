@@ -3,6 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import mdit from 'markdown-it'
 import mditAttrs from 'markdown-it-attrs'
+import mditFrontMatter from 'markdown-it-front-matter'
+import mditMeta from 'markdown-it-meta'
 import mditSemanticContainer from '../index.js'
 import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
@@ -108,6 +110,24 @@ const mdLabelControlGitHubInlineTitleOff = mdit().use(mditAttrs).use(mditSemanti
   githubTypeInlineLabel: true,
   labelControl: false
 })
+const mdMetaSc = mdit().use(mditMeta).use(mditSemanticContainer)
+const parseFrontMatterNotice = (raw) => {
+  const match = String(raw || '').match(/(?:^|\n)\s*notice\s*:\s*["']?([^"'\n]+)["']?\s*$/m)
+  if (!match) return {}
+  return { sc: { notice: match[1].trim() } }
+}
+const mdFrontMatterSc = mdit()
+mdFrontMatterSc.use(mditFrontMatter, (fm) => {
+  mdFrontMatterSc.frontmatter = parseFrontMatterNotice(fm)
+})
+mdFrontMatterSc.use(mditSemanticContainer)
+const mdFrontMatterMetaSc = mdit()
+mdFrontMatterMetaSc.meta = {}
+mdFrontMatterMetaSc.use(mditFrontMatter, (fm) => {
+  const parsed = parseFrontMatterNotice(fm)
+  mdFrontMatterMetaSc.meta.sc = parsed.sc
+})
+mdFrontMatterMetaSc.use(mditSemanticContainer)
 
 let __dirname = path.dirname(new URL(import.meta.url).pathname)
 const isWindows = (process.platform === 'win32')
@@ -232,6 +252,17 @@ const runTest = (process, pat, pass, testId, htmlLabel = 'default') => {
   return pass
 }
 
+const runDirectTest = (title, pass, fn) => {
+  console.log('Direct Test: ' + title + ' >>>')
+  try {
+    fn()
+  } catch (e) {
+    pass = false
+    console.log(e?.stack || e)
+  }
+  return pass
+}
+
 let pass = true
 pass = runTest(md, testData.noOption, pass)
 pass = runTest(md, testData.htmlLabels, pass)
@@ -271,5 +302,149 @@ pass = runTest(mdGitHubAlertsInlineTitle, testData.githubAlertsInlineTitle, pass
 pass = runTest(mdGitHubAlertsInlineTitleMixin, testData.githubAlertsInlineTitle, pass, undefined, 'mixin')
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
+
+pass = runDirectTest('sc alias standard', pass, () => {
+  const env = { semanticContainerSc: { notice: 'お知らせ' } }
+  const markdown = '---\n\nお知らせ：本文。\n\n---\n'
+  const html = md.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">お知らせ<span class="sc-notice-label-joint">：</span></span>本文。</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+  assert.strictEqual(Array.isArray(env.semanticContainerWarnings), false)
+})
+
+pass = runDirectTest('sc hide standard', pass, () => {
+  const env = { semanticContainerSc: { notice: '' } }
+  const markdown = '---\n\nNotice. Body.\n\n---\n'
+  const html = md.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice" aria-label="Notice">\n'
+    + '<p>Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('inline label overrides sc hide', pass, () => {
+  const env = { semanticContainerSc: { notice: '' } }
+  const markdown = '---\n\nNotice. Body. {label="Custom"}\n\n---\n'
+  const html = mdLabelControl.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Custom<span class="sc-notice-label-joint">.</span></span> Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('sc alias bracket', pass, () => {
+  const env = { semanticContainerSc: { notice: 'お知らせ' } }
+  const markdown = '---\n\n[お知らせ] 本文。\n\n---\n'
+  const html = mdBracketFormat.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>お知らせ<span class="sc-notice-label-joint">]</span></span> 本文。</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('sc alias github', pass, () => {
+  const env = { semanticContainerSc: { notice: 'お知らせ' } }
+  const markdown = '> [!お知らせ]\n> 本文。\n'
+  const html = mdGitHubAlerts.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>お知らせ<span class="sc-notice-label-joint">]</span></strong></p>\n'
+    + '<p>本文。</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('sc hide bracket', pass, () => {
+  const env = { semanticContainerSc: { notice: '' } }
+  const markdown = '---\n\n[Notice] Body.\n\n---\n'
+  const html = mdBracketFormat.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice" aria-label="Notice">\n'
+    + '<p>Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('sc hide github', pass, () => {
+  const env = { semanticContainerSc: { notice: '' } }
+  const markdown = '> [!NOTICE]\n> Body.\n'
+  const html = mdGitHubAlerts.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice" aria-label="NOTICE">\n'
+    + '<p>Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('sc alias conflict warning', pass, () => {
+  const env = { semanticContainerSc: { note: 'Notice' } }
+  const markdown = '---\n\nNotice. Body.\n\n---\n'
+  const html = md.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+  assert.strictEqual(Array.isArray(env.semanticContainerWarnings), true)
+  assert.strictEqual(env.semanticContainerWarnings.length > 0, true)
+})
+
+pass = runDirectTest('sc alias via env.frontmatter.sc', pass, () => {
+  const env = { frontmatter: { sc: { notice: '特別通知' } } }
+  const markdown = '---\n\n特別通知：本文。\n\n---\n'
+  const html = md.render(markdown, env)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">特別通知<span class="sc-notice-label-joint">：</span></span>本文。</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('semanticContainerSc precedence over env.frontmatter.sc', pass, () => {
+  const env = {
+    semanticContainerSc: { notice: '先頭入力' },
+    frontmatter: { sc: { notice: '後続入力' } },
+  }
+  const markdown = '---\n\n先頭入力：本文。\n\n---\n'
+  const html = md.render(markdown, env)
+  assert.strictEqual(html.includes('<section class="sc-notice"'), true)
+  assert.strictEqual(html.includes('先頭入力'), true)
+})
+
+pass = runDirectTest('sc alias via markdown-it-meta', pass, () => {
+  const markdown = '---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n'
+  const html = mdMetaSc.render(markdown)
+  assert.strictEqual(html.includes('<section class="sc-notice"'), true)
+  assert.strictEqual(html.includes('特別通知'), true)
+})
+
+pass = runDirectTest('markdown-it-meta sc does not leak to next render', pass, () => {
+  mdMetaSc.render('---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n')
+  const html = mdMetaSc.render('---\n\n特別通知：本文。\n\n---\n')
+  assert.strictEqual(html.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('sc alias via markdown-it-front-matter (md.frontmatter.sc)', pass, () => {
+  const markdown = '---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n'
+  const html = mdFrontMatterSc.render(markdown)
+  assert.strictEqual(html.includes('<section class="sc-notice"'), true)
+  assert.strictEqual(html.includes('特別通知'), true)
+})
+
+pass = runDirectTest('markdown-it-front-matter md.frontmatter.sc does not leak to next render', pass, () => {
+  mdFrontMatterSc.render('---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n')
+  const html = mdFrontMatterSc.render('---\n\n特別通知：本文。\n\n---\n')
+  assert.strictEqual(html.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('sc alias via markdown-it-front-matter (md.meta.sc)', pass, () => {
+  const markdown = '---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n'
+  const html = mdFrontMatterMetaSc.render(markdown)
+  assert.strictEqual(html.includes('<section class="sc-notice"'), true)
+  assert.strictEqual(html.includes('特別通知'), true)
+})
+
+pass = runDirectTest('markdown-it-front-matter md.meta.sc does not leak to next render', pass, () => {
+  mdFrontMatterMetaSc.render('---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n')
+  const html = mdFrontMatterMetaSc.render('---\n\n特別通知：本文。\n\n---\n')
+  assert.strictEqual(html.includes('<section class="sc-notice"'), false)
+})
 
 if (pass) console.log('Passed all test.')

@@ -4,6 +4,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 
 1) **Options & data**
    - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Per-render SC input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
+   - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
 
 2) **Core factories**
@@ -17,6 +19,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `createContainerApplier(...)`: wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens for scroll sync (delegates to GitHub/bracket setters when applicable). With `labelControl`, empty/whitespace `label` means "hide visible label" while accessibility label fallback is preserved.
    - `createContainerWalker(...)`: main token walker; skips non-target tokens and uses a Set of checked positions to avoid reprocessing.
    - `createContainerRunner(...)`: runs the walker over all tokens.
+   - Render-time SC helpers in `index.js` resolve SC input, normalize aliases/hide flags, collect conflicts, and cache per-alias semantic engines.
 
 3) **Feature helpers**
    - Bracket format helpers are built in `src/bracket-format.js` and only instantiated when `allowBracketJoint` is true.
@@ -34,10 +37,11 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
       - End `map` is resolved from the nearest mapped token within the blockquote, because `blockquote_close` has no map.
    - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic (typically with `markdown-it-attrs`).
      - Empty/whitespace `label` values are treated as hide-label directives in all three paths.
+   - `semanticContainerSc` default hide flags are applied in standard/bracket/GitHub appliers; inline `label` (when `labelControl` is enabled) takes precedence.
 
 4) **Initialization**
    - `createSemanticEngine` wires the factories: builds regexes, picks the checker, builds the setter and walker, and returns `semanticContainer`.
-   - `mditSemanticContainer` sets defaults, builds semantics/helpers, optionally registers the GitHub alert block rule, and adds the core ruler (`semantic_container`) after the latest available safe anchor (inline/text_join/footnote/etc.) to avoid index shifts from other plugins.
+   - `mditSemanticContainer` sets defaults, builds semantics/helpers, optionally registers the GitHub alert block rule, and adds the core ruler (`semantic_container`) after the latest available safe anchor (inline/text_join/footnote/strong-ja token postprocess and trailing-space rules/etc.) to avoid index shifts from other plugins.
 
 5) **Data layout**
    - Locale data: `semantics/en.json` (canonical entries with tags/attrs/aliases), `semantics/ja.json` (label map). Additional locales can be added similarly and passed via `languages`.
@@ -45,6 +49,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
+- `semanticContainerSc` alias engines are cached by deterministic alias signatures (bounded cache) to avoid rebuilding regex/helper pipelines on repeated renders.
+- SC normalization allocates alias conflict maps lazily (only when aliases exist), and semantics alias merging uses copy-on-write so unchanged semantics entries are reused.
 - GitHub/bracket/standard label checks use fast leading-char guards to reduce regex work on non-candidates.
 - Standard/bracket/GitHub label matchers keep small bounded match caches to reduce repeated regex scans for identical leading content.
 - Match caches store parsed semantic metadata instead of raw regex match arrays to reduce cache footprint and repeated group parsing.

@@ -13,6 +13,8 @@
   ],
   "scripts": {
     "test": "node test/test.js",
+    "labels:audit": "node scripts/label-audit.js",
+    "labels:audit:strict": "node scripts/label-audit.js --strict",
     "performance": "node test/performance/performance-test.js full",
     "performance:quick": "node test/performance/performance-test.js quick",
     "performance:ab": "node test/performance/performance-test.js ab",
@@ -23,11 +25,13 @@
   "author": "peaceroad <peaceroad@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "@peaceroad/markdown-it-cjk-breaks-mod": "^0.1.7",
+    "@peaceroad/markdown-it-cjk-breaks-mod": "^0.1.8",
     "@peaceroad/markdown-it-figure-with-p-caption": "^0.16.0",
-    "@peaceroad/markdown-it-footnote-here": "^0.3.3",
-    "@peaceroad/markdown-it-strong-ja": "^0.7.2",
+    "@peaceroad/markdown-it-footnote-here": "^0.4.2",
+    "@peaceroad/markdown-it-strong-ja": "^0.8.0",
     "markdown-it": "^14.1.0",
-    "markdown-it-attrs": "^4.3.1"
+    "markdown-it-attrs": "^4.3.1",
+    "markdown-it-front-matter": "^0.2.4",
+    "markdown-it-meta": "^0.0.1"
   }
 }

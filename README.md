@@ -254,17 +254,18 @@ import mdit from 'markdown-it'
 import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
 const md = mdit().use(mditSemanticContainer);
 const markdownCont = '...'
-md.render(markdowonCont)
+md.render(markdownCont)
 ```
 
-The hr element can be omitted in a one-paragraph semantics container, but if not, specify the following option.
+The hr element can be omitted in a one-paragraph semantic container.
+To require hr even for one-paragraph containers, specify the following option.
 
 ```js
 import mdit from 'markdown-it'
 import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
 const md = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true});
 const markdownCont = '...'
-md.render(markdowonCont)
+md.render(markdownCont)
 ```
 
 Other options are explained under headings towards the end of the document.
@@ -494,6 +495,75 @@ mdit().use(mditSemanticContainer, { languages: ["ja"] })
 
 // English only
 mdit().use(mditSemanticContainer, { languages: [] })
+```
+
+### frontmatter `sc` input sources
+
+This plugin does not parse frontmatter text by itself.
+It reads already-parsed `sc` data from these sources (in priority order):
+
+1. `state.env.semanticContainerSc`
+2. `state.env.frontmatter.sc`
+3. `state.env.meta.sc`
+4. `md.frontmatter.sc` (`markdown-it-front-matter` style)
+5. `md.meta.sc` (`markdown-it-meta` style)
+
+For `md.frontmatter.sc` / `md.meta.sc`, this plugin only consumes values from the current render context (front matter token present) or when object reference changed, to avoid leaking stale metadata across renders.
+
+Recommended explicit input:
+
+```js
+const env = {
+  semanticContainerSc: {
+    notice: "お知らせ",  // alias extension
+    warning: "",         // default hide label
+    note: null           // default hide label
+  }
+}
+md.render(markdownCont, env)
+```
+
+`markdown-it-meta` example (no manual env bridge):
+
+```js
+import mdit from 'markdown-it'
+import mditMeta from 'markdown-it-meta'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+
+const md = mdit()
+  .use(mditMeta)
+  .use(mditSemanticContainer)
+```
+
+`markdown-it-front-matter` example (bring your own parser):
+
+```js
+import mdit from 'markdown-it'
+import mditFrontMatter from 'markdown-it-front-matter'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+
+const md = mdit()
+md.use(mditFrontMatter, (raw) => {
+  // Parse `raw` with your preferred parser, then expose { sc: ... }.
+  md.frontmatter = parseFrontMatter(raw)
+})
+md.use(mditSemanticContainer)
+```
+
+Behavior:
+- Non-empty `sc.<semantic>` values extend aliases for semantic detection.
+- `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior.
+- `labelControl` inline `label="..."` takes precedence over `sc` default hide.
+- Alias conflicts are ignored deterministically and warnings are collected in `env.semanticContainerWarnings`.
+
+Example frontmatter shape (from your own frontmatter parser):
+
+```yaml
+---
+sc:
+  notice: "お知らせ"
+  warning: ""
+---
 ```
 
 ### labelControl
@@ -755,7 +825,8 @@ When using heading mixin, put `label` on the heading line (not on `[!TYPE]` line
 > Content
 ```
 
-Supported GitHub alert types: `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`, and their Japanese equivalents.
+GitHub canonical alert types are `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`.
+This plugin also accepts any registered semantic label/alias as `TYPE`.
 
 ### requireHrAtOneParagraph
 
@@ -763,6 +834,15 @@ Force the use of horizontal rules even for single-paragraph containers. By defau
 
 ```js
 mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
+```
+
+## Audit helper
+
+Use the included audit script to find repeated inline labels and `sc` alias conflicts in Markdown files.
+
+```bash
+npm run labels:audit
+npm run labels:audit:strict
 ```
 
 With this option enabled, the following would NOT be converted to a semantic container:
