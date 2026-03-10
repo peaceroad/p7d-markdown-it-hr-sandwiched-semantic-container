@@ -4,6 +4,7 @@ import { createGitHubTypeContainer } from './src/github-type-container.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 import { createStandardContainerApplier } from './src/standard-applier.js'
+import { resolveContainerRangeEnd } from './src/container-range.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -37,6 +38,15 @@ const EMPTY_RUNTIME_PLAN = Object.freeze({
 const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
 const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
 const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key)
+const isStandardContainerLeadToken = (tokenType) => tokenType === 'paragraph_open' || tokenType === 'heading_open'
+const isStandaloneWalkTargetToken = (tokenType, allowStandaloneParagraph, allowGitHubBlockquote) => (
+  (allowStandaloneParagraph && tokenType === 'paragraph_open')
+  || (allowGitHubBlockquote && tokenType === 'blockquote_open')
+)
+const isHrDelimitedWalkTargetToken = (tokenType, allowGitHubBlockquote) => (
+  isStandardContainerLeadToken(tokenType)
+  || (allowGitHubBlockquote && tokenType === 'blockquote_open')
+)
 const hasSemanticJointInPrefix = (content, startIndex) => {
   const end = Math.min(content.length, startIndex + SEMANTIC_PREFIX_SCAN_MAX)
   for (let i = startIndex; i < end; i++) {
@@ -460,35 +470,11 @@ const createLabelMatcher = (semantics, semanticsReg) => {
   }
 
   const checkStandardLabel = (state, n, hrType, sc, checked) => {
-    const tokens = state.tokens
-    const tokensLength = tokens.length
     const matchedSemantic = findMatchedSemantic(state, n)
     if (!matchedSemantic) return false
 
-    let en = n
-    let hasEndSemanticsHr = false
-    let pCloseN = -1
-    while (en < tokensLength) {
-      const tokenAtEn = tokens[en]
-      if (tokenAtEn.type === 'hr') {
-        if (hrType && tokenAtEn.markup.includes(hrType)) {
-          hasEndSemanticsHr = true
-          break
-        }
-        en++
-        continue
-      }
-
-      if (tokenAtEn.type === 'paragraph_close' && pCloseN === -1) {
-        pCloseN = en
-        if (!hrType) break
-      }
-
-      en++
-    }
-    if (hrType && !hasEndSemanticsHr) return false
-
-    const rangeEnd = hrType ? en : (pCloseN !== -1 ? pCloseN + 1 : en)
+    const rangeEnd = resolveContainerRangeEnd(state.tokens, n, hrType)
+    if (rangeEnd < 0) return false
     sc.push({
       range: [n, rangeEnd],
       continued: checked,
@@ -597,10 +583,15 @@ const tryApplyStandaloneContainer = (
 const createActiveCheck = ({ githubCheck, bracketCheck, defaultCheck }) => {
   return (state, n, hrType, sc, checked) => {
     const token = state.tokens[n]
+    const tokenType = token?.type
     // Priority contract: github > bracket > standard.
     // GitHub checks are exclusive on blockquote_open tokens.
-    if (githubCheck && token.type === 'blockquote_open') {
+    if (tokenType === 'blockquote_open') {
+      if (!githubCheck) return false
       return githubCheck(state, n, hrType, sc, checked)
+    }
+    if (!isStandardContainerLeadToken(tokenType)) {
+      return false
     }
     if (bracketCheck && bracketCheck(state, n, hrType, sc, checked)) {
       return true
@@ -650,13 +641,18 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   const tokens = state.tokens
   const hrStartLineKeySet = runtimePlan?.hrStartLineKeySet
   const githubCandidateLineSet = runtimePlan?.githubCandidateLineSet
+  const allowGitHubBlockquote = !!optLocal.githubTypeContainer
+  const allowStandaloneParagraph = !optLocal.requireHrAtOneParagraph
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
+  const tokenType = token?.type
   let hrType = ''
 
-  const isEdge = (n === 0 || n === tokens.length - 1)
-  if (isEdge || prevToken.type !== 'hr') {
+  if (n === 0 || prevToken.type !== 'hr') {
+    if (!isStandaloneWalkTargetToken(tokenType, allowStandaloneParagraph, allowGitHubBlockquote)) {
+      return n + 1
+    }
     const nextIndex = tryApplyStandaloneContainer(
       state,
       tokens,
@@ -670,9 +666,13 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
       githubCandidateLineSet,
       appliedHrCandidateStartLineSet,
       appliedGitHubCandidateLineSet,
-      !isEdge
+      n > 0
     )
     if (nextIndex !== null) return nextIndex
+    return n + 1
+  }
+
+  if (!isHrDelimitedWalkTargetToken(tokenType, allowGitHubBlockquote)) {
     return n + 1
   }
 

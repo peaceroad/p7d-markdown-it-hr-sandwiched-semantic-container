@@ -1,6 +1,7 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { resolveContainerRangeEnd } from './container-range.js'
 import { resolveAutoJointLabelStyle } from './label-style.js'
 import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
@@ -280,33 +281,11 @@ const createBracketFormat = (semantics) => {
 
   // Bracket format check function
   const checkBracketSemanticContainerCore = (state, n, hrType, sc, checked) => {
-    const tokens = state.tokens
-    const tokensLength = tokens.length
     const matchedSemantic = findBracketSemanticMatch(state, n)
     if (!matchedSemantic) return false
 
-    let en = n
-    let hasEndSemanticsHr = false
-    let pCloseN = -1
-    while (en < tokensLength) {
-      const tokenAtEn = tokens[en]
-      if (tokenAtEn.type === 'hr') {
-        if (hrType && tokenAtEn.markup.includes(hrType)) {
-          hasEndSemanticsHr = true
-          break
-        }
-        en++
-        continue
-      }
-      if (tokenAtEn.type === 'paragraph_close' && pCloseN === -1) {
-        pCloseN = en
-        if (!hrType) break
-      }
-      en++
-    }
-    if (hrType && !hasEndSemanticsHr) return false
-
-    const rangeEnd = hrType ? en : (pCloseN !== -1 ? pCloseN + 1 : en)
+    const rangeEnd = resolveContainerRangeEnd(state.tokens, n, hrType)
+    if (rangeEnd < 0) return false
     sc.push({
       range: [n, rangeEnd],
       continued: checked,

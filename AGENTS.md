@@ -13,14 +13,15 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
    - `buildSemanticLeadCandidates(semantics)` (in `src/semantic-lead.js`): pre-buckets semantic candidates by leading label character for faster checks.
    - `resolveLabelControl(...)` / `escapeHtmlForAttr(...)` (in `src/label-control.js`): shared `label` extraction/removal and safe attribute escaping. Supports attrs-based extraction and optional inline-tail fallback (`{label=...}`) when attrs are unavailable.
+   - `resolveContainerRangeEnd(...)` (in `src/container-range.js`): shared range-end resolver for standard/bracket detection; returns hr-close token index for hr paths and post-`paragraph_close` index for standalone paths, matching applier splice contracts.
    - `createContainerStartToken(...)` / `createContainerEndToken(...)` (in `src/container-token.js`): shared HTML container start/end token generation for standard, bracket, and GitHub paths.
    - `createWrappedLabelTokens(...)` / `createBracketWrappedLabelTokens(...)` (in `src/label-token-builder.js`): shared inline label token builders reused by bracket/GitHub appliers.
    - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
-   - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker.
+   - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker, with an early token-type gate for non paragraph/heading targets.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
    - `createContainerApplier(...)`: dispatches to GitHub/bracket setters, otherwise delegates standard behavior to `createStandardContainerApplier(...)` in `src/standard-applier.js`. Standard path wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens.
    - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for paragraph/blockquote checks; consolidates skip guards (`applied hr candidate`, list-item exclusion, GitHub candidate gating) and applies single-container conversions without duplicating walker branches.
-   - `createContainerWalker(...)`: main token walker; skips non-target tokens and uses a Set of checked positions to avoid reprocessing.
+   - `createContainerWalker(...)`: main token walker; skips non-target tokens before standalone/hr-path checks and uses a Set of checked positions to avoid reprocessing.
    - `createHrCandidatePlanner(...)`: resolves semantic matches with standard+bracket matchers on hr candidates and produces descending planned edits + applied start-line sets.
    - `createGitHubCandidatePlanner(...)`: resolves GitHub alert candidates and produces descending planned edits + applied candidate-line sets.
    - `mergePlannedEditsDescending(...)`: linearly merges hr/github descending edit lists.
