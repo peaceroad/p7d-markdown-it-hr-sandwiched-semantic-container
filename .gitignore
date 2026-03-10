@@ -1,0 +1,6 @@
+/.codex/
+/node_modules/
+package-lock.json
+index_*
+/plan*
+/test*
