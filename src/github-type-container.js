@@ -244,7 +244,6 @@ const createGitHubTypeContainer = (semantics) => {
     }
     return null
   }
-
   const checkGitHubAlertsCore = (state, n, _hrType, sc, _checked) => {
     const tokens = state.tokens
     const tokensLength = tokens.length
@@ -273,6 +272,9 @@ const createGitHubTypeContainer = (semantics) => {
               actualName: semantic.actualName,
               openBracket: semantic.openBracket,
               closeBracket: semantic.closeBracket,
+              paragraphOpenIndex: n + 1,
+              paragraphInlineIndex: n + 2,
+              paragraphCloseIndex: n + 3,
               isGitHubAlert: true
             })
             return true
@@ -286,6 +288,9 @@ const createGitHubTypeContainer = (semantics) => {
     let depth = 0
     let semantic = null
     let hasParagraphMarker = false
+    let markerParagraphOpenIndex = -1
+    let markerParagraphInlineIndex = -1
+    let markerParagraphCloseIndex = -1
     for (let i = n; i < tokensLength; i++) {
       const token = tokens[i]
       if (token.type === 'blockquote_open') {
@@ -298,6 +303,9 @@ const createGitHubTypeContainer = (semantics) => {
           if (!paragraphToken || paragraphToken.type !== 'inline') return false
           semantic = findGitHubSemanticMatch(paragraphToken.content)
           if (!semantic) return false
+          markerParagraphOpenIndex = i
+          markerParagraphInlineIndex = i + 1
+          markerParagraphCloseIndex = i + 2
           hasParagraphMarker = true
         } else if (token.type === 'blockquote_close') {
           return false
@@ -313,6 +321,9 @@ const createGitHubTypeContainer = (semantics) => {
             actualName: semantic.actualName,
             openBracket: semantic.openBracket,
             closeBracket: semantic.closeBracket,
+            paragraphOpenIndex: markerParagraphOpenIndex,
+            paragraphInlineIndex: markerParagraphInlineIndex,
+            paragraphCloseIndex: markerParagraphCloseIndex,
             isGitHubAlert: true
           })
           return true
@@ -330,16 +341,28 @@ const createGitHubTypeContainer = (semantics) => {
     const sn = sc.sn
     const sem = semantics[sn]
 
-    let paragraphOpenIndex = -1
-    let paragraphInlineIndex = -1
-    let paragraphCloseIndex = -1
+    let paragraphOpenIndex = Number.isInteger(sc.paragraphOpenIndex) ? sc.paragraphOpenIndex : -1
+    let paragraphInlineIndex = Number.isInteger(sc.paragraphInlineIndex) ? sc.paragraphInlineIndex : -1
+    let paragraphCloseIndex = Number.isInteger(sc.paragraphCloseIndex) ? sc.paragraphCloseIndex : -1
 
-    for (let i = rs + 1; i <= re; i++) {
-      if (tokens[i].type === 'paragraph_open') {
-        paragraphOpenIndex = i
-        paragraphInlineIndex = i + 1
-        paragraphCloseIndex = i + 2
-        break
+    if (
+      paragraphOpenIndex < rs
+      || paragraphInlineIndex !== paragraphOpenIndex + 1
+      || paragraphCloseIndex !== paragraphOpenIndex + 2
+      || tokens[paragraphOpenIndex]?.type !== 'paragraph_open'
+      || tokens[paragraphInlineIndex]?.type !== 'inline'
+      || tokens[paragraphCloseIndex]?.type !== 'paragraph_close'
+    ) {
+      paragraphOpenIndex = -1
+      paragraphInlineIndex = -1
+      paragraphCloseIndex = -1
+      for (let i = rs + 1; i <= re; i++) {
+        if (tokens[i].type === 'paragraph_open') {
+          paragraphOpenIndex = i
+          paragraphInlineIndex = i + 1
+          paragraphCloseIndex = i + 2
+          break
+        }
       }
     }
 
