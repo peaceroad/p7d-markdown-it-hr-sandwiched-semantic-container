@@ -1,5 +1,6 @@
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { createTextToken, createWrappedLabelTokens } from './label-token-builder.js'
 
 const semanticsHalfJoint = '[:.]'
 const semanticsFullJoint = '[　：。．]'
@@ -243,13 +244,6 @@ const createStandardContainerApplier = (semantics) => (state, hrType, sc, sci, o
     }
 
     if (!foundLabelStrong) {
-      const strongBefore = new state.Token('text', '', 0)
-      const strongOpen = new state.Token('strong_open', 'strong', 1)
-      const strongContent = new state.Token('text', '', 0)
-      strongContent.content = labelText
-      const strongClose = new state.Token('strong_close', 'strong', -1)
-      strongOpen.attrJoin('class', sem.labelClass)
-
       const firstChild = ntChildren?.[0]
       if (firstChild?.content) {
         const escapedActualName = escapeRegExp(sc.actualName)
@@ -266,27 +260,21 @@ const createStandardContainerApplier = (semantics) => (state, hrType, sc, sci, o
       }
       nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
 
-      const labelTokens = [strongBefore, strongOpen, strongContent]
-      if (labelJoint) {
-        const jointSpan = new state.Token('span_open', 'span', 1)
-        jointSpan.attrJoin('class', sem.labelJointClass)
-        const jointContent = new state.Token('text', '', 0)
-        jointContent.content = labelJoint
-        const jointSpanClose = new state.Token('span_close', 'span', -1)
-        labelTokens.push(jointSpan, jointContent, jointSpanClose)
-      }
-      labelTokens.push(strongClose)
+      const labelTokens = [
+        createTextToken(state, ''),
+        ...createWrappedLabelTokens(
+          state,
+          true,
+          sem.labelClass,
+          labelText,
+          sem.labelJointClass,
+          labelJoint
+        ),
+      ]
       ntChildren.splice(0, 0, ...labelTokens)
     }
     nJump += 3
   } else {
-    const ltFirst = new state.Token('text', '', 0)
-    const ltSpanOpen = new state.Token('span_open', 'span', 1)
-    ltSpanOpen.attrJoin('class', sem.labelClass)
-    const ltSpanContent = new state.Token('text', '', 0)
-    ltSpanContent.content = labelText
-    const ltSpanClose = new state.Token('span_close', 'span', -1)
-
     const firstChild = ntChildren?.[0]
     if (sc.hasHalfJoint && firstChild?.content) {
       firstChild.content = ' ' + removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
@@ -294,16 +282,17 @@ const createStandardContainerApplier = (semantics) => (state, hrType, sc, sci, o
       firstChild.content = removeLiteralPrefix(firstChild.content, sc.actualContNoStrong)
     }
 
-    const labelTokens = [ltFirst, ltSpanOpen, ltSpanContent]
-    if (labelJoint) {
-      const ltJointSpanOpen = new state.Token('span_open', 'span', 1)
-      ltJointSpanOpen.attrJoin('class', sem.labelJointClass)
-      const ltJointContent = new state.Token('text', '', 0)
-      ltJointContent.content = labelJoint
-      const ltJointSpanClose = new state.Token('span_close', 'span', -1)
-      labelTokens.push(ltJointSpanOpen, ltJointContent, ltJointSpanClose)
-    }
-    labelTokens.push(ltSpanClose)
+    const labelTokens = [
+      createTextToken(state, ''),
+      ...createWrappedLabelTokens(
+        state,
+        false,
+        sem.labelClass,
+        labelText,
+        sem.labelJointClass,
+        labelJoint
+      ),
+    ]
     ntChildren.splice(0, 0, ...labelTokens)
     nJump += 3
   }

@@ -701,45 +701,77 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   return n + (firstJump > 0 ? firstJump : 1)
 }
 
-const buildHrCandidateTokenIndex = (tokens) => {
+const buildHrCandidateTokenIndex = (tokens, startKeySet, endKeySet) => {
   const startIndexByKey = new Map()
   const endIndexByKey = new Map()
+  const targetStartCount = startKeySet?.size || 0
+  const targetEndCount = endKeySet?.size || 0
+
+  if (targetStartCount === 0 && targetEndCount === 0) {
+    return { startIndexByKey, endIndexByKey }
+  }
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]
-    if (token?.type === 'hr' && token?.map && Number.isInteger(token.map[0])) {
+    if (
+      targetEndCount > endIndexByKey.size
+      && token?.type === 'hr'
+      && token?.map
+      && Number.isInteger(token.map[0])
+    ) {
       const hrType = getHrTypeFromMarkup(token.markup || '')
       if (hrType) {
         const key = createHrCandidateKey(token.map[0], hrType)
-        endIndexByKey.set(key, i)
+        if (endKeySet.has(key)) {
+          endIndexByKey.set(key, i)
+        }
       }
     }
 
-    if (i === 0) continue
-    const prev = tokens[i - 1]
-    if (prev?.type !== 'hr') continue
-    if (!token?.map || !Number.isInteger(token.map[0])) continue
-    const hrType = getHrTypeFromMarkup(prev.markup || '')
-    if (!hrType) continue
+    if (
+      targetStartCount > startIndexByKey.size
+      && i > 0
+      && token?.map
+      && Number.isInteger(token.map[0])
+    ) {
+      const prev = tokens[i - 1]
+      if (prev?.type === 'hr') {
+        const hrType = getHrTypeFromMarkup(prev.markup || '')
+        if (hrType) {
+          const key = createHrCandidateKey(token.map[0], hrType)
+          if (startKeySet.has(key) && !startIndexByKey.has(key)) {
+            startIndexByKey.set(key, i)
+          }
+        }
+      }
+    }
 
-    const key = createHrCandidateKey(token.map[0], hrType)
-    if (!startIndexByKey.has(key)) {
-      startIndexByKey.set(key, i)
+    if (
+      endIndexByKey.size >= targetEndCount
+      && startIndexByKey.size >= targetStartCount
+    ) {
+      break
     }
   }
 
   return { startIndexByKey, endIndexByKey }
 }
 
-const buildBlockquoteTokenIndexByLine = (tokens) => {
+const buildBlockquoteTokenIndexByLine = (tokens, candidateLineSet) => {
   const indexByLine = new Map()
+  const targetLineCount = candidateLineSet?.size || 0
+  if (targetLineCount === 0) return indexByLine
+
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]
     if (token?.type !== 'blockquote_open') continue
     if (!token?.map || !Number.isInteger(token.map[0])) continue
     const line = token.map[0]
-    if (!indexByLine.has(line)) {
+    if (candidateLineSet.has(line) && !indexByLine.has(line)) {
       indexByLine.set(line, i)
+      if (indexByLine.size >= targetLineCount) {
+        break
+      }
     }
   }
   return indexByLine
@@ -782,8 +814,10 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
     return { handledAll: true, appliedStartLineSet: null, plannedEdits: null }
   }
 
-  const tokenIndex = buildHrCandidateTokenIndex(state.tokens)
-  const matchedByCandidate = new Array(candidates.length)
+  const candidateKeys = new Array(candidates.length)
+  const startKeySet = new Set()
+  const endKeySet = new Set()
+  let validCandidateCount = 0
   let handledAll = true
 
   for (let i = 0; i < candidates.length; i++) {
@@ -801,14 +835,36 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
     }
 
     const startKey = createHrCandidateKey(startLine, hrType)
-    const n = tokenIndex.startIndexByKey.get(startKey)
+    const endKey = createHrCandidateKey(endHrLine, hrType)
+    candidateKeys[i] = { startKey, endKey }
+    startKeySet.add(startKey)
+    endKeySet.add(endKey)
+    validCandidateCount++
+  }
+
+  if (validCandidateCount === 0) {
+    return { handledAll, appliedStartLineSet: null, plannedEdits: null }
+  }
+
+  const tokenIndex = buildHrCandidateTokenIndex(state.tokens, startKeySet, endKeySet)
+  const matchedByCandidate = new Array(candidates.length)
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i]
+    const keys = candidateKeys[i]
+    if (!keys) {
+      continue
+    }
+
+    const startLine = candidate.startLine
+    const hrType = candidate.hrType
+    const n = tokenIndex.startIndexByKey.get(keys.startKey)
     if (n === undefined) {
       handledAll = false
       continue
     }
 
-    const endKey = createHrCandidateKey(endHrLine, hrType)
-    const re = tokenIndex.endIndexByKey.get(endKey)
+    const re = tokenIndex.endIndexByKey.get(keys.endKey)
     if (re === undefined || re < n) {
       handledAll = false
       continue
@@ -916,7 +972,7 @@ const createGitHubCandidatePlanner = (githubCheck) => (state, runtimePlan) => {
   const candidateLineSet = runtimePlan?.githubCandidateLineSet
   if (!candidateLineSet || candidateLineSet.size === 0) return { handledAll: true, appliedLineSet: null, plannedEdits: null }
 
-  const tokenIndexByLine = buildBlockquoteTokenIndexByLine(state.tokens)
+  const tokenIndexByLine = buildBlockquoteTokenIndexByLine(state.tokens, candidateLineSet)
   const matchedCandidates = []
   let handledAll = true
 
