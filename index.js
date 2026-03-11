@@ -540,7 +540,6 @@ const tryApplyStandaloneContainer = (
   optLocal,
   activeCheck,
   applyContainer,
-  hrType,
   githubCandidateLineSet,
   appliedHrCandidateStartLineSet,
   appliedGitHubCandidateLineSet,
@@ -555,8 +554,8 @@ const tryApplyStandaloneContainer = (
       if (tokens[n - 1].type === 'list_item_open') return n + 1
     }
     const sc = []
-    if (activeCheck(state, n, hrType, sc, false)) {
-      const firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+    if (activeCheck(state, n, '', sc, false)) {
+      const firstJump = applyContainer(state, n, '', sc[0], -1, optLocal)
       return n + (firstJump > 0 ? firstJump : 1)
     }
     return n + 1
@@ -570,8 +569,8 @@ const tryApplyStandaloneContainer = (
       return n + 1
     }
     const sc = []
-    if (activeCheck(state, n, hrType, sc, false)) {
-      const firstJump = applyContainer(state, n, hrType, sc[0], -1, optLocal)
+    if (activeCheck(state, n, '', sc, false)) {
+      const firstJump = applyContainer(state, n, '', sc[0], -1, optLocal)
       return n + (firstJump > 0 ? firstJump : 1)
     }
     return n + 1
@@ -647,8 +646,6 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   const prevToken = tokens[n-1]
   const token = tokens[n]
   const tokenType = token?.type
-  let hrType = ''
-
   if (n === 0 || prevToken.type !== 'hr') {
     if (!isStandaloneWalkTargetToken(tokenType, allowStandaloneParagraph, allowGitHubBlockquote)) {
       return n + 1
@@ -662,7 +659,6 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
       optLocal,
       activeCheck,
       applyContainer,
-      hrType,
       githubCandidateLineSet,
       appliedHrCandidateStartLineSet,
       appliedGitHubCandidateLineSet,
@@ -676,20 +672,18 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
     return n + 1
   }
 
-  hrType = getHrTypeFromMarkup(prevToken.markup || '')
+  const hrType = getHrTypeFromMarkup(prevToken.markup || '')
 
   if (hrStartLineKeySet && token?.map && Number.isInteger(token.map[0])) {
     const hrCandidateKey = createHrCandidateKey(token.map[0], hrType)
     if (!hrStartLineKeySet.has(hrCandidateKey)) {
-      n++
-      return n
+      return n + 1
     }
   }
 
   const sc = []
   if (!checkContainerRanges(state, n, hrType, sc)) {
-    n++
-    return n
+    return n + 1
   }
 
   let firstJump = 0
