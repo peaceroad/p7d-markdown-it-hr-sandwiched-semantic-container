@@ -264,17 +264,18 @@ const getHrTypeFromMarkup = (markup) => {
 
 const createHrCandidateKey = (line, hrType) => String(line) + HR_CANDIDATE_KEY_SEP + hrType
 
+const toNonEmptySetOrNull = (value) => (
+  value && typeof value.size === 'number' && value.size > 0
+    ? value
+    : null
+)
+
 const buildRuntimePlan = (state) => {
   const candidates = Array.isArray(state?.env?.semanticContainerHrCandidates)
     ? state.env.semanticContainerHrCandidates
     : null
   const keySet = state?.env?.semanticContainerHrCandidateKeySet
-  const githubCandidateLineSet = state?.env?.semanticContainerGitHubCandidateLineSet
-  const activeGitHubCandidateLineSet = (
-    githubCandidateLineSet && typeof githubCandidateLineSet.size === 'number' && githubCandidateLineSet.size > 0
-      ? githubCandidateLineSet
-      : null
-  )
+  const activeGitHubCandidateLineSet = toNonEmptySetOrNull(state?.env?.semanticContainerGitHubCandidateLineSet)
   if (keySet && typeof keySet.size === 'number' && keySet.size > 0) {
     return {
       hrStartLineKeySet: keySet,
@@ -284,14 +285,13 @@ const buildRuntimePlan = (state) => {
   }
 
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    if (!activeGitHubCandidateLineSet) {
-      return EMPTY_RUNTIME_PLAN
-    }
-    return {
-      hrStartLineKeySet: null,
-      hrCandidates: null,
-      githubCandidateLineSet: activeGitHubCandidateLineSet,
-    }
+    return activeGitHubCandidateLineSet
+      ? {
+        hrStartLineKeySet: null,
+        hrCandidates: null,
+        githubCandidateLineSet: activeGitHubCandidateLineSet,
+      }
+      : EMPTY_RUNTIME_PLAN
   }
 
   const hrStartLineKeySet = new Set()
@@ -304,12 +304,13 @@ const buildRuntimePlan = (state) => {
     hrStartLineKeySet.add(createHrCandidateKey(line, hrType))
   }
   if (hrStartLineKeySet.size === 0) {
-    if (!activeGitHubCandidateLineSet) return EMPTY_RUNTIME_PLAN
-    return {
-      hrStartLineKeySet: null,
-      hrCandidates: null,
-      githubCandidateLineSet: activeGitHubCandidateLineSet,
-    }
+    return activeGitHubCandidateLineSet
+      ? {
+        hrStartLineKeySet: null,
+        hrCandidates: null,
+        githubCandidateLineSet: activeGitHubCandidateLineSet,
+      }
+      : EMPTY_RUNTIME_PLAN
   }
 
   return {
