@@ -270,6 +270,12 @@ const toNonEmptySetOrNull = (value) => (
     : null
 )
 
+const createRuntimePlan = (hrStartLineKeySet, hrCandidates, githubCandidateLineSet) => ({
+  hrStartLineKeySet,
+  hrCandidates,
+  githubCandidateLineSet,
+})
+
 const buildRuntimePlan = (state) => {
   const candidates = Array.isArray(state?.env?.semanticContainerHrCandidates)
     ? state.env.semanticContainerHrCandidates
@@ -277,20 +283,12 @@ const buildRuntimePlan = (state) => {
   const keySet = state?.env?.semanticContainerHrCandidateKeySet
   const activeGitHubCandidateLineSet = toNonEmptySetOrNull(state?.env?.semanticContainerGitHubCandidateLineSet)
   if (keySet && typeof keySet.size === 'number' && keySet.size > 0) {
-    return {
-      hrStartLineKeySet: keySet,
-      hrCandidates: candidates,
-      githubCandidateLineSet: activeGitHubCandidateLineSet,
-    }
+    return createRuntimePlan(keySet, candidates, activeGitHubCandidateLineSet)
   }
 
   if (!Array.isArray(candidates) || candidates.length === 0) {
     return activeGitHubCandidateLineSet
-      ? {
-        hrStartLineKeySet: null,
-        hrCandidates: null,
-        githubCandidateLineSet: activeGitHubCandidateLineSet,
-      }
+      ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
       : EMPTY_RUNTIME_PLAN
   }
 
@@ -305,19 +303,11 @@ const buildRuntimePlan = (state) => {
   }
   if (hrStartLineKeySet.size === 0) {
     return activeGitHubCandidateLineSet
-      ? {
-        hrStartLineKeySet: null,
-        hrCandidates: null,
-        githubCandidateLineSet: activeGitHubCandidateLineSet,
-      }
+      ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
       : EMPTY_RUNTIME_PLAN
   }
 
-  return {
-    hrStartLineKeySet,
-    hrCandidates: candidates,
-    githubCandidateLineSet: activeGitHubCandidateLineSet,
-  }
+  return createRuntimePlan(hrStartLineKeySet, candidates, activeGitHubCandidateLineSet)
 }
 
 const resolveRawScInput = (state, md, mdStateRef) => {
