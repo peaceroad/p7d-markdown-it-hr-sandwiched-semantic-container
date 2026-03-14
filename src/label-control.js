@@ -1,18 +1,32 @@
 const LABEL_ATTR = 'label'
+const LABEL_TAIL_REGEX_CACHE_MAX = 8
 const labelTailRegexCache = new Map()
 const CODE_RIGHT_BRACE = 125
+const DEFAULT_TAIL_LABEL_MARKER = '{' + LABEL_ATTR
 
 const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-const getTailLabelRegex = (attrName) => {
+const buildTailLabelRegex = (attrName) => {
   const key = attrName || LABEL_ATTR
-  const cached = labelTailRegexCache.get(key)
-  if (cached) return cached
   // Tail-only parser for attrs-less mode:
   // ... {label="..."} / {label='...'} / {label=value}
   const pattern = '(?:^|[ \\t]+)\\{' + escapeRegExp(key)
     + '\\s*=\\s*(?:"([^"]*)"|\'([^\']*)\'|([^\\s{}"\']+))\\}\\s*$'
-  const reg = new RegExp(pattern)
+  return new RegExp(pattern)
+}
+
+const DEFAULT_TAIL_LABEL_REGEX = buildTailLabelRegex(LABEL_ATTR)
+
+const getTailLabelRegex = (attrName) => {
+  const key = attrName || LABEL_ATTR
+  if (key === LABEL_ATTR) return DEFAULT_TAIL_LABEL_REGEX
+  const cached = labelTailRegexCache.get(key)
+  if (cached) return cached
+  const reg = buildTailLabelRegex(key)
+  if (labelTailRegexCache.size >= LABEL_TAIL_REGEX_CACHE_MAX) {
+    const firstKey = labelTailRegexCache.keys().next().value
+    labelTailRegexCache.delete(firstKey)
+  }
   labelTailRegexCache.set(key, reg)
   return reg
 }
@@ -33,6 +47,14 @@ const getAndRemoveTokenAttr = (token, attrName = LABEL_ATTR) => {
 }
 
 const getAndRemoveInlineTailLabel = (inlineToken, attrName = LABEL_ATTR) => {
+  const key = attrName || LABEL_ATTR
+  const marker = key === LABEL_ATTR ? DEFAULT_TAIL_LABEL_MARKER : '{' + key
+  const inlineContent = typeof inlineToken?.content === 'string' ? inlineToken.content : null
+  if (inlineContent) {
+    const inlineLength = inlineContent.length
+    if (!inlineLength || inlineContent.charCodeAt(inlineLength - 1) !== CODE_RIGHT_BRACE) return undefined
+    if (inlineContent.lastIndexOf(marker) === -1) return undefined
+  }
   if (!inlineToken || !Array.isArray(inlineToken.children) || inlineToken.children.length === 0) return undefined
 
   let textToken = null
@@ -48,11 +70,10 @@ const getAndRemoveInlineTailLabel = (inlineToken, attrName = LABEL_ATTR) => {
   const content = textToken.content
   const contentLength = content.length
   if (!contentLength || content.charCodeAt(contentLength - 1) !== CODE_RIGHT_BRACE) return undefined
-  const marker = '{' + (attrName || LABEL_ATTR)
   if (content.lastIndexOf(marker) === -1) return undefined
 
-  const tailReg = getTailLabelRegex(attrName)
-  const match = content.match(tailReg)
+  const tailReg = getTailLabelRegex(key)
+  const match = tailReg.exec(content)
   if (!match) return undefined
 
   const matched = match[0]

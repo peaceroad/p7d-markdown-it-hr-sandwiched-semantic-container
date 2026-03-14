@@ -552,6 +552,7 @@ md.use(mditSemanticContainer)
 
 Behavior:
 - Non-empty `sc.<semantic>` values extend aliases for semantic detection.
+- Runtime `sc` aliases are treated as literal strings, not regex patterns. If you need regex-capable aliases, define them in locale data (`semantics/*.json`).
 - `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior.
 - `labelControl` inline `label="..."` takes precedence over `sc` default hide.
 - Alias conflicts are ignored deterministically and warnings are collected in `env.semanticContainerWarnings`.

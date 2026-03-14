@@ -1,4 +1,5 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
+import { buildSemanticAliasPatterns } from './semantic-alias.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 import { resolveContainerRangeEnd } from './container-range.js'
@@ -188,8 +189,9 @@ const createBracketFormat = (semantics) => {
 
   // Bracket format regex patterns
   const semanticsBracketReg = semantics.map((sem) => {
-    const aliasStr = sem.aliases.length
-      ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
+    const aliasPatterns = buildSemanticAliasPatterns(sem)
+    const aliasStr = aliasPatterns.length
+      ? '|' + aliasPatterns.join('|')
       : ''
     // Match [Semantics] (half-width, space required) or ［Semantics］ (full-width, space optional)
     const bkPattern = '^(?:(' + strongMark + ')?([\\[])((?:' + sem.name + aliasStr + ')' + sNumber + ')([\\]])\\1?( +)|(' + strongMark + ')?([［])((?:' + sem.name + aliasStr + ')' + sNumber + ')([］])\\6?( *))'

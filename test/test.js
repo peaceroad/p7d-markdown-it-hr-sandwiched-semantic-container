@@ -10,6 +10,7 @@ import mditCjkBreaks from '@peaceroad/markdown-it-cjk-breaks-mod'
 import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import mditFigureWithPCaption from '@peaceroad/markdown-it-figure-with-p-caption'
+import { resolveLabelControl } from '../src/label-control.js'
 
 
 const md = mdit().use(mditSemanticContainer).use(mditFootnoteHere)
@@ -385,6 +386,60 @@ pass = runDirectTest('labelControl works without markdown-it-attrs (github)', pa
   assert.strictEqual(html, expected)
 })
 
+pass = runDirectTest('labelControl fallback supports partial inline tokens without inline content', pass, () => {
+  const inlineToken = {
+    children: [
+      { type: 'text', content: 'Body. {label="Custom"}' }
+    ]
+  }
+  const resolved = resolveLabelControl(null, inlineToken, undefined, true)
+  assert.deepStrictEqual(resolved, { hide: false, value: 'Custom' })
+  assert.strictEqual(inlineToken.children[0].content, 'Body.')
+})
+
+pass = runDirectTest('runtime sc alias treats regex metacharacters literally (standard)', pass, () => {
+  const exactHtml = md.render('---\n\nNo+tice. Body.\n\n---\n', {
+    semanticContainerSc: { notice: 'No+tice' }
+  })
+  assert.strictEqual(exactHtml.includes('<section class="sc-notice"'), true)
+
+  const overmatchHtml = md.render('---\n\nNootice. Body.\n\n---\n', {
+    semanticContainerSc: { notice: 'No+tice' }
+  })
+  assert.strictEqual(overmatchHtml.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('runtime sc alias treats regex metacharacters literally (bracket)', pass, () => {
+  const exactHtml = mdBracketFormat.render('---\n\n[A|B] Body.\n\n---\n', {
+    semanticContainerSc: { notice: 'A|B' }
+  })
+  assert.strictEqual(exactHtml.includes('<section class="sc-notice"'), true)
+
+  const overmatchHtml = mdBracketFormat.render('---\n\n[A] Body.\n\n---\n', {
+    semanticContainerSc: { notice: 'A|B' }
+  })
+  assert.strictEqual(overmatchHtml.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('runtime sc alias treats regex metacharacters literally (github)', pass, () => {
+  const exactHtml = mdGitHubAlerts.render('> [!No+tice]\n> Body.\n', {
+    semanticContainerSc: { notice: 'No+tice' }
+  })
+  assert.strictEqual(exactHtml.includes('<section class="sc-notice"'), true)
+
+  const overmatchHtml = mdGitHubAlerts.render('> [!Nootice]\n> Body.\n', {
+    semanticContainerSc: { notice: 'No+tice' }
+  })
+  assert.strictEqual(overmatchHtml.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('runtime sc alias with regex syntax characters does not throw', pass, () => {
+  const html = md.render('---\n\nBad). Body.\n\n---\n', {
+    semanticContainerSc: { notice: 'Bad)' }
+  })
+  assert.strictEqual(html.includes('<section class="sc-notice"'), true)
+})
+
 pass = runDirectTest('sc alias bracket', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }
   const markdown = '---\n\n[お知らせ] 本文。\n\n---\n'
@@ -535,6 +590,26 @@ pass = runDirectTest('block hr candidates reset on env reuse', pass, () => {
   assert.strictEqual(env.semanticContainerHrCandidateKeySet.size, 0)
 })
 
+pass = runDirectTest('block hr candidates normalize setext underline to the next actual hr', pass, () => {
+  const env = {}
+  mdRequireHrAtOneParagraph.render('---\n\nNotice. Body.\n\nSubhead\n---\n\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerHrCandidates), true)
+  assert.strictEqual(env.semanticContainerHrCandidates.length, 1)
+  assert.strictEqual(env.semanticContainerHrCandidates[0].startLine, 2)
+  assert.strictEqual(env.semanticContainerHrCandidates[0].endHrLine, 7)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet.has('2:-'), true)
+})
+
+pass = runDirectTest('block hr candidates drop setext underline without an actual closing hr', pass, () => {
+  const env = {}
+  mdRequireHrAtOneParagraph.render('---\n\nNotice. Body.\n\nSubhead\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerHrCandidates), true)
+  assert.strictEqual(env.semanticContainerHrCandidates.length, 0)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet instanceof Set, true)
+  assert.strictEqual(env.semanticContainerHrCandidateKeySet.size, 0)
+})
+
 pass = runDirectTest('requireHr hr-candidate runner handles standard + bracket mixed', pass, () => {
   const markdown = '---\n\nNotice. Standard body.\n\n---\n\n[Notice] Bracket body.\n\n---\n'
   const html = mdRequireHrBracket.render(markdown)
@@ -606,6 +681,34 @@ pass = runDirectTest('detection priority keeps github alerts deterministic over 
   const sectionCount = (html.match(/<section class=\"sc-note\"/g) || []).length
   assert.strictEqual(sectionCount, 1)
   assert.strictEqual(html.includes('<strong class="sc-note-label">'), true)
+})
+
+pass = runDirectTest('githubTypeInlineLabelJoint is ignored when githubTypeInlineLabel is false', pass, () => {
+  const mdGitHubSeparateAutoJoint = mdit().use(mditAttrs).use(mditSemanticContainer, {
+    githubTypeContainer: true,
+    githubTypeInlineLabelJoint: 'auto',
+    labelControl: true,
+  })
+  const html = mdGitHubSeparateAutoJoint.render('> [!NOTE]\n> Body text. {label="重要メモ"}\n')
+  const expected = '<section class="sc-note" role="doc-notice">\n'
+    + '<p><strong class="sc-note-label">重要メモ</strong></p>\n'
+    + '<p>Body text.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('githubTypeInlineLabelHeadingMixin is ignored when githubTypeInlineLabel is false', pass, () => {
+  const mdGitHubSeparateHeadingMixin = mdit().use(mditSemanticContainer, {
+    githubTypeContainer: true,
+    githubTypeInlineLabelHeadingMixin: true,
+  })
+  const html = mdGitHubSeparateHeadingMixin.render('> [!NOTE]\n>\n> ## Heading\n> Body\n')
+  const expected = '<section class="sc-note" role="doc-notice">\n'
+    + '<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>\n'
+    + '<h2>Heading</h2>\n'
+    + '<p>Body</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
 })
 
 pass = runDirectTest('cjk/attrs plugin order keeps rendered output stable', pass, () => {

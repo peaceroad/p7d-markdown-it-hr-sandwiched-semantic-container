@@ -1,6 +1,7 @@
 import { buildSemantics } from './src/semantics.js'
 import { createBracketFormat } from './src/bracket-format.js'
 import { createGitHubTypeContainer } from './src/github-type-container.js'
+import { buildSemanticAliasPatterns } from './src/semantic-alias.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 import { createStandardContainerApplier } from './src/standard-applier.js'
@@ -217,18 +218,25 @@ const mergeSemanticsWithScAliases = (baseSemantics, aliasBySemantic) => {
     const additions = aliasBySemantic.get(sem.name)
     if (!additions || additions.size === 0) continue
     const aliases = sem.aliases.length ? sem.aliases.slice() : []
+    const literalAliases = Array.isArray(sem.literalAliases) && sem.literalAliases.length
+      ? sem.literalAliases.slice()
+      : []
     const seen = new Set(aliases)
+    for (let ai = 0; ai < literalAliases.length; ai++) {
+      seen.add(literalAliases[ai])
+    }
     let changed = false
     for (const alias of additions) {
       if (seen.has(alias)) continue
       seen.add(alias)
-      aliases.push(alias)
+      literalAliases.push(alias)
       changed = true
     }
     if (changed) {
       semantics[i] = {
         ...sem,
         aliases,
+        literalAliases,
       }
     }
   }
@@ -276,38 +284,103 @@ const createRuntimePlan = (hrStartLineKeySet, hrCandidates, githubCandidateLineS
   githubCandidateLineSet,
 })
 
-const buildRuntimePlan = (state) => {
-  const candidates = Array.isArray(state?.env?.semanticContainerHrCandidates)
-    ? state.env.semanticContainerHrCandidates
-    : null
-  const keySet = state?.env?.semanticContainerHrCandidateKeySet
-  const activeGitHubCandidateLineSet = toNonEmptySetOrNull(state?.env?.semanticContainerGitHubCandidateLineSet)
-  if (keySet && typeof keySet.size === 'number' && keySet.size > 0) {
-    return createRuntimePlan(keySet, candidates, activeGitHubCandidateLineSet)
+const normalizeHrRuntimePlan = (tokens, rawStartKeySet) => {
+  if (!rawStartKeySet || rawStartKeySet.size === 0 || !Array.isArray(tokens) || tokens.length === 0) {
+    return EMPTY_RUNTIME_PLAN
   }
 
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    return activeGitHubCandidateLineSet
-      ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
-      : EMPTY_RUNTIME_PLAN
+  const pendingCandidateByType = {
+    '*': 0,
+    '-': 0,
+    '_': 0,
   }
-
   const hrStartLineKeySet = new Set()
-  for (let i = 0; i < candidates.length; i++) {
-    const candidate = candidates[i]
-    const line = candidate?.startLine
-    const hrType = candidate?.hrType
-    if (!Number.isInteger(line)) continue
-    if (hrType !== '*' && hrType !== '-' && hrType !== '_') continue
-    hrStartLineKeySet.add(createHrCandidateKey(line, hrType))
-  }
-  if (hrStartLineKeySet.size === 0) {
-    return activeGitHubCandidateLineSet
-      ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
-      : EMPTY_RUNTIME_PLAN
+  const hrCandidates = []
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (token?.type === 'hr' && token?.map && Number.isInteger(token.map[0])) {
+      const hrType = getHrTypeFromMarkup(token.markup || '')
+      if (!hrType) continue
+
+      const pending = pendingCandidateByType[hrType]
+      if (!pending) continue
+
+      hrStartLineKeySet.add(pending.startKey)
+      hrCandidates.push({
+        openHrLine: pending.openHrLine,
+        startLine: pending.startLine,
+        hrType,
+        endHrLine: token.map[0],
+        startTokenIndex: pending.startTokenIndex,
+        endTokenIndex: i,
+      })
+      pendingCandidateByType[hrType] = 0
+      continue
+    }
+
+    if (!token?.map || !Number.isInteger(token.map[0]) || i === 0) continue
+    const prev = tokens[i - 1]
+    if (prev?.type !== 'hr') continue
+
+    const hrType = getHrTypeFromMarkup(prev.markup || '')
+    if (!hrType) continue
+
+    const startLine = token.map[0]
+    const startKey = createHrCandidateKey(startLine, hrType)
+    if (!rawStartKeySet.has(startKey)) continue
+
+    pendingCandidateByType[hrType] = {
+      openHrLine: Number.isInteger(prev?.map?.[0]) ? prev.map[0] : null,
+      startLine,
+      startKey,
+      startTokenIndex: i,
+    }
   }
 
-  return createRuntimePlan(hrStartLineKeySet, candidates, activeGitHubCandidateLineSet)
+  return createRuntimePlan(
+    hrStartLineKeySet.size > 0 ? hrStartLineKeySet : null,
+    hrCandidates.length > 0 ? hrCandidates : null,
+    null
+  )
+}
+
+const buildRuntimePlan = (state) => {
+  const env = state?.env
+  const keySet = toNonEmptySetOrNull(env?.semanticContainerHrCandidateKeySet)
+  const activeGitHubCandidateLineSet = toNonEmptySetOrNull(state?.env?.semanticContainerGitHubCandidateLineSet)
+
+  if (keySet) {
+    const normalizedHrPlan = normalizeHrRuntimePlan(state?.tokens, keySet)
+    if (env) {
+      env.semanticContainerHrCandidates = normalizedHrPlan.hrCandidates || []
+      const envKeySet = env.semanticContainerHrCandidateKeySet instanceof Set
+        ? env.semanticContainerHrCandidateKeySet
+        : (env.semanticContainerHrCandidateKeySet = new Set())
+      envKeySet.clear()
+      if (normalizedHrPlan.hrStartLineKeySet) {
+        for (const candidateKey of normalizedHrPlan.hrStartLineKeySet) {
+          envKeySet.add(candidateKey)
+        }
+      }
+    }
+
+    if (!normalizedHrPlan.hrStartLineKeySet) {
+      return activeGitHubCandidateLineSet
+        ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
+        : EMPTY_RUNTIME_PLAN
+    }
+
+    return createRuntimePlan(
+      normalizedHrPlan.hrStartLineKeySet,
+      normalizedHrPlan.hrCandidates,
+      activeGitHubCandidateLineSet
+    )
+  }
+
+  return activeGitHubCandidateLineSet
+    ? createRuntimePlan(null, null, activeGitHubCandidateLineSet)
+    : EMPTY_RUNTIME_PLAN
 }
 
 const resolveRawScInput = (state, md, mdStateRef) => {
@@ -351,8 +424,9 @@ const resolveRawScInput = (state, md, mdStateRef) => {
 }
 
 const buildSemanticsReg = (semantics) => semantics.map((sem) => {
-  const aliasStr = sem.aliases.length
-    ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
+  const aliasPatterns = buildSemanticAliasPatterns(sem)
+  const aliasStr = aliasPatterns.length
+    ? '|' + aliasPatterns.join('|')
     : ''
   const pattern =
     '^(' + strongMark + ')?((?:' + sem.name + aliasStr + ')' + sNumber + ')'
@@ -843,14 +917,20 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
 
     const startLine = candidate.startLine
     const hrType = candidate.hrType
-    const n = tokenIndex.startIndexByKey.get(keys.startKey)
-    if (n === undefined) {
+    const startTokenIndex = candidate?.startTokenIndex
+    const endTokenIndex = candidate?.endTokenIndex
+    const n = Number.isInteger(startTokenIndex)
+      ? startTokenIndex
+      : tokenIndex.startIndexByKey.get(keys.startKey)
+    if (!Number.isInteger(n)) {
       handledAll = false
       continue
     }
 
-    const re = tokenIndex.endIndexByKey.get(keys.endKey)
-    if (re === undefined || re < n) {
+    const re = Number.isInteger(endTokenIndex)
+      ? endTokenIndex
+      : tokenIndex.endIndexByKey.get(keys.endKey)
+    if (!Number.isInteger(re) || re < n) {
       handledAll = false
       continue
     }
@@ -1131,14 +1211,26 @@ const mditSemanticContainer = (md, option) => {
   if (opt.bracketLabelJointMode !== 'remove' && opt.bracketLabelJointMode !== 'auto') {
     opt.bracketLabelJointMode = 'keep'
   }
-  if (opt.githubTypeInlineLabelJoint !== 'auto') {
+  if (!opt.githubTypeContainer) {
+    opt.githubTypeInlineLabel = false
+    opt.githubTypeInlineLabelHeadingMixin = false
     opt.githubTypeInlineLabelJoint = 'none'
+  } else {
+    opt.githubTypeInlineLabel = !!opt.githubTypeInlineLabel
+    opt.githubTypeInlineLabelHeadingMixin = opt.githubTypeInlineLabel && !!opt.githubTypeInlineLabelHeadingMixin
+    if (!opt.githubTypeInlineLabel || opt.githubTypeInlineLabelJoint !== 'auto') {
+      opt.githubTypeInlineLabelJoint = 'none'
+    }
   }
-  if (opt.labelControlInlineFallback !== true && opt.labelControlInlineFallback !== false) {
-    opt.labelControlInlineFallback = 'auto'
-  }
-  if (opt.labelControlInlineFallback === 'auto') {
-    opt.labelControlInlineFallback = !hasCoreRule(md, 'curly_attributes')
+  if (!opt.labelControl) {
+    opt.labelControlInlineFallback = false
+  } else {
+    if (opt.labelControlInlineFallback !== true && opt.labelControlInlineFallback !== false) {
+      opt.labelControlInlineFallback = 'auto'
+    }
+    if (opt.labelControlInlineFallback === 'auto') {
+      opt.labelControlInlineFallback = !hasCoreRule(md, 'curly_attributes')
+    }
   }
   
   const baseSemantics = buildSemantics(opt.languages)

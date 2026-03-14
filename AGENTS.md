@@ -29,7 +29,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - For `requireHrAtOneParagraph: false`, planned hr-candidate application records applied start lines; walker skips those paragraph starts to avoid double-application.
    - `createContainerRunner(...)`: orchestrates candidate planners, applies planned edits, then runs the fallback walker only when needed.
    - Render-time SC helpers in `index.js` resolve SC input, normalize aliases/hide flags, collect conflicts, build runtime plans, and cache per-alias semantic engines.
-   - `buildRuntimePlan(...)` reuses block-stage key sets when available (`hr` and GitHub alert line candidates), avoiding per-render reconstruction in core.
+   - `semanticContainerSc` runtime aliases are treated as literal aliases (escaped before regex assembly); built-in `semantics/*.json` aliases remain regex-capable.
+   - `buildRuntimePlan(...)` reuses block-stage start-line key sets when available, then normalizes hr candidates against actual parsed `hr` tokens in core so raw-line false positives (for example setext/fence-like lines) do not leak into candidate application.
 
 3) **Feature helpers**
    - Label style helpers are shared in `src/label-style.js` and reused by bracket/github auto-joint modes.
@@ -40,7 +41,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
      - Default emits a dedicated label paragraph before body paragraphs (GitHub-like).
      - `githubTypeInlineLabel: true` keeps inline label style (`<p><strong>label</strong> body...`).
      - `githubTypeInlineLabelHeadingMixin: true` mixes inline label into a following heading when the marker paragraph has no body text.
-     - `githubTypeInlineLabelJoint` controls custom-label suffix/spacing in inline mode (`none`/`auto`).
+     - `githubTypeInlineLabelJoint` controls custom-label suffix/spacing in inline mode (`none`/`auto`) and is ignored unless `githubTypeInlineLabel` is true.
+     - `githubTypeInlineLabelHeadingMixin` is ignored unless `githubTypeInlineLabel` is true.
      - In heading-first cases, `labelControl` reads `{label=...}` from the heading line, not the `[!TYPE]` marker line.
      - The block rule only gates on the first line and records candidate start lines in `env.semanticContainerGitHubCandidateLineSet`; it then returns `false` so native blockquote parsing remains the single source of truth for blockquote structure.
      - Core detection uses a fast path when the first child block is marker paragraph (`> [!TYPE]`), with a depth-safe fallback scan for uncommon structures.
@@ -69,6 +71,7 @@ Performance considerations:
 - Candidate-based edits are collected first and then applied in descending token-index order, reducing forward index-shift risk and centralizing splice behavior.
 - With GitHub enabled, candidate-based GitHub conversion is also attempted before deciding whether a full walk is still necessary.
 - Hr candidate application pre-indexes hr start/end token locations once per render and applies groups in reverse order, reducing repeated token scans on hr-heavy documents.
+- Hr runtime plans normalize block-stage hr candidates against actual parsed `hr` tokens before planning, preventing raw-line closing mismatches from setext/fence-like content while preserving candidate gating.
 - GitHub blockquote checks in walker are gated by block-stage candidate start lines when available, reducing scans over non-alert blockquotes.
 - `semanticContainerSc` alias engines are cached by deterministic alias signatures (bounded cache) to avoid rebuilding regex/helper pipelines on repeated renders.
 - SC normalization allocates alias conflict maps lazily (only when aliases exist), and semantics alias merging uses copy-on-write so unchanged semantics entries are reused.

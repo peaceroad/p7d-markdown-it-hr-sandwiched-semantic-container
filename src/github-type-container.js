@@ -1,4 +1,5 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
+import { buildSemanticAliasPatterns } from './semantic-alias.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 import { resolveAutoJointLabelStyle } from './label-style.js'
@@ -81,8 +82,9 @@ const createGitHubTypeContainer = (semantics) => {
     return trimLeadingWhitespace(value.slice(closeIndex + 1))
   }
   const semanticsGitHubAlertsReg = semantics.map((sem) => {
-    const aliasStr = sem.aliases.length
-      ? '|' + sem.aliases.map((x) => x.replace(/\(/g, '(?:').trim()).join('|')
+    const aliasPatterns = buildSemanticAliasPatterns(sem)
+    const aliasStr = aliasPatterns.length
+      ? '|' + aliasPatterns.join('|')
       : ''
     // Supports ASCII [!TYPE] and full-width ［!TYPE］ / ［！TYPE］
     const ghPattern = '^(?:\\[!|［[!！])(' + sem.name + aliasStr + ')(?:\\]|］)'
@@ -375,9 +377,11 @@ const createGitHubTypeContainer = (semantics) => {
     const paragraphChildren = Array.isArray(paragraphInlineToken.children)
       ? paragraphInlineToken.children
       : (paragraphInlineToken.children = [])
-    const inlineLabelJointMode = normalizeInlineLabelJointMode(opt?.githubTypeInlineLabelJoint)
     const separateTitleParagraph = !opt?.githubTypeInlineLabel
-    const inlineLabelHeadingMixin = !!opt?.githubTypeInlineLabelHeadingMixin
+    const inlineLabelJointMode = separateTitleParagraph
+      ? INLINE_LABEL_JOINT_NONE
+      : normalizeInlineLabelJointMode(opt?.githubTypeInlineLabelJoint)
+    const inlineLabelHeadingMixin = !separateTitleParagraph && !!opt?.githubTypeInlineLabelHeadingMixin
 
     for (let i = rs + 1; i < re; i++) {
       const token = tokens[i]

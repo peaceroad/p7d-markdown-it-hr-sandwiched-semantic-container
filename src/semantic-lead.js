@@ -36,6 +36,16 @@ const buildSemanticLeadCandidates = (semantics) => {
       keys.add(aliasKey)
     }
 
+    const literalAliases = Array.isArray(sem.literalAliases) ? sem.literalAliases : []
+    for (let i = 0; i < literalAliases.length; i++) {
+      const aliasKey = getLiteralLeadKey(literalAliases[i])
+      if (!aliasKey) {
+        hasUnknown = true
+        continue
+      }
+      keys.add(aliasKey)
+    }
+
     if (keys.size === 0 || hasUnknown) {
       fallback.push(sn)
     }
