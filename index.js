@@ -289,10 +289,10 @@ const normalizeHrRuntimePlan = (tokens, rawStartKeySet) => {
     return EMPTY_RUNTIME_PLAN
   }
 
-  const pendingCandidateByType = {
-    '*': 0,
-    '-': 0,
-    '_': 0,
+  const pendingStartCandidateByType = {
+    '*': null,
+    '-': null,
+    '_': null,
   }
   const hrStartLineKeySet = new Set()
   const hrCandidates = []
@@ -303,7 +303,7 @@ const normalizeHrRuntimePlan = (tokens, rawStartKeySet) => {
       const hrType = getHrTypeFromMarkup(token.markup || '')
       if (!hrType) continue
 
-      const pending = pendingCandidateByType[hrType]
+      const pending = pendingStartCandidateByType[hrType]
       if (!pending) continue
 
       hrStartLineKeySet.add(pending.startKey)
@@ -315,7 +315,7 @@ const normalizeHrRuntimePlan = (tokens, rawStartKeySet) => {
         startTokenIndex: pending.startTokenIndex,
         endTokenIndex: i,
       })
-      pendingCandidateByType[hrType] = 0
+      pendingStartCandidateByType[hrType] = null
       continue
     }
 
@@ -330,7 +330,7 @@ const normalizeHrRuntimePlan = (tokens, rawStartKeySet) => {
     const startKey = createHrCandidateKey(startLine, hrType)
     if (!rawStartKeySet.has(startKey)) continue
 
-    pendingCandidateByType[hrType] = {
+    pendingStartCandidateByType[hrType] = {
       openHrLine: Number.isInteger(prev?.map?.[0]) ? prev.map[0] : null,
       startLine,
       startKey,
