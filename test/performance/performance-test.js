@@ -260,13 +260,15 @@ function runFeatureBenchmarks({ iterations = 50 } = {}) {
     // Get baseline first
     const baselineMd = configurations.baseline.setup()
     const baselineResult = measurePerformance(() => baselineMd.render(test.content), iterations)
+    console.log(`  ${configurations.baseline.name}: ${baselineResult.median.toFixed(3)}ms median (0.0% overhead)`)
     
     Object.entries(configurations).forEach(([key, config]) => {
+      if (key === 'baseline') return
       const md = config.setup()
       const result = measurePerformance(() => md.render(test.content), iterations)
-      const overhead = key === 'baseline' ? 0 : ((result.avg - baselineResult.avg) / baselineResult.avg * 100)
+      const overhead = ((result.median - baselineResult.median) / baselineResult.median * 100)
       
-      console.log(`  ${config.name}: ${result.avg.toFixed(3)}ms avg (${overhead > 0 ? '+' : ''}${overhead.toFixed(1)}% overhead)`)
+      console.log(`  ${config.name}: ${result.median.toFixed(3)}ms median (${overhead > 0 ? '+' : ''}${overhead.toFixed(1)}% overhead)`)
     })
   })
 }
@@ -285,9 +287,9 @@ function runScalabilityTest({ sizes = [1000, 5000, 10000, 50000], iterations = 2
       const result = measurePerformance(() => md.render(content), iterations)
       
       if (!results[key]) results[key] = []
-      results[key].push({ size, time: result.avg })
+      results[key].push({ size, time: result.median })
       
-      console.log(`  ${config.name}: ${result.avg.toFixed(3)}ms`)
+      console.log(`  ${config.name}: ${result.median.toFixed(3)}ms`)
     })
   })
   
@@ -318,7 +320,7 @@ function runTokenDensityTest() {
       const tokens = md.parse(test.content, {}) // ensure env exists to avoid inline link rule errors
       const result = measurePerformance(() => md.render(test.content), 30)
       
-      console.log(`  ${config.name}: ${result.avg.toFixed(3)}ms (${tokens.length} tokens)`)
+      console.log(`  ${config.name}: ${result.median.toFixed(3)}ms (${tokens.length} tokens)`)
     })
   })
 }
@@ -465,7 +467,7 @@ function runComprehensiveTest({ iterations = 50, sizes = { small: 1000, medium: 
         contentSize: content.length
       }
       
-      console.log(`  Time - Avg: ${perfResult.avg.toFixed(3)}ms, Median: ${perfResult.median.toFixed(3)}ms, P95: ${perfResult.p95.toFixed(3)}ms`)
+      console.log(`  Time - Median: ${perfResult.median.toFixed(3)}ms, Avg: ${perfResult.avg.toFixed(3)}ms, P95: ${perfResult.p95.toFixed(3)}ms`)
       if (memResult) {
         console.log(`  Memory - Used: ${(memResult.diff / 1024 / 1024).toFixed(2)}MB`)
       }
@@ -483,9 +485,9 @@ function runComprehensiveTest({ iterations = 50, sizes = { small: 1000, medium: 
       const result = results[configKey][sizeName]
       if (result) {
         const baselineResult = results.baseline?.[sizeName]
-        const overhead = baselineResult ? ((result.performance.avg - baselineResult.performance.avg) / baselineResult.performance.avg * 100) : 0
+        const overhead = baselineResult ? ((result.performance.median - baselineResult.performance.median) / baselineResult.performance.median * 100) : 0
         
-        console.log(`  ${sizeName}: ${result.performance.avg.toFixed(3)}ms (${overhead > 0 ? '+' : ''}${overhead.toFixed(1)}% vs baseline)`)
+        console.log(`  ${sizeName}: ${result.performance.median.toFixed(3)}ms (${overhead > 0 ? '+' : ''}${overhead.toFixed(1)}% vs baseline)`)
       }
     })
   })

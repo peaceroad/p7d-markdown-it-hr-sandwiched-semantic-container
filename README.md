@@ -711,7 +711,7 @@ A paragraph.
 [HTML]
 <p>A paragraph.</p>
 <section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A notice message.</p>
+<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> A notice message.</p>
 </section>
 <p>A paragraph.</p>
 ```

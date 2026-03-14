@@ -1087,6 +1087,7 @@ const hasCoreRule = (md, name) => (
 const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
   for (let i = 0; i < SAFE_CORE_ANCHOR_FALLBACK_ORDER.length; i++) {
     const anchor = SAFE_CORE_ANCHOR_FALLBACK_ORDER[i]
+    if (!hasCoreRule(md, anchor)) continue
     try {
       md.core.ruler.after(anchor, ruleName, handler)
       return
