@@ -27,6 +27,15 @@ const mdRequireHrBracket = mdit().use(mditSemanticContainer, {
   requireHrAtOneParagraph: true,
   allowBracketJoint: true,
 })
+const mdHeadingSection = mdit().use(mditSemanticContainer, { headingSectionContainer: true })
+const mdHeadingSectionRequireHr = mdit().use(mditSemanticContainer, {
+  headingSectionContainer: true,
+  requireHrAtOneParagraph: true,
+})
+const mdHeadingSectionBracket = mdit().use(mditSemanticContainer, {
+  headingSectionContainer: true,
+  allowBracketJoint: true,
+})
 const mdRequireHrAllFeatures = mdit().use(mditSemanticContainer, {
   requireHrAtOneParagraph: true,
   allowBracketJoint: true,
@@ -82,6 +91,10 @@ const mdLabelControlNoAttrsFallbackOff = mdit().use(mditSemanticContainer, { lab
 const mdLabelControlBracket = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: true})
 const mdLabelControlBracketOff = mdit().use(mditAttrs).use(mditSemanticContainer, {allowBracketJoint: true, labelControl: false})
 const mdLabelControlBracketNoAttrs = mdit().use(mditSemanticContainer, { allowBracketJoint: true, labelControl: true, labelControlInlineFallback: true })
+const mdLabelControlHeadingSection = mdit().use(mditAttrs).use(mditSemanticContainer, {
+  headingSectionContainer: true,
+  labelControl: true,
+})
 const mdLabelControlGitHub = mdit().use(mditAttrs).use(mditSemanticContainer, {
   githubTypeContainer: true,
   labelControl: true
@@ -169,6 +182,9 @@ const testData = {
   bracketJointModeLabelControl: __dirname + path.sep + 'examples-bracket-label-joint-mode-label-control.txt',
   labelControlGitHub: __dirname + path.sep + 'examples-label-control-github.txt',
   labelControlGitHubInlineTitle: __dirname + path.sep + 'examples-label-control-github-inline-title.txt',
+  headingSection: __dirname + path.sep + 'examples-heading-section-container.txt',
+  headingSectionBracket: __dirname + path.sep + 'examples-heading-section-container-bracket.txt',
+  headingSectionLabelControl: __dirname + path.sep + 'examples-heading-section-container-label-control.txt',
 }
 
 const getTestData = (pat) => {
@@ -316,6 +332,10 @@ pass = runTest(mdGitHubAlertsInlineTitle, testData.githubAlertsInlineTitle, pass
 pass = runTest(mdGitHubAlertsInlineTitleMixin, testData.githubAlertsInlineTitle, pass, undefined, 'mixin')
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
+pass = runTest(mdHeadingSection, testData.headingSection, pass)
+pass = runTest(mdHeadingSectionRequireHr, testData.headingSection, pass)
+pass = runTest(mdHeadingSectionBracket, testData.headingSectionBracket, pass)
+pass = runTest(mdLabelControlHeadingSection, testData.headingSectionLabelControl, pass)
 
 pass = runDirectTest('sc alias standard', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }

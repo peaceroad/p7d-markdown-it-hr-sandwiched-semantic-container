@@ -1,0 +1,131 @@
+[Markdown]
+## Notice. Heading
+
+Body.
+
+### Sub
+
+More.
+
+## Next
+
+After.
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+<h3>Sub</h3>
+<p>More.</p>
+</section>
+<h2>Next</h2>
+<p>After.</p>
+
+
+[Markdown]
+## Notice. Heading
+## Next
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+</section>
+<h2>Next</h2>
+
+
+[Markdown]
+### Notice. Heading
+
+Body.
+
+## Next
+
+After.
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h3><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h3>
+<p>Body.</p>
+</section>
+<h2>Next</h2>
+<p>After.</p>
+
+
+[Markdown]
+## Notice. Heading
+
+Body.
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+
+
+[Markdown]
+> ## Notice. Heading
+>
+> Body.
+
+## Next
+[HTML]
+<blockquote>
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+</blockquote>
+<h2>Next</h2>
+
+
+[Markdown]
+- item
+
+  ## Notice. Heading
+
+  Body.
+
+## Next
+[HTML]
+<ul>
+<li>
+<p>item</p>
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+</li>
+</ul>
+<h2>Next</h2>
+
+
+[Markdown]
+## Notice. Outer
+
+### Warning. Inner
+
+Text.
+
+## Next
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Outer</h2>
+<section class="sc-warning" role="doc-notice">
+<h3><span class="sc-warning-label">Warning<span class="sc-warning-label-joint">.</span></span> Inner</h3>
+<p>Text.</p>
+</section>
+</section>
+<h2>Next</h2>
+
+
+[Markdown]
+Notice. Heading
+---
+
+Body.
+
+Next
+====
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+<h1>Next</h1>

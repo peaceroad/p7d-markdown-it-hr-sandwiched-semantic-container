@@ -1,0 +1,26 @@
+[Markdown]
+## Notice. Heading {label="見出しラベル"}
+
+Body.
+
+## Next
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label">見出しラベル<span class="sc-notice-label-joint">.</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+<h2>Next</h2>
+
+
+[Markdown]
+## Notice. Hidden {label=""}
+
+Body.
+
+## Next
+[HTML]
+<section class="sc-notice" role="doc-notice" aria-label="Notice">
+<h2>Hidden</h2>
+<p>Body.</p>
+</section>
+<h2>Next</h2>

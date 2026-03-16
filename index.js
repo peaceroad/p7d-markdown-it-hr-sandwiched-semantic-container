@@ -5,7 +5,7 @@ import { buildSemanticAliasPatterns } from './src/semantic-alias.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 import { createStandardContainerApplier } from './src/standard-applier.js'
-import { resolveContainerRangeEnd } from './src/container-range.js'
+import { resolveContainerRangeEnd, resolveHeadingSectionRangeEnd } from './src/container-range.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -40,8 +40,9 @@ const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code
 const isPotentialLabelLeadCode = (code) => code === CODE_STAR || code === CODE_UNDERSCORE || code >= 128 || isAsciiAlnum(code)
 const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key)
 const isStandardContainerLeadToken = (tokenType) => tokenType === 'paragraph_open' || tokenType === 'heading_open'
-const isStandaloneWalkTargetToken = (tokenType, allowStandaloneParagraph, allowGitHubBlockquote) => (
+const isStandaloneWalkTargetToken = (tokenType, allowStandaloneParagraph, allowGitHubBlockquote, allowHeadingSection) => (
   (allowStandaloneParagraph && tokenType === 'paragraph_open')
+  || (allowHeadingSection && tokenType === 'heading_open')
   || (allowGitHubBlockquote && tokenType === 'blockquote_open')
 )
 const isHrDelimitedWalkTargetToken = (tokenType, allowGitHubBlockquote) => (
@@ -558,7 +559,7 @@ const createLabelMatcher = (semantics, semanticsReg) => {
   return { checkStandardLabel, findMatchedSemantic }
 }
 
-const createHrCandidateSemanticFinder = (matchers) => {
+const createSemanticFinder = (matchers) => {
   const activeMatchers = []
   for (let i = 0; i < matchers.length; i++) {
     if (typeof matchers[i] === 'function') activeMatchers.push(matchers[i])
@@ -569,6 +570,23 @@ const createHrCandidateSemanticFinder = (matchers) => {
       if (matched) return matched
     }
     return null
+  }
+}
+
+const createHeadingSectionFinder = (findHeadingSectionSemantic) => (state, n) => {
+  const token = state.tokens[n]
+  if (token?.type !== 'heading_open') return null
+
+  const matchedSemantic = findHeadingSectionSemantic(state, n)
+  if (!matchedSemantic) return null
+
+  const rangeEnd = resolveHeadingSectionRangeEnd(state.tokens, n)
+  if (rangeEnd < 0) return null
+
+  return {
+    range: [n, rangeEnd],
+    continued: false,
+    ...matchedSemantic,
   }
 }
 
@@ -604,12 +622,22 @@ const tryApplyStandaloneContainer = (
   cn,
   optLocal,
   activeCheck,
+  findHeadingSectionContainer,
   applyContainer,
   githubCandidateLineSet,
   appliedHrCandidateStartLineSet,
   appliedGitHubCandidateLineSet,
   checkParagraphGuards
 ) => {
+  if (optLocal.headingSectionContainer && token.type === 'heading_open') {
+    const sc = findHeadingSectionContainer ? findHeadingSectionContainer(state, n) : null
+    if (sc) {
+      const firstJump = applyContainer(state, n, '', sc, -1, optLocal)
+      return n + (firstJump > 0 ? firstJump : 1)
+    }
+    return n + 1
+  }
+
   if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
     if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
       return n + 1
@@ -693,7 +721,7 @@ const createContainerApplier = (semantics, featureHelpers) => {
   }
 }
 
-const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer) => (
+const createContainerWalker = (activeCheck, findHeadingSectionContainer, checkContainerRanges, applyContainer) => (
   state,
   n,
   cn,
@@ -707,12 +735,13 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
   const githubCandidateLineSet = runtimePlan?.githubCandidateLineSet
   const allowGitHubBlockquote = !!optLocal.githubTypeContainer
   const allowStandaloneParagraph = !optLocal.requireHrAtOneParagraph
+  const allowHeadingSection = !!optLocal.headingSectionContainer
 
   const prevToken = tokens[n-1]
   const token = tokens[n]
   const tokenType = token?.type
   if (n === 0 || prevToken.type !== 'hr') {
-    if (!isStandaloneWalkTargetToken(tokenType, allowStandaloneParagraph, allowGitHubBlockquote)) {
+    if (!isStandaloneWalkTargetToken(tokenType, allowStandaloneParagraph, allowGitHubBlockquote, allowHeadingSection)) {
       return n + 1
     }
     const nextIndex = tryApplyStandaloneContainer(
@@ -723,6 +752,7 @@ const createContainerWalker = (activeCheck, checkContainerRanges, applyContainer
       cn,
       optLocal,
       activeCheck,
+      findHeadingSectionContainer,
       applyContainer,
       githubCandidateLineSet,
       appliedHrCandidateStartLineSet,
@@ -1096,7 +1126,7 @@ const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandi
   const appliedHrCandidateStartLineSet = hrCandidatePlan?.appliedStartLineSet || null
   const appliedGitHubCandidateLineSet = githubCandidatePlan?.appliedLineSet || null
 
-  if (optLocal.requireHrAtOneParagraph) {
+  if (optLocal.requireHrAtOneParagraph && !optLocal.headingSectionContainer) {
     const hrHandled = (
       !runtimePlan.hrStartLineKeySet
       || runtimePlan.hrStartLineKeySet.size === 0
@@ -1137,13 +1167,16 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
   const activeCheck = createActiveCheck({ githubCheck, bracketCheck, defaultCheck: semanticLabelMatcher })
   const checkContainerRanges = createContainerRangeChecker(activeCheck)
   const applyContainer = createContainerApplier(semantics, featureHelpers)
-  const walkContainers = createContainerWalker(activeCheck, checkContainerRanges, applyContainer)
   const findBracketSemanticMatch = opt.allowBracketJoint ? featureHelpers.bracket?.findBracketSemanticMatch : null
-  const findHrCandidateSemantic = createHrCandidateSemanticFinder([
+  const findNonGitHubSemantic = createSemanticFinder([
     findMatchedSemantic,
     findBracketSemanticMatch,
   ])
-  const planHrCandidates = createHrCandidatePlanner(findHrCandidateSemantic)
+  const findHeadingSectionContainer = opt.headingSectionContainer
+    ? createHeadingSectionFinder(findNonGitHubSemantic)
+    : null
+  const walkContainers = createContainerWalker(activeCheck, findHeadingSectionContainer, checkContainerRanges, applyContainer)
+  const planHrCandidates = createHrCandidatePlanner(findNonGitHubSemantic)
   const planGitHubCandidates = createGitHubCandidatePlanner(githubCheck)
   const semanticContainer = createContainerRunner(
     walkContainers,
@@ -1181,6 +1214,7 @@ const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
 const mditSemanticContainer = (md, option) => {
   let opt = {
     requireHrAtOneParagraph: false,
+    headingSectionContainer: false,
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
     // Bracket label rendering mode when allowBracketJoint is true.
@@ -1208,6 +1242,7 @@ const mditSemanticContainer = (md, option) => {
     languages: ['ja'],
   }
   if (option) Object.assign(opt, option)
+  opt.headingSectionContainer = !!opt.headingSectionContainer
   if (opt.bracketLabelJointMode !== 'remove' && opt.bracketLabelJointMode !== 'auto') {
     opt.bracketLabelJointMode = 'keep'
   }

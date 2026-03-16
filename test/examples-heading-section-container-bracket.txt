@@ -1,0 +1,12 @@
+[Markdown]
+## [Notice] Heading
+
+Body.
+
+## Next
+[HTML]
+<section class="sc-notice" role="doc-notice">
+<h2><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Heading</h2>
+<p>Body.</p>
+</section>
+<h2>Next</h2>
