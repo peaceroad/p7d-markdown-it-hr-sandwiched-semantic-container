@@ -3,7 +3,7 @@
 This plugin converts paragraph groups into semantic containers in markdown-it. Key flow (defined in `index.js`):
 
 1) **Options & data**
-   - Options: `requireHrAtOneParagraph`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Options: `requireHrAtOneParagraph`, `headingSectionContainer`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
    - Per-render SC input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
    - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
@@ -13,14 +13,14 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
    - `buildSemanticLeadCandidates(semantics)` (in `src/semantic-lead.js`): pre-buckets semantic candidates by leading label character for faster checks.
    - `resolveLabelControl(...)` / `escapeHtmlForAttr(...)` (in `src/label-control.js`): shared `label` extraction/removal and safe attribute escaping. Supports attrs-based extraction and optional inline-tail fallback (`{label=...}`) when attrs are unavailable.
-   - `resolveContainerRangeEnd(...)` (in `src/container-range.js`): shared range-end resolver for standard/bracket detection; returns hr-close token index for hr paths and post-`paragraph_close` index for standalone paths, matching applier splice contracts.
+   - `resolveContainerRangeEnd(...)` / `resolveHeadingSectionRangeEnd(...)` (in `src/container-range.js`): shared range-end resolvers for standard/bracket detection; the first handles hr-close and paragraph-only standalone contracts, while the second resolves heading-scoped standalone sections using heading rank + token nesting level.
    - `createContainerStartToken(...)` / `createContainerEndToken(...)` (in `src/container-token.js`): shared HTML container start/end token generation for standard, bracket, and GitHub paths.
    - `createWrappedLabelTokens(...)` / `createBracketWrappedLabelTokens(...)` (in `src/label-token-builder.js`): shared inline label token builders reused by bracket/GitHub appliers.
    - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker, with an early token-type gate for non paragraph/heading targets.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
    - `createContainerApplier(...)`: dispatches to GitHub/bracket setters, otherwise delegates standard behavior to `createStandardContainerApplier(...)` in `src/standard-applier.js`. Standard path wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens.
-   - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for paragraph/blockquote checks; consolidates skip guards (`applied hr candidate`, list-item exclusion, GitHub candidate gating) and applies single-container conversions without duplicating walker branches.
+   - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for heading/paragraph/blockquote checks; consolidates skip guards (`applied hr candidate`, list-item exclusion, GitHub candidate gating) and applies single-container conversions without duplicating walker branches.
    - `createContainerWalker(...)`: main token walker; skips non-target tokens before standalone/hr-path checks and uses a Set of checked positions to avoid reprocessing.
    - `createHrCandidatePlanner(...)`: resolves semantic matches with standard+bracket matchers on hr candidates and produces descending planned edits + applied start-line sets.
    - `createGitHubCandidatePlanner(...)`: resolves GitHub alert candidates and produces descending planned edits + applied candidate-line sets.
@@ -52,6 +52,7 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic.
      - With `labelControlInlineFallback`, trailing inline `{label=...}` can be consumed safely even without `markdown-it-attrs`.
      - Empty/whitespace `label` values are treated as hide-label directives in all three paths.
+   - `headingSectionContainer: true` allows semantic headings to open a no-`hr` section that continues through smaller headings and closes before the next same-level/higher-level heading or before leaving the parent token structure.
    - `semanticContainerSc` default hide flags are applied in standard/bracket/GitHub appliers; inline `label` (when `labelControl` is enabled) takes precedence.
 
 4) **Initialization**
@@ -64,7 +65,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
 Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
-- Non-hr standalone detection for paragraph/blockquote paths is centralized in one helper, reducing duplicated branch logic and keeping skip guards consistent across edge/non-edge positions.
+- Non-hr standalone detection for heading/paragraph/blockquote paths is centralized in one helper, reducing duplicated branch logic and keeping skip guards consistent across edge/non-edge positions.
+- Heading-section standalone ranges are closed from parser-derived heading tokens and `token.level`, avoiding raw-source section scans and preventing the section from escaping parent list/blockquote structure.
 - Per-render env reset is done once in core (`semantic_container_prepare_env`), then block collectors only append matched candidates; this avoids stale candidate leakage when `env` is reused and removes per-line init checks.
 - Candidate gating is based on hr-sandwich structure only (not semantic name matching), so it can be applied safely before semantic regex checks across standard/bracket/github enabled renders.
 - Hr candidates are applied before the general walker in both require/non-require modes; in non-require mode the walker skips applied candidate-start paragraphs.
@@ -89,3 +91,4 @@ Testing notes:
 - Default assertions use `[HTML]` (or the first HTML block if unlabeled); labeled assertions are selected explicitly from `test/test.js`.
 - Direct tests include block candidate collection/reset checks to lock per-render env behavior.
 - Direct tests include non-requireHr candidate re-apply skip checks.
+- Fixture coverage includes heading-section boundary checks for same/higher heading closure, nested smaller headings, and structural exits from blockquotes/lists.

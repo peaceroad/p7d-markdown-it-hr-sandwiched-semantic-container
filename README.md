@@ -842,9 +842,35 @@ When using heading mixin, put `label` on the heading line (not on `[!TYPE]` line
 GitHub canonical alert types are `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`.
 This plugin also accepts any registered semantic label/alias as `TYPE`.
 
+### headingSectionContainer
+
+Allow a semantic container to start from a semantic heading without surrounding `hr` lines.
+This mode is opt-in because it expands detection scope from paragraph-only no-`hr` cases to heading-scoped sections.
+
+```js
+mdit().use(mditSemanticContainer, { headingSectionContainer: true })
+```
+
+The container starts at the matched heading and continues until the next heading of the same level or a higher level.
+Smaller headings stay inside the container.
+
+```md
+## Notice. Heading
+
+Body paragraph.
+
+### Sub heading
+
+More body.
+
+## Next section
+```
+
 ### requireHrAtOneParagraph
 
 Force the use of horizontal rules even for single-paragraph containers. By default, single-paragraph semantic containers don't require surrounding `---` lines.
+
+`headingSectionContainer` is a separate mode. When enabled, heading-start section containers can still work without `hr` even if `requireHrAtOneParagraph` is `true`.
 
 ```js
 mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
