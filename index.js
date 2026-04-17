@@ -630,6 +630,14 @@ const tryApplyStandaloneContainer = (
   checkParagraphGuards
 ) => {
   if (optLocal.headingSectionContainer && token.type === 'heading_open') {
+    if (
+      appliedHrCandidateStartLineSet
+      && token?.map
+      && Number.isInteger(token.map[0])
+      && appliedHrCandidateStartLineSet.has(token.map[0])
+    ) {
+      return n + 1
+    }
     const sc = findHeadingSectionContainer ? findHeadingSectionContainer(state, n) : null
     if (sc) {
       const firstJump = applyContainer(state, n, '', sc, -1, optLocal)

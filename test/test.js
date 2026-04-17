@@ -337,6 +337,17 @@ pass = runTest(mdHeadingSectionRequireHr, testData.headingSection, pass)
 pass = runTest(mdHeadingSectionBracket, testData.headingSectionBracket, pass)
 pass = runTest(mdLabelControlHeadingSection, testData.headingSectionLabelControl, pass)
 
+pass = runDirectTest('headingSectionContainer with hr delimiters is not double-wrapped', pass, () => {
+  const markdown = '---\n\n## コラム：コラムタイトル\n\nコラム本文\n\n---\n'
+  const html = mdHeadingSection.render(markdown)
+  const expected = '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span>コラムタイトル</h2>\n'
+    + '<p>コラム本文</p>\n'
+    + '</aside>\n'
+  assert.strictEqual(html, expected)
+  assert.strictEqual((html.match(/<aside/g) || []).length, 1)
+})
+
 pass = runDirectTest('sc alias standard', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }
   const markdown = '---\n\nお知らせ：本文。\n\n---\n'
