@@ -129,3 +129,18 @@ Next
 <p>Body.</p>
 </section>
 <h1>Next</h1>
+
+
+[Markdown]
+---
+
+## コラム：コラムタイトル
+
+コラム本文
+
+---
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span>コラムタイトル</h2>
+<p>コラム本文</p>
+</aside>

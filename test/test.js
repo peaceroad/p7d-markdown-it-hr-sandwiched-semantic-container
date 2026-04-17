@@ -193,7 +193,7 @@ const getTestData = (pat) => {
     console.log('No exist: ' + pat)
     return ms
   }
-  const exampleCont = fs.readFileSync(pat, 'utf-8').trim();
+  const exampleCont = fs.readFileSync(pat, 'utf-8').replace(/\r\n?/g, '\n').trim();
 
   let ms0 = exampleCont.split(/\n*\[Markdown\]\n/);
   let n = 1;
@@ -652,6 +652,16 @@ pass = runDirectTest('non-requireHr hr candidates are applied once and skip re-a
     + '<section class="sc-notice" role="doc-notice">\n'
     + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> One body.</p>\n'
     + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('headingSection hr candidates are applied once and skip heading re-apply', pass, () => {
+  const markdown = '---\n\n## Column: Title\n\nBody.\n\n---\n'
+  const html = mdHeadingSection.render(markdown)
+  const expected = '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>\n'
+    + '<p>Body.</p>\n'
+    + '</aside>\n'
   assert.strictEqual(html, expected)
 })
 
