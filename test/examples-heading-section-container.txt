@@ -144,3 +144,22 @@ Next
 <h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span>コラムタイトル</h2>
 <p>コラム本文</p>
 </aside>
+
+
+[Markdown]
+---
+
+## Column: First
+
+---
+
+## Column: Second
+
+---
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+</aside>
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>
+</aside>

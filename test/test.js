@@ -666,6 +666,40 @@ pass = runDirectTest('non-requireHr hr candidates are applied once and skip re-a
   assert.strictEqual(html, expected)
 })
 
+pass = runDirectTest('headingSection hr candidates are applied once and skip heading re-apply', pass, () => {
+  const markdown = '---\n\n## Column: Title\n\nBody.\n\n---\n'
+  const html = mdHeadingSection.render(markdown)
+  const expected = '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>\n'
+    + '<p>Body.</p>\n'
+    + '</aside>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('headingSection shared hr consecutive headings render as siblings', pass, () => {
+  const markdown = '---\n\n## Column: First\n\n---\n\n## Column: Second\n\n---\n'
+  const html = mdHeadingSection.render(markdown)
+  const expected = '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>\n'
+    + '</aside>\n'
+    + '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>\n'
+    + '</aside>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('headingSection shared hr empty-title headings render as siblings', pass, () => {
+  const markdown = '---\n\n## コラム：\n\n---\n\n## コラム：\n\n---\n'
+  const html = mdHeadingSection.render(markdown)
+  const expected = '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>\n'
+    + '</aside>\n'
+    + '<aside class="sc-column">\n'
+    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>\n'
+    + '</aside>\n'
+  assert.strictEqual(html, expected)
+})
+
 pass = runDirectTest('github candidate lines are collected and reset on env reuse', pass, () => {
   const env = {}
   mdGitHubAlerts.render('> [!NOTE]\n> body\n', env)
