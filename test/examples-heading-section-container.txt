@@ -129,3 +129,22 @@ Next
 <p>Body.</p>
 </section>
 <h1>Next</h1>
+
+
+[Markdown]
+---
+
+## Column: First
+
+---
+
+## Column: Second
+
+---
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+</aside>
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>
+</aside>

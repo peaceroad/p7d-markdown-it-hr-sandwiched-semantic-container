@@ -590,9 +590,9 @@ const createHeadingSectionFinder = (findHeadingSectionSemantic) => (state, n) =>
   }
 }
 
-const isAppliedHrCandidateParagraph = (token, appliedHrCandidateStartLineSet) => (
+const isAppliedHrCandidateLeadToken = (token, appliedHrCandidateStartLineSet) => (
   !!appliedHrCandidateStartLineSet
-  && token?.type === 'paragraph_open'
+  && isStandardContainerLeadToken(token?.type)
   && token?.map
   && Number.isInteger(token.map[0])
   && appliedHrCandidateStartLineSet.has(token.map[0])
@@ -630,6 +630,9 @@ const tryApplyStandaloneContainer = (
   checkParagraphGuards
 ) => {
   if (optLocal.headingSectionContainer && token.type === 'heading_open') {
+    if (isAppliedHrCandidateLeadToken(token, appliedHrCandidateStartLineSet)) {
+      return n + 1
+    }
     const sc = findHeadingSectionContainer ? findHeadingSectionContainer(state, n) : null
     if (sc) {
       const firstJump = applyContainer(state, n, '', sc, -1, optLocal)
@@ -639,7 +642,7 @@ const tryApplyStandaloneContainer = (
   }
 
   if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-    if (isAppliedHrCandidateParagraph(token, appliedHrCandidateStartLineSet)) {
+    if (isAppliedHrCandidateLeadToken(token, appliedHrCandidateStartLineSet)) {
       return n + 1
     }
     if (checkParagraphGuards) {
@@ -740,6 +743,9 @@ const createContainerWalker = (activeCheck, findHeadingSectionContainer, checkCo
   const prevToken = tokens[n-1]
   const token = tokens[n]
   const tokenType = token?.type
+  if (isAppliedHrCandidateLeadToken(token, appliedHrCandidateStartLineSet)) {
+    return n + 1
+  }
   if (n === 0 || prevToken.type !== 'hr') {
     if (!isStandaloneWalkTargetToken(tokenType, allowStandaloneParagraph, allowGitHubBlockquote, allowHeadingSection)) {
       return n + 1
