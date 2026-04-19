@@ -625,7 +625,6 @@ const tryApplyStandaloneContainer = (
   findHeadingSectionContainer,
   applyContainer,
   githubCandidateLineSet,
-  appliedHrCandidateStartLineSet,
   appliedGitHubCandidateLineSet,
   checkParagraphGuards
 ) => {
@@ -755,7 +754,6 @@ const createContainerWalker = (activeCheck, findHeadingSectionContainer, checkCo
       findHeadingSectionContainer,
       applyContainer,
       githubCandidateLineSet,
-      appliedHrCandidateStartLineSet,
       appliedGitHubCandidateLineSet,
       n > 0
     )

@@ -20,8 +20,8 @@ This plugin converts paragraph groups into semantic containers in markdown-it. K
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker, with an early token-type gate for non paragraph/heading targets.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
    - `createContainerApplier(...)`: dispatches to GitHub/bracket setters, otherwise delegates standard behavior to `createStandardContainerApplier(...)` in `src/standard-applier.js`. Standard path wraps tokens with `html_block` start/end tags, fixes labels/joints/aria-label, and copies `map` from nearby hr/paragraph tokens.
-   - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for heading/paragraph/blockquote checks; consolidates skip guards (`applied hr candidate` for paragraph/heading starts, list-item exclusion, GitHub candidate gating) and applies single-container conversions without duplicating walker branches.
-   - `createContainerWalker(...)`: main token walker; skips non-target tokens before standalone/hr-path checks and uses a Set of checked positions to avoid reprocessing.
+   - `tryApplyStandaloneContainer(...)`: shared no-hr path helper for heading/paragraph/blockquote checks; consolidates list-item exclusion and GitHub candidate gating, and applies single-container conversions without duplicating walker branches.
+   - `createContainerWalker(...)`: main token walker; skips applied hr-candidate lead tokens and other non-target tokens before standalone/hr-path checks and uses a Set of checked positions to avoid reprocessing.
    - `createHrCandidatePlanner(...)`: resolves semantic matches with standard+bracket matchers on hr candidates and produces descending planned edits + applied start-line sets.
    - `createGitHubCandidatePlanner(...)`: resolves GitHub alert candidates and produces descending planned edits + applied candidate-line sets.
    - `mergePlannedEditsDescending(...)`: linearly merges hr/github descending edit lists.
@@ -72,7 +72,7 @@ Performance considerations:
 - Hr candidates are applied before the general walker in both require/non-require modes; the walker skips applied candidate-start paragraphs and heading tokens so hr-delimited heading sections are not re-applied by standalone heading-section checks.
 - Candidate-based edits are collected first and then applied in descending token-index order, reducing forward index-shift risk and centralizing splice behavior.
 - With GitHub enabled, candidate-based GitHub conversion is also attempted before deciding whether a full walk is still necessary.
-- Hr candidate application pre-indexes hr start/end token locations once per render and applies groups in reverse order, reducing repeated token scans on hr-heavy documents.
+- Hr candidate planning reuses normalized candidate token indexes when available and only falls back to start/end token re-indexing for candidates that lack token indexes, avoiding repeated scans on the common path.
 - Hr runtime plans normalize block-stage hr candidates against actual parsed `hr` tokens before planning, preventing raw-line closing mismatches from setext/fence-like content while preserving candidate gating.
 - GitHub blockquote checks in walker are gated by block-stage candidate start lines when available, reducing scans over non-alert blockquotes.
 - `semanticContainerSc` alias engines are cached by deterministic alias signatures (bounded cache) to avoid rebuilding regex/helper pipelines on repeated renders.
