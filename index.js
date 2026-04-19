@@ -630,9 +630,6 @@ const tryApplyStandaloneContainer = (
   checkParagraphGuards
 ) => {
   if (optLocal.headingSectionContainer && token.type === 'heading_open') {
-    if (isAppliedHrCandidateLeadToken(token, appliedHrCandidateStartLineSet)) {
-      return n + 1
-    }
     const sc = findHeadingSectionContainer ? findHeadingSectionContainer(state, n) : null
     if (sc) {
       const firstJump = applyContainer(state, n, '', sc, -1, optLocal)
@@ -642,9 +639,6 @@ const tryApplyStandaloneContainer = (
   }
 
   if (!optLocal.requireHrAtOneParagraph && token.type === 'paragraph_open') {
-    if (isAppliedHrCandidateLeadToken(token, appliedHrCandidateStartLineSet)) {
-      return n + 1
-    }
     if (checkParagraphGuards) {
       if (cn.has(n - 1)) return n + 1
       if (tokens[n - 1].type === 'list_item_open') return n + 1
@@ -910,8 +904,8 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
   }
 
   const candidateKeys = new Array(candidates.length)
-  const startKeySet = new Set()
-  const endKeySet = new Set()
+  let startKeySet = null
+  let endKeySet = null
   let validCandidateCount = 0
   let handledAll = true
 
@@ -929,11 +923,17 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
       continue
     }
 
-    const startKey = createHrCandidateKey(startLine, hrType)
-    const endKey = createHrCandidateKey(endHrLine, hrType)
-    candidateKeys[i] = { startKey, endKey }
-    startKeySet.add(startKey)
-    endKeySet.add(endKey)
+    if (!Number.isInteger(candidate?.startTokenIndex) || !Number.isInteger(candidate?.endTokenIndex)) {
+      if (!startKeySet) {
+        startKeySet = new Set()
+        endKeySet = new Set()
+      }
+      const startKey = createHrCandidateKey(startLine, hrType)
+      const endKey = createHrCandidateKey(endHrLine, hrType)
+      candidateKeys[i] = { startKey, endKey }
+      startKeySet.add(startKey)
+      endKeySet.add(endKey)
+    }
     validCandidateCount++
   }
 
@@ -941,23 +941,21 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
     return { handledAll, appliedStartLineSet: null, plannedEdits: null }
   }
 
-  const tokenIndex = buildHrCandidateTokenIndex(state.tokens, startKeySet, endKeySet)
+  const tokenIndex = startKeySet
+    ? buildHrCandidateTokenIndex(state.tokens, startKeySet, endKeySet)
+    : null
   const matchedByCandidate = new Array(candidates.length)
 
   for (let i = 0; i < candidates.length; i++) {
     const candidate = candidates[i]
     const keys = candidateKeys[i]
-    if (!keys) {
-      continue
-    }
-
     const startLine = candidate.startLine
     const hrType = candidate.hrType
     const startTokenIndex = candidate?.startTokenIndex
     const endTokenIndex = candidate?.endTokenIndex
     const n = Number.isInteger(startTokenIndex)
       ? startTokenIndex
-      : tokenIndex.startIndexByKey.get(keys.startKey)
+      : tokenIndex?.startIndexByKey.get(keys.startKey)
     if (!Number.isInteger(n)) {
       handledAll = false
       continue
@@ -965,7 +963,7 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
 
     const re = Number.isInteger(endTokenIndex)
       ? endTokenIndex
-      : tokenIndex.endIndexByKey.get(keys.endKey)
+      : tokenIndex?.endIndexByKey.get(keys.endKey)
     if (!Number.isInteger(re) || re < n) {
       handledAll = false
       continue

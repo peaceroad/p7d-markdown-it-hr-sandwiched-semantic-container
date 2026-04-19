@@ -333,20 +333,9 @@ pass = runTest(mdGitHubAlertsInlineTitleMixin, testData.githubAlertsInlineTitle,
 pass = runTest(mdBracketFormat, testData.bracketFormat, pass)
 pass = runTest(mdAllFeatures, testData.mixedFeatures, pass)
 pass = runTest(mdHeadingSection, testData.headingSection, pass)
-pass = runTest(mdHeadingSectionRequireHr, testData.headingSection, pass)
+pass = runTest(mdHeadingSectionRequireHr, testData.headingSection, pass, undefined, 'requireHrAtOneParagraph')
 pass = runTest(mdHeadingSectionBracket, testData.headingSectionBracket, pass)
 pass = runTest(mdLabelControlHeadingSection, testData.headingSectionLabelControl, pass)
-
-pass = runDirectTest('headingSectionContainer with hr delimiters is not double-wrapped', pass, () => {
-  const markdown = '---\n\n## コラム：コラムタイトル\n\nコラム本文\n\n---\n'
-  const html = mdHeadingSection.render(markdown)
-  const expected = '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span>コラムタイトル</h2>\n'
-    + '<p>コラム本文</p>\n'
-    + '</aside>\n'
-  assert.strictEqual(html, expected)
-  assert.strictEqual((html.match(/<aside/g) || []).length, 1)
-})
 
 pass = runDirectTest('sc alias standard', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }
@@ -666,37 +655,15 @@ pass = runDirectTest('non-requireHr hr candidates are applied once and skip re-a
   assert.strictEqual(html, expected)
 })
 
-pass = runDirectTest('headingSection hr candidates are applied once and skip heading re-apply', pass, () => {
-  const markdown = '---\n\n## Column: Title\n\nBody.\n\n---\n'
-  const html = mdHeadingSection.render(markdown)
-  const expected = '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Title</h2>\n'
-    + '<p>Body.</p>\n'
-    + '</aside>\n'
-  assert.strictEqual(html, expected)
-})
-
-pass = runDirectTest('headingSection shared hr consecutive headings render as siblings', pass, () => {
-  const markdown = '---\n\n## Column: First\n\n---\n\n## Column: Second\n\n---\n'
-  const html = mdHeadingSection.render(markdown)
-  const expected = '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>\n'
-    + '</aside>\n'
-    + '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>\n'
-    + '</aside>\n'
-  assert.strictEqual(html, expected)
-})
-
-pass = runDirectTest('headingSection shared hr empty-title headings render as siblings', pass, () => {
-  const markdown = '---\n\n## コラム：\n\n---\n\n## コラム：\n\n---\n'
-  const html = mdHeadingSection.render(markdown)
-  const expected = '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>\n'
-    + '</aside>\n'
-    + '<aside class="sc-column">\n'
-    + '<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>\n'
-    + '</aside>\n'
+pass = runDirectTest('default consecutive one-line containers render as siblings', pass, () => {
+  const markdown = 'Notice. First.\n\nNotice. Second.\n'
+  const html = md.render(markdown)
+  const expected = '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> First.</p>\n'
+    + '</section>\n'
+    + '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Second.</p>\n'
+    + '</section>\n'
   assert.strictEqual(html, expected)
 })
 

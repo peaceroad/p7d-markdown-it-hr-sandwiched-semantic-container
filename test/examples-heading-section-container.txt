@@ -163,3 +163,70 @@ Next
 <aside class="sc-column">
 <h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>
 </aside>
+
+
+[Markdown]
+## Column: First
+
+Body.
+
+## Next
+
+Notice. Second.
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+<p>Body.</p>
+</aside>
+<h2>Next</h2>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Second.</p>
+</section>
+[HTML:requireHrAtOneParagraph]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+<p>Body.</p>
+</aside>
+<h2>Next</h2>
+<p>Notice. Second.</p>
+
+
+[Markdown]
+---
+
+## Column: First
+
+---
+
+Notice. Second.
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+</aside>
+<section class="sc-notice" role="doc-notice">
+<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Second.</p>
+</section>
+[HTML:requireHrAtOneParagraph]
+<aside class="sc-column">
+<h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
+</aside>
+<p>Notice. Second.</p>
+
+
+[Markdown]
+---
+
+## コラム：
+
+---
+
+## コラム：
+
+---
+[HTML]
+<aside class="sc-column">
+<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>
+</aside>
+<aside class="sc-column">
+<h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span></h2>
+</aside>
