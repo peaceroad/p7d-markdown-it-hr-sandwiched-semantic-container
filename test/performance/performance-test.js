@@ -13,10 +13,8 @@ import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import { performance } from 'perf_hooks'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 // Test configurations
 const configurations = {

@@ -16,6 +16,7 @@ const STRONG_MARK_GLOBAL_REG = /[*_]{2}/g
 const MATCH_CACHE_MAX = 256
 const SC_ENGINE_CACHE_MAX = 32
 const CACHE_MISS = 0
+const INSTALL_SENTINEL = Symbol.for('@peaceroad/markdown-it-hr-sandwiched-semantic-container:installed')
 const CODE_STAR = 42
 const CODE_UNDERSCORE = 95
 const CODE_DOT = 46
@@ -274,7 +275,7 @@ const getHrTypeFromMarkup = (markup) => {
 const createHrCandidateKey = (line, hrType) => String(line) + HR_CANDIDATE_KEY_SEP + hrType
 
 const toNonEmptySetOrNull = (value) => (
-  value && typeof value.size === 'number' && value.size > 0
+  value instanceof Set && value.size > 0
     ? value
     : null
 )
@@ -1206,7 +1207,7 @@ const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
     try {
       md.core.ruler.after(anchor, ruleName, handler)
       return
-    } catch (err) {
+    } catch {
       // Try the next known anchor.
     }
   }
@@ -1214,6 +1215,11 @@ const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
 }
 
 const mditSemanticContainer = (md, option) => {
+  if (md[INSTALL_SENTINEL]) return
+  Object.defineProperty(md, INSTALL_SENTINEL, {
+    value: true,
+  })
+
   let opt = {
     requireHrAtOneParagraph: false,
     headingSectionContainer: false,

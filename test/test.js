@@ -704,6 +704,25 @@ pass = runDirectTest('semantic core rule falls back to inline anchor when text_j
   assert.strictEqual(semanticIndex > inlineIndex, true)
 })
 
+pass = runDirectTest('duplicate plugin use is ignored without duplicate transforms', pass, () => {
+  const markdown = '---\n\nNotice. Body.\n\n---\n'
+  const mdSingle = mdit().use(mditSemanticContainer)
+  const mdDouble = mdit()
+    .use(mditSemanticContainer)
+    .use(mditSemanticContainer, { githubTypeContainer: true })
+
+  assert.strictEqual(mdDouble.render(markdown), mdSingle.render(markdown))
+  assert.strictEqual(
+    mdDouble.core.ruler.__rules__.filter((rule) => rule.name === 'semantic_container').length,
+    1
+  )
+  assert.strictEqual(
+    mdDouble.block.ruler.__rules__.filter((rule) => rule.name === 'semantic_container_hr_candidates').length,
+    1
+  )
+  assert.strictEqual(mdDouble.render('> [!NOTE]\n> Body.\n').includes('<section class="sc-note"'), false)
+})
+
 pass = runDirectTest('detection priority keeps github alerts deterministic over other modes', pass, () => {
   const mdPriority = mdit().use(mditSemanticContainer, {
     allowBracketJoint: true,

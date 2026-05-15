@@ -270,6 +270,8 @@ md.render(markdownCont)
 
 Other options are explained under headings towards the end of the document.
 
+Call `.use(mditSemanticContainer, options)` only once per `markdown-it` instance. If the same instance receives the plugin again, the later call is ignored so non-idempotent token transforms are not registered twice.
+
 ## Install
 
 ```bash
