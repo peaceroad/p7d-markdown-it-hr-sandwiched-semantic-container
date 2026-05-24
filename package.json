@@ -4,6 +4,9 @@
   "description": "A markdown-it plugin. If a paragraph group is sandwiched between two hr elements of the same symbol type, and the first word of the paragraph group has a semantic meaning, then the paragraph group change to a semantic container.",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.18.3"
+  },
   "files": [
     "index.js",
     "semantics/",
@@ -20,7 +23,8 @@
     "performance:ab": "node test/performance/performance-test.js ab",
     "performance:order": "node test/performance/performance-test.js order",
     "performance:features": "node test/performance/performance-test.js features",
-    "performance:memory": "node --expose-gc test/performance/performance-test.js full"
+    "performance:memory": "node --expose-gc test/performance/performance-test.js full",
+    "smoke:pack": "npm --cache ./.npm-cache pack --dry-run && node scripts/smoke-pack.js"
   },
   "repository": "https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container",
   "author": "peaceroad <peaceroad@gmail.com>",

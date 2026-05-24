@@ -1,8 +1,9 @@
 # p7d-markdown-it-hr-sandwiched-semantic-container
 
-This is a markdown-it plugin. In markdown specifications, there are three types of Markdown symbols used to generate hr element. Suppose a paragraph group is sandwiched between two hr elements of the same symbol type. Then, if the first word of the paragraph group has a semantic meaning, the paragraph group is changed into a block element as a semantic container.
+This is a markdown-it plugin that turns selected paragraph groups into semantic HTML containers.
+When a group is sandwiched between two horizontal rules made from the same marker type (`-`, `*`, or `_`), and the first block starts with a registered semantic label, the plugin replaces the surrounding `hr` tokens with a semantic container such as `<section>` or `<aside>`.
 
-For example, suppose you write the following Markdown:
+For example, this Markdown:
 
 ```md
 A paragraph 1.
@@ -16,7 +17,7 @@ Notice. A paragraph 2.
 A paragraph 3.
 ```
 
-Then it will be converted to the following HTML.
+is rendered as:
 
 ```html
 <p>A paragraph 1.</p>
@@ -26,15 +27,39 @@ Then it will be converted to the following HTML.
 <p>A paragraph 3.</p>
 ```
 
+## Install
+
+```bash
+npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
+```
+
+## Quick start
+
+```js
+import mdit from 'markdown-it'
+import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
+
+const md = mdit().use(mditSemanticContainer)
+const markdownCont = '...'
+md.render(markdownCont)
+```
+
+Call `.use(mditSemanticContainer, options)` only once per `markdown-it` instance. If the same instance receives the plugin again, the later call is ignored so non-idempotent token transforms are not registered twice.
+
+## Runtime compatibility
+
+This package is ESM-only and uses JSON import attributes for the built-in semantic catalogs.
+Use Node.js `>=20.18.3` or a bundler/runtime that supports ESM plus JSON import attributes.
+
 ## Rule
 
 The notation is as follows:
 
-1. Sandwich paragraphs with two horizontal lines of the same symbol type. The symbol type is either `*` or `-` or`_`.
-2. Write the word (`Semantics` in the example below) that means a semantic container in the string at the beginning of the first paragraph of this group of paragraphs.
-3. Immediately after the Semantics word, write one of the letters `.:。．：　`, which is a separator with the normal paragraph.
+1. Sandwich paragraphs with two horizontal rules made from the same marker type: `*`, `-`, or `_`.
+2. Put a registered semantic label at the beginning of the first paragraph or heading in the group.
+3. Put one of the supported joints immediately after the label, such as `.`, `:`, `。`, `．`, `：`, or an ideographic space.
 
-Notice: In addition, half-width symbols required a space after them. [ver.0.3+] 
+Half-width joints such as `.` and `:` require a following space. [ver.0.3+]
 
 ```md
 ---
@@ -46,7 +71,7 @@ A paragraph inside the container.
 ---
 ```
 
-The Semantics words are defined as follows. (This word can be in uppercase or lowercase.) You can infer which tag is used for the container by referring to [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json) and locale files such as [`semantics/ja.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/ja.json). English is always loaded; Japanese labels are loaded by default and can be toggled via the new `languages` option.
+Semantic labels are matched case-insensitively and are defined by [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json) plus optional locale files such as [`semantics/ja.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/ja.json). English is always loaded; Japanese labels are loaded by default and can be toggled with the `languages` option.
 
 ```plain
 abstract (要旨,抄録)
@@ -126,13 +151,14 @@ topic (トピック,話題)
 warning (warn,警告)
 ```
 
----
+### Semantic catalog stability
 
-Notice. Currently, this semantics words are unstable.
+Canonical semantic names, output tags, output classes, and documented attributes are part of the public output contract.
+Removing a canonical semantic, changing its tag/attrs, or changing generated class names is treated as a breaking change.
+Aliases may be expanded in minor releases, but alias removal or a change that causes existing Markdown to stop matching is also treated as breaking.
+Runtime `semanticContainerSc` aliases are always literal strings; regex-capable aliases are limited to built-in locale catalog files.
 
----
-
-As a notation, the Semantics word itself may be made into a strong element as follows. In the first example, Semantics converted to a span element, but in this example it is, of course, converted to a strong element.
+The semantic label can also be written as strong text. In that case, the rendered label remains a `<strong>` element instead of becoming a `<span>`.
 
 ```md
 ---
@@ -144,7 +170,7 @@ A paragraph inside the container.
 ---
 ```
 
-,or (ver: 0.3+)
+or (ver. 0.3+):
 
 ```md
 ---
@@ -156,7 +182,7 @@ A paragraph inside the container.
 ---
 ```
 
-Also, there are times when you want to add a heading in a column or the like. Therefore, the following description is also acceptable.
+The first block inside a semantic container may also be a heading:
 
 ```md
 ---
@@ -172,13 +198,13 @@ A paragraph inside the container.
 
 ------
 
-Notice. This semantic containers can be nested up to three by using different horizontal line symbol types.
+Semantic containers can be nested up to three levels by using different horizontal-rule marker types.
 
 I think it would be better to use the symbols themselves for different purposes, with `*` as the horizontal line, `-` as the semantic container, and `_` as the semantic container inside the semantic container.
 
 ------
 
-Also, when the semantic containers are continuous, you may have one of the front end horizon marks and the back start horizon mark between the two semantic containers.
+When semantic containers are adjacent, the closing horizontal rule of one container can also serve as the opening horizontal rule of the next container.
 
 For example, the following description:
 
@@ -220,8 +246,7 @@ A paragraph 4.
 
 [Version 0.2+]
 
-If the semantics container consists of one paragraph, are you cumbersome to sandwich with two hr elements?
-Yes, you can omit them. (There is also an option that cannot be omitted.)
+If a semantic container consists of one paragraph, the surrounding horizontal rules can be omitted by default.
 
 ```md
 A paragraph.
@@ -247,36 +272,20 @@ Notice. A notice.
 A paragraph.
 ```
 
-## Use
+## One-paragraph shorthand
 
-```js
-import mdit from 'markdown-it'
-import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
-const md = mdit().use(mditSemanticContainer);
-const markdownCont = '...'
-md.render(markdownCont)
+By default, a one-paragraph semantic container can omit the surrounding horizontal rules:
+
+```md
+A paragraph.
+
+Notice. A notice.
+
+A paragraph.
 ```
 
-The hr element can be omitted in a one-paragraph semantic container.
-To require hr even for one-paragraph containers, specify the following option.
-
-```js
-import mdit from 'markdown-it'
-import mditSemanticContainer from '@peaceroad/markdown-it-hr-sandwiched-semantic-container'
-const md = mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true});
-const markdownCont = '...'
-md.render(markdownCont)
-```
-
-Other options are explained under headings towards the end of the document.
-
-Call `.use(mditSemanticContainer, options)` only once per `markdown-it` instance. If the same instance receives the plugin again, the later call is ignored so non-idempotent token transforms are not registered twice.
-
-## Install
-
-```bash
-npm install @peaceroad/markdown-it-hr-sandwiched-semantic-container
-```
+Use `requireHrAtOneParagraph: true` to require horizontal rules even for one-paragraph containers.
+See [requireHrAtOneParagraph](#requirehratoneparagraph) for details.
 
 ## Example
 
@@ -485,7 +494,35 @@ A paragraph.
 ~~~
 
 
+## Output contract
+
+The plugin emits structural HTML only; it does not ship or inject CSS.
+Consumers can style the generated containers with these stable selectors:
+
+- Container class: `sc-${semanticName}` (for example, `sc-notice`)
+- Label class: `sc-${semanticName}-label`
+- Label joint class: `sc-${semanticName}-label-joint`
+
+The canonical semantic name, output tag, and default attributes come from [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json).
+For example, a semantic may render as `<section class="sc-notice" role="doc-notice">` or `<aside class="sc-column">`.
+When a label is hidden by `labelControl` or `semanticContainerSc`, the container receives an `aria-label` fallback when the semantic does not already define one.
+
 ## Option
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `languages` | `["ja"]` | Adds locale-specific recognition labels on top of English. |
+| `requireHrAtOneParagraph` | `false` | Requires horizontal rules for one-paragraph containers. |
+| `headingSectionContainer` | `false` | Allows semantic headings to open heading-scoped containers without `hr`. |
+| `removeJointAtLineEnd` | `false` | Removes the label joint when the label is the whole line. |
+| `allowBracketJoint` | `false` | Enables `[Label] body` / `［Label］body` syntax. |
+| `bracketLabelJointMode` | `"keep"` | Controls bracket label rendering: `"keep"`, `"remove"`, or `"auto"`. |
+| `githubTypeContainer` | `false` | Enables GitHub-style `> [!TYPE]` alert containers. |
+| `githubTypeInlineLabel` | `false` | Renders GitHub alert labels inline in the first paragraph. |
+| `githubTypeInlineLabelHeadingMixin` | `false` | Allows GitHub inline labels to mix into a following heading. |
+| `githubTypeInlineLabelJoint` | `"none"` | Controls custom-label suffixes in GitHub inline mode: `"none"` or `"auto"`. |
+| `labelControl` | `false` | Enables `label` override/hide handling. |
+| `labelControlInlineFallback` | `"auto"` | Parses trailing `{label=...}` without `markdown-it-attrs` when enabled. |
 
 ### languages
 
@@ -878,6 +915,16 @@ Force the use of horizontal rules even for single-paragraph containers. By defau
 mdit().use(mditSemanticContainer, {"requireHrAtOneParagraph": true})
 ```
 
+With this option enabled, the following Markdown is not converted to a semantic container:
+
+```md
+A paragraph.
+
+Notice. This paragraph will not be converted to a Notice semantic container.
+
+A paragraph.
+```
+
 ## Audit helper
 
 Use the included audit script to find repeated inline labels and `sc` alias conflicts in Markdown files.
@@ -887,12 +934,18 @@ npm run labels:audit
 npm run labels:audit:strict
 ```
 
-With this option enabled, the following would NOT be converted to a semantic container:
+## Development checks
 
-```md
-A paragraph.
+Recommended checks before publishing or opening a pull request:
 
-Notice. This paragraph will not be converted to a Notice semantic container.
+```bash
+npm test
+npm run labels:audit:strict
+npm run smoke:pack
+```
 
-A paragraph.
+Use the deterministic benchmark when a change touches parser phases, hot paths, rule ordering, or candidate planning:
+
+```bash
+npm run performance:ab
 ```

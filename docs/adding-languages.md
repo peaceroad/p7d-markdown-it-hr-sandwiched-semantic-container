@@ -37,6 +37,7 @@ Example `semantics/es.json`:
 - Avoid duplicating `tag`/`attrs` in locale files; those live only in `en.json`.
 - Unknown locale codes in `languages` are ignored safely.
 - Duplicate labels are de-duplicated when semantics are built.
+- This package is ESM-only and imports JSON catalogs with import attributes, so locale additions should keep the same import style used in `src/semantics.js`.
 - Regex-like aliases are supported, but aliases with a clear literal leading character are faster in hot paths.
 - Matching is case-insensitive, but it does not perform full Unicode case folding.
   For example, German `ß` is not treated the same as `ẞ` or `SS` automatically.

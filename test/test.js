@@ -723,6 +723,16 @@ pass = runDirectTest('duplicate plugin use is ignored without duplicate transfor
   assert.strictEqual(mdDouble.render('> [!NOTE]\n> Body.\n').includes('<section class="sc-note"'), false)
 })
 
+pass = runDirectTest('unknown and invalid options keep tolerant normalization', pass, () => {
+  const mdTolerant = mdit().use(mditSemanticContainer, {
+    allowBracketJoint: true,
+    bracketLabelJointMode: 'strip',
+    typoOption: true,
+  })
+  const html = mdTolerant.render('---\n\n[Notice] Body.\n\n---\n')
+  assert.strictEqual(html.includes('<span class="sc-notice-label-joint">[</span>'), true)
+})
+
 pass = runDirectTest('detection priority keeps github alerts deterministic over other modes', pass, () => {
   const mdPriority = mdit().use(mditSemanticContainer, {
     allowBracketJoint: true,

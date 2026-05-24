@@ -1,5 +1,6 @@
 /.codex/
 /node_modules/
+/.npm-cache/
 package-lock.json
 index_*
 /plan*

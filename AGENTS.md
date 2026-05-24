@@ -2,8 +2,21 @@
 
 This plugin converts paragraph groups into semantic containers in markdown-it. Key flow (defined in `index.js`):
 
+## Drift guard checklist
+
+Update this file in the same change set when you change any of these behavior contracts:
+
+- Public options, option defaults, or option normalization policy.
+- Rule registration order, rule names, or parser phase ownership.
+- Runtime `semanticContainerSc` input precedence, warning behavior, or cache keys.
+- Semantic catalog layout, alias interpretation, generated classes, output tags, or default attributes.
+- Label-control behavior across standard, bracket, and GitHub alert paths.
+- Candidate collection/planning/apply order, map propagation, or walker skip guards.
+- Test loader semantics, direct regression-test scope, benchmark commands, or package smoke checks.
+
 1) **Options & data**
    - Options: `requireHrAtOneParagraph`, `headingSectionContainer`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
+   - Option normalization is intentionally tolerant: unknown options are ignored, invalid enum-like values fall back to safe defaults, and dependent options are disabled when their parent feature flag is off.
    - Per-render SC input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
    - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
@@ -89,6 +102,8 @@ Performance considerations:
 Testing notes:
 - The test loader supports multiple expected HTML blocks per case via `[HTML:<label>]` headers.
 - Default assertions use `[HTML]` (or the first HTML block if unlabeled); labeled assertions are selected explicitly from `test/test.js`.
+- Direct option normalization tests cover tolerant fallback for unknown and invalid option values.
 - Direct tests include block candidate collection/reset checks to lock per-render env behavior.
 - Direct tests include non-requireHr candidate re-apply skip checks and headingSectionContainer hr-delimited double-apply regression coverage.
 - Fixture coverage includes heading-section boundary checks for same/higher heading closure, nested smaller headings, and structural exits from blockquotes/lists.
+- Local preflight checks are `npm test`, `npm run labels:audit:strict`, and `npm run smoke:pack`; use `performance:ab` when parser phases, hot paths, or rule ordering change.
