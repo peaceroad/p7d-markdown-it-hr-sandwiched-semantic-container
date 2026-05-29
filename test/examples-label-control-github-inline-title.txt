@@ -2,72 +2,70 @@
 > [!NOTE]
 > Body text. {label="重要メモ"}
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label">重要メモ</strong> Body text.</p>
 </section>
 
 [HTML:autoJoint]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label">重要メモ<span class="sc-note-label-joint">：</span></strong>Body text.</p>
 </section>
 
 [HTML:mixinAutoJoint]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label">重要メモ<span class="sc-note-label-joint">：</span></strong>Body text.</p>
 </section>
 
 [HTML:labelControlOff]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p label="重要メモ"><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> Body text.</p>
 </section>
-
 
 [Markdown]
 > [!NOTE]
 > Body text. {label=""}
 [HTML]
-<section class="sc-note" role="doc-notice" aria-label="NOTE">
+<section class="sc-note" aria-label="NOTE">
 <p>Body text.</p>
 </section>
 
 [HTML:labelControlOff]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p label=""><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> Body text.</p>
 </section>
-
 
 [Markdown]
 > [!NOTE]
 > ## Heading {label="重要メモ"}
 > Content
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label">重要メモ</strong></p>
 <h2>Heading</h2>
 <p>Content</p>
 </section>
 
 [HTML:mixin]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <h2><strong class="sc-note-label">重要メモ</strong> Heading</h2>
 <p>Content</p>
 </section>
 
 [HTML:autoJoint]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label">重要メモ<span class="sc-note-label-joint">：</span></strong></p>
 <h2>Heading</h2>
 <p>Content</p>
 </section>
 
 [HTML:mixinAutoJoint]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <h2><strong class="sc-note-label">重要メモ<span class="sc-note-label-joint">：</span></strong>Heading</h2>
 <p>Content</p>
 </section>
 
 [HTML:labelControlOff]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
 <h2 label="重要メモ">Heading</h2>
 <p>Content</p>

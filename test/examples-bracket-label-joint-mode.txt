@@ -14,7 +14,6 @@
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice body.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -30,7 +29,6 @@
 <section class="sc-caution" role="doc-notice">
 <p><span class="sc-caution-label">注意<span class="sc-caution-label-joint">：</span></span>これは注意です。</p>
 </section>
-
 
 [Markdown]
 ---

@@ -11,7 +11,6 @@ Body.
 </section>
 <h2>Next</h2>
 
-
 [Markdown]
 ## Notice. Hidden {label=""}
 

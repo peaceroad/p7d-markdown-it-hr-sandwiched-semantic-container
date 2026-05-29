@@ -18,7 +18,6 @@ A paragraph.
 </aside>
 <p>A paragraph.</p>
 
-
 [Markdown]
 A paragraph.
 
@@ -38,7 +37,6 @@ A paragraph.
 <p>A column paragraph.</p>
 </aside>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -60,7 +58,6 @@ A paragraph.
 </aside>
 <p>A paragraph.</p>
 
-
 [Markdown]
 A paragraph.
 
@@ -75,12 +72,11 @@ A paragraph.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-postscript" role="doc-notice">
+<section class="sc-postscript">
 <p><span class="sc-postscript-label">追記</span></p>
 <p>追記文章。</p>
 </section>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -96,12 +92,11 @@ A paragraph.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-postscript" role="doc-notice">
+<section class="sc-postscript">
 <p><strong class="sc-postscript-label">5月30日追記</strong></p>
 <p>追記文章。</p>
 </section>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -117,12 +112,11 @@ A paragraph.
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-postscript" role="doc-notice">
+<section class="sc-postscript">
 <p><strong class="sc-postscript-label">5月30日追記</strong></p>
 <p>追記文章。</p>
 </section>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -151,7 +145,6 @@ A paragraph.
 <p>A column paragraph.</p>
 </aside>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -182,7 +175,6 @@ A paragraph.
 <p>A column paragraph.</p>
 </aside>
 <p>A paragraph.</p>
-
 
 [Markdown]
 A paragraph.
@@ -213,7 +205,6 @@ A paragraph.
 <p>A column paragraph.</p>
 </aside>
 <p>A paragraph.</p>
-
 
 [Markdown]
 ---

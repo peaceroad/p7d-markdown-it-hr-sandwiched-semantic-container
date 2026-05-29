@@ -22,7 +22,6 @@ A paragraph.
 </section>
 <p>A paragraph.</p>
 
-
 [Markdown]
 ---
 
@@ -38,7 +37,6 @@ Notice 1. A hidden label. {label=""}
 <section class="sc-notice" role="doc-notice">
 <p label=""><span class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">.</span></span> A hidden label.</p>
 </section>
-
 
 [Markdown]
 ---
@@ -56,7 +54,6 @@ Notice 1. A hidden label. {label=""}
 <h2 label="ヘッダーラベル"><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">:</span></span> The title</h2>
 </section>
 
-
 [Markdown]
 ---
 
@@ -72,7 +69,6 @@ Notice 1. A hidden label. {label=""}
 <section class="sc-notice" role="doc-notice">
 <h2 label=""><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">:</span></span> Hidden title</h2>
 </section>
-
 
 [Markdown]
 ---
@@ -90,7 +86,6 @@ Notice 1. A hidden label. {label=""}
 <p label="重要"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A notice.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -106,7 +101,6 @@ Notice 1. A hidden label. {label=""}
 <section class="sc-notice" role="doc-notice">
 <p label=""><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></strong> A hidden strong label.</p>
 </section>
-
 
 [Markdown]
 ---
@@ -124,7 +118,6 @@ Notice 1. A hidden label. {label=""}
 <p label="強調ラベル外側"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A strong label with outer joint.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -141,7 +134,6 @@ Notice 1. A hidden label. {label=""}
 <p label="強調ラベル内側"><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A strong label with inner joint.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -157,7 +149,6 @@ Notice 1. A hidden label. {label=""}
 <section class="sc-notice" role="doc-notice">
 <p label=""><strong class="sc-notice-label">Notice<span class="sc-notice-label-joint">。</span></strong> A hidden strong label with outer joint.</p>
 </section>
-
 
 [Markdown]
 ---

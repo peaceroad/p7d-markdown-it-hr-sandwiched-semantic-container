@@ -14,7 +14,6 @@
 <p><span class="sc-notice-label">重要<span class="sc-notice-label-joint">：</span></span>A notice body.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -30,7 +29,6 @@
 <section class="sc-notice" role="doc-notice">
 <p><strong class="sc-notice-label">Changed Label<span class="sc-notice-label-joint">.</span></strong> A body.</p>
 </section>
-
 
 [Markdown]
 ---

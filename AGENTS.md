@@ -10,9 +10,11 @@ Update this file in the same change set when you change any of these behavior co
 - Rule registration order, rule names, or parser phase ownership.
 - Runtime `semanticContainerSc` input precedence, warning behavior, or cache keys.
 - Semantic catalog layout, alias interpretation, generated classes, output tags, or default attributes.
+- Semantic catalog documentation generation (`npm run docs:semantic-catalog`) or category/overview copy in `docs/generate-semantic-catalog.js`.
+- DPUB-ARIA alignment policy for emitted `role="doc-*"` attributes or decisions to leave a semantic without a default `role`.
 - Label-control behavior across standard, bracket, and GitHub alert paths.
 - Candidate collection/planning/apply order, map propagation, or walker skip guards.
-- Test loader semantics, direct regression-test scope, benchmark commands, or package smoke checks.
+- Test loader semantics, direct regression-test scope, or benchmark commands.
 
 1) **Options & data**
    - Options: `requireHrAtOneParagraph`, `headingSectionContainer`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
@@ -74,6 +76,10 @@ Update this file in the same change set when you change any of these behavior co
 
 5) **Data layout**
    - Locale data: `semantics/en.json` (canonical entries with tags/attrs/aliases), `semantics/ja.json` (label map). Additional locales can be added similarly and passed via `languages`.
+   - Semantic catalog documentation is generated from `semantics/*.json` plus documentation copy in `docs/generate-semantic-catalog.js`; run `npm run docs:semantic-catalog` when canonical semantics, default tags/attrs, or important alias policy changes.
+   - This plugin handles semantics that wrap content as `section`, `aside`, or `div`. HTML tag selection follows native HTML semantics first: use `section` for standalone document sections, `aside` for tangential/sidebar-like material, and `div` only when a stronger sectioning element would overstate the structure (`question`). This plugin does not include `example` as a built-in semantic; figure-like examples and figure-specific `role="doc-example"` output are intentionally delegated to figure/caption tooling such as `p7d-markdown-it-figure-with-p-caption`.
+   - The default `role="doc-*"` attributes prioritize DPUB-ARIA close matches. If a semantic label has no close DPUB-ARIA role, keep the `sc-*` class and do not emit a default `role` rather than forcing a broad document role. `glossary` is included as a close DPUB-ARIA role match (`doc-glossary`); workflow-oriented semantics such as `requirements`, `procedure`, `resources`, `explanation`, `limitations`, `decision`, `troubleshooting`, `prerequisites`, `next-steps`, `minutes`, `learning-objectives`, and `rubric` do not emit default `role` attributes.
+   - `epub:type` is not emitted by default; EPUB structural vocabulary is reference material for future EPUB-specific output only.
 
 Performance considerations:
 - Regexes and helpers are built once per init; helpers are only created for enabled features.
@@ -103,7 +109,8 @@ Testing notes:
 - The test loader supports multiple expected HTML blocks per case via `[HTML:<label>]` headers.
 - Default assertions use `[HTML]` (or the first HTML block if unlabeled); labeled assertions are selected explicitly from `test/test.js`.
 - Direct option normalization tests cover tolerant fallback for unknown and invalid option values.
+- Direct semantic catalog tests lock DPUB-ARIA close-match roles, no-default-role fallbacks, canonical-name class output, narrowed alias behavior, and technical/office/school label coverage in English and Japanese.
 - Direct tests include block candidate collection/reset checks to lock per-render env behavior.
 - Direct tests include non-requireHr candidate re-apply skip checks and headingSectionContainer hr-delimited double-apply regression coverage.
 - Fixture coverage includes heading-section boundary checks for same/higher heading closure, nested smaller headings, and structural exits from blockquotes/lists.
-- Local preflight checks are `npm test`, `npm run labels:audit:strict`, and `npm run smoke:pack`; use `performance:ab` when parser phases, hot paths, or rule ordering change.
+- Local preflight checks are `npm test` and `npm run labels:audit:strict`; use `performance:ab` when parser phases, hot paths, or rule ordering change.

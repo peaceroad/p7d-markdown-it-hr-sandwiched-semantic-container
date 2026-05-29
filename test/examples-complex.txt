@@ -20,7 +20,6 @@ Another paragraph here.
 <p><a href="#fn-ref1-a" class="fn-backlink" role="doc-backlink">[1]</a> This is a footnote.</p>
 </aside>
 
-
 [Markdown]
 A paragraph before.
 
@@ -42,11 +41,10 @@ Final paragraph.
 <section class="sc-notice" role="doc-notice">
 <p><strong class="sc-notice-label">Notice 1<span class="sc-notice-label-joint">:</span></strong> First notice with <strong>important details</strong>.</p>
 </section>
-<section class="sc-information" role="doc-notice">
+<section class="sc-information">
 <p><strong class="sc-information-label">Information 2<span class="sc-information-label-joint">:</span></strong> Second container with <em>emphasis</em> and code <code>sample</code>.</p>
 </section>
 <p>Final paragraph.</p>
-
 
 [Markdown]
 Introduction paragraph.
@@ -66,17 +64,16 @@ And more content here.
 Next section.
 [HTML]
 <p>Introduction paragraph.</p>
-<figure class="sc-example" role="doc-example">
-<p><strong class="sc-example-label">Example 1-A<span class="sc-example-label-joint">:</span></strong> This is a multi-line example
+<hr>
+<p><strong>Example 1-A:</strong> This is a multi-line example
 with <strong>complex formatting</strong> including:</p>
 <ul>
 <li>List item with <code>code</code></li>
 <li>Another item with <em>emphasis</em></li>
 </ul>
 <p>And more content here.</p>
-</figure>
+<hr>
 <p>Next section.</p>
-
 
 [Markdown]
 Start paragraph with footnote[^complex].

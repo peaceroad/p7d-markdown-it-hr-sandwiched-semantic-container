@@ -22,15 +22,14 @@ Outro.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Default semantic.</p>
 </section>
-<section class="sc-tip" role="doc-tip">
+<aside class="sc-tip" role="doc-tip">
 <p><strong class="sc-tip-label"><span class="sc-tip-label-joint">[</span>TIP<span class="sc-tip-label-joint">]</span></strong></p>
 <p>GitHub tip.</p>
-</section>
+</aside>
 <section class="sc-warning" role="doc-notice">
 <p><span class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></span> Bracket message.</p>
 </section>
 <p>Outro.</p>
-
 
 [Markdown]
 Prelude.
@@ -59,10 +58,10 @@ Outro.
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Default semantic.</p>
 </section>
 <p>Paragraph</p>
-<section class="sc-tip" role="doc-tip">
+<aside class="sc-tip" role="doc-tip">
 <p><strong class="sc-tip-label"><span class="sc-tip-label-joint">[</span>TIP<span class="sc-tip-label-joint">]</span></strong></p>
 <p>GitHub tip.</p>
-</section>
+</aside>
 <section class="sc-warning" role="doc-notice">
 <p><span class="sc-warning-label"><span class="sc-warning-label-joint">[</span>Warning<span class="sc-warning-label-joint">]</span></span> Bracket message.</p>
 </section>

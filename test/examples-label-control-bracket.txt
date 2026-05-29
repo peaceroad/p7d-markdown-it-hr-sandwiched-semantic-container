@@ -14,7 +14,6 @@
 <p label="重要"><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> A notice body.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -30,7 +29,6 @@
 <section class="sc-notice" role="doc-notice">
 <p label="重要"><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A body.</p>
 </section>
-
 
 [Markdown]
 ---
@@ -48,7 +46,6 @@
 <p label=""><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></strong> A hidden body.</p>
 </section>
 
-
 [Markdown]
 ---
 
@@ -65,7 +62,6 @@
 <h2 label="見出しラベル"><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Heading body</h2>
 </section>
 
-
 [Markdown]
 ---
 
@@ -81,7 +77,6 @@
 <section class="sc-notice" role="doc-notice">
 <h2 label=""><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>Notice<span class="sc-notice-label-joint">]</span></span> Hidden heading</h2>
 </section>
-
 
 [Markdown]
 ---

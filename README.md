@@ -73,82 +73,103 @@ A paragraph inside the container.
 
 Semantic labels are matched case-insensitively and are defined by [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json) plus optional locale files such as [`semantics/ja.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/ja.json). English is always loaded; Japanese labels are loaded by default and can be toggled with the `languages` option.
 
+For detailed semantic meanings, output tags, ARIA role policy, and English/Japanese label guidance, see [`docs/semantic-catalog.md`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/docs/semantic-catalog.md) and [`docs/semantic-catalog_ja.md`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/docs/semantic-catalog_ja.md).
+
+`example` is intentionally not a built-in semantic. For code, terminal, image,
+or table examples that should become `<figure role="doc-example">`, use figure
+caption tooling such as
+[`p7d-markdown-it-figure-with-p-caption`](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption)
+with `roleDocExample: true`.
+
 ```plain
 abstract (要旨,抄録)
-acknowledgments (謝辞)
+acknowledgments (acknowledgement,acknowledgment,acknowledgements,謝辞)
 afterword (後書き,あとがき,跋文)
-agenda (議題,検討課題,アジェンダ)
-alert (警報,アラート)
+agenda (meeting agenda,議題,アジェンダ,議事次第)
+alert (alerts,警報,アラート,注意喚起)
 annotation (注釈)
-answer (answers,回答,答え?)
-appendix ((付録|付属))
-assessments (評価,採点)
+answer (answers,回答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,答え([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?)
+appendix (appendices,付録,付属資料)
+assessments (assessment,quiz,quizzes,exam,exams,評価,採点,試験,小テスト,確認テスト)
 author (著者)
-bibliography ((参考)?文献(一覧)?)
+bibliography (references,reference list,works cited,(参考)?文献(一覧)?,文献表)
 book (magazine,(書籍|雑誌)(情報|案内)?,書誌(情報)?)
-caution (注意)
+caution (cautions,注意,注意事項,ご注意,注意点,使用上の注意,留意事項)
 chapter-toc (chapter toc,章目次)
-check (チェック,確認事項)
+check (checklist,チェック,確認事項,チェックリスト)
 colophon (奥付)
 column (コラム)
 conclusion (終わりに,おわりに,結び,結論)
 credits (クレジット)
-danger (危険)
+danger (dangers,危険,危険事項)
 dedication (献呈)
-editornote (editor('s)? note,編注)
+decision (decisions,決定事項,決定内容)
+editor-note (editornote,editor('s)? note,editors note,編注,編集注,編集者注)
 endnotes (後注,章末注,巻末注)
 epigraph (題辞,題句,題言)
 epilogue (エピローグ,終幕,終章)
 errata (正誤表)
 event (イベント(情報|案内)?,行事(情報|案内)?,催し物(情報|案内)?,出来事)
-example (例)
+explanation (explanations,解説)
 faq (ＦＡＱ,よくある(質問|問い合わせ))
 feedback (フィードバック)
 first-published (first (published|publication),初出)
 foreword (((本書|日本語版)?の)?(刊行|発行|発刊)に寄せて)
+glossary (glossary of terms,用語集,用語一覧)
 hint (ヒント)
-importance (important, (重要|重大)(情報|なこと)?)
+important (importance,(重要|重大)(情報|なこと)?,重要事項)
 information (info,案内,(参考)?情報,インフォメーション)
 index (索引)
 interview (インタビュー)
 introduction (序論,序説,はじめに,始めに)
-issue (問題点,争点,論点,イシュー)
+issue (issues,問題点,争点,論点,イシュー,検討課題,懸案事項)
 keywords (キーワード,手がかり(語)?)
-lead (リード(文)?,導入(文)?)
-lesson (レッスン,教訓)
+lead (lede,リード(文)?,導入(文)?)
+lesson (lessons,learning unit,learning units,レッスン,単元)
+learning-objectives (learning objectives,objectives,学習目標,到達目標)
+limitations (limitation,constraints,constraint,restrictions,restriction,制限事項,制約,制約事項)
 memo (メモ)
-note (ノート)
-notice (通知,通告,告知,掲示,注目,(お)?(し|知)らせ)
+minutes (meeting minutes,議事録)
+note (ノート,注,註,注記,備考)
+notice (通知,通告,告知,掲示,(お)?(し|知)らせ)
+next-steps (next steps,next step,次のステップ,今後の対応,今後の予定)
 opinion (意見,見解,オピニオン)
 outline (概略,アウトライン)
-overview (概観,大要,あらまし)
-planning (plan,計画,案)
+overview (概要,概観,大要,あらまし)
+planning (plan,計画,計画案,プラン)
 point (ポイント,要点)
 postscript ((([0-9]+年)?[0-9]+月[0-9]+日)?追記)
 preamble (序,序文)
 preface (前書き,まえがき)
-problem (問[い題]?)
+prerequisites (prerequisite,前提条件,事前準備)
+problem (exercise,exercises,practice problem,practice problems,問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,演習問題,練習問題)
+procedure (procedures,steps,instructions,手順,操作手順,作業手順)
 profile (プロフィール,人物紹介)
 prologue (プロローグ,序幕,序章)
-proposal (プロポーザル,提言)
-pull-quote (pull quote, プル(・)?ク[オォ]ート,抜粋)
-qna (Q&A,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
-question (質問,問(題)?)
-reference ([レリ]ファレンス,参照,参考)
-related-book (related (book|magazine),関連(した)?(本|書籍|雑誌))
-related-article (related article,関連(した)?記事)
-related-link (related link,関連(した)?リンク)
-relation (related,関連)
-recommendation (recommend(ed)?,勧告,勧め,推薦,リコメンド)
-supplement (supplements,補足(情報)?)
-solution (解答,解決(方法)?,解法)
+proposal (project proposal,プロポーザル,提言,企画案)
+pull-quote (pull quote,プル(・)?ク[オォ]ート)
+qna (Q&A,QA,Q and A,Questions and answers,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
+question (質問,問い([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,設問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,問[0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})
+reference ([レリ]ファレンス,参照,参考資料,参照先)
+related-book (related book,related books,related magazine,related magazines,関連(した)?(本|書籍|雑誌))
+related-article (related article,related articles,関連(した)?記事)
+related-link (related link,related links,see also,further reading,関連(した)?リンク,参考リンク)
+related (relation,関連,関連情報,関連資料)
+recommendation (recommend,recommended,勧告,勧め,おすすめ,お勧め,推薦,推奨,リコメンド)
+requirements (requirement,system requirements,要件,必要条件,動作要件,システム要件)
+resources (resource,materials,資料,教材)
+rubric (grading rubric,評価基準,採点基準,ルーブリック)
+supplement (supplements,補足(情報)?,補遺)
+solution (solutions,解答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,解答例,解決(方法)?,解法)
 suggestion (suggest,提案,サジェスト)
 summary (要約,まとめ,あらすじ)
-task (課題,作業,タスク)
-tip (tips,コツ,秘訣,助言)
-toc (目次)
+task (tasks,assignment,assignments,homework,action item,action items,課題,作業,タスク,宿題,アクションアイテム)
+tip (tips,コツ,秘訣,助言,アドバイス,豆知識)
+troubleshooting (トラブルシューティング,困ったときは)
+toc (table of contents,contents,目次,もくじ)
 topic (トピック,話題)
-warning (warn,警告)
+warning (warn,warnings,警告,警告事項)
+
 ```
 
 ### Semantic catalog stability
@@ -157,6 +178,13 @@ Canonical semantic names, output tags, output classes, and documented attributes
 Removing a canonical semantic, changing its tag/attrs, or changing generated class names is treated as a breaking change.
 Aliases may be expanded in minor releases, but alias removal or a change that causes existing Markdown to stop matching is also treated as breaking.
 Runtime `semanticContainerSc` aliases are always literal strings; regex-capable aliases are limited to built-in locale catalog files.
+
+The default ARIA attributes prioritize DPUB-ARIA roles where the semantic label closely matches a digital-publishing role.
+When no DPUB-ARIA role is a close fit, the package keeps the stable `sc-*` class and avoids forcing a `role="doc-*"` value.
+This plugin handles semantics that wrap content as `section`, `aside`, or `div`.
+Figure-like examples are intentionally delegated to figure/caption plugins such as
+[`p7d-markdown-it-figure-with-p-caption`](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).
+The package does not emit `epub:type`; EPUB structural vocabulary is treated as reference material for possible EPUB-specific output, not as default HTML output.
 
 The semantic label can also be written as strong text. In that case, the rendered label remains a `<strong>` element instead of becoming a `<span>`.
 
@@ -505,6 +533,7 @@ Consumers can style the generated containers with these stable selectors:
 
 The canonical semantic name, output tag, and default attributes come from [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json).
 For example, a semantic may render as `<section class="sc-notice" role="doc-notice">` or `<aside class="sc-column">`.
+DPUB-ARIA roles are emitted only for close matches; otherwise the semantic class remains the styling and integration contract.
 When a label is hidden by `labelControl` or `semanticContainerSc`, the container receives an `aria-label` fallback when the semantic does not already define one.
 
 ## Option
@@ -816,7 +845,7 @@ Default rendering keeps a GitHub-like title paragraph layout:
 > [!WARNING]
 > This is a warning message.
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
 <p>This is a helpful note.</p>
 </section>
@@ -838,7 +867,7 @@ mdit().use(mditSemanticContainer, {
 This produces:
 
 ```html
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> This is a helpful note.</p>
 </section>
 ```
@@ -859,7 +888,7 @@ mdit().use(mditSemanticContainer, {
 })
 ```
 
-By default, inline mode does not merge the label into a following heading.  
+By default, inline mode does not merge the label into a following heading.
 To merge label + heading text into one heading element, enable `githubTypeInlineLabelHeadingMixin: true`.
 
 ```js
@@ -941,7 +970,6 @@ Recommended checks before publishing or opening a pull request:
 ```bash
 npm test
 npm run labels:audit:strict
-npm run smoke:pack
 ```
 
 Use the deterministic benchmark when a change touches parser phases, hot paths, rule ordering, or candidate planning:

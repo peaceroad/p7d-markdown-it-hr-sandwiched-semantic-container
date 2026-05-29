@@ -2,10 +2,9 @@
 > [!NOTE]
 > This is a helpful tip.
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> This is a helpful tip.</p>
 </section>
-
 
 [Markdown]
 > [!WARNING]
@@ -17,7 +16,6 @@
 <p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong> First paragraph.</p>
 <p>Second paragraph.</p>
 </section>
-
 
 [Markdown]
 > [!CAUTION]
@@ -32,7 +30,6 @@ code block
 </code></pre>
 </section>
 
-
 [Markdown]
 > ［！注意］
 > これは注意です。
@@ -41,20 +38,19 @@ code block
 <p><strong class="sc-caution-label"><span class="sc-caution-label-joint">［</span>注意<span class="sc-caution-label-joint">］</span></strong> これは注意です。</p>
 </section>
 
-
 [Markdown]
 > [!NOTE]
 > ## Heading
 > Content
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
 <h2>Heading</h2>
 <p>Content</p>
 </section>
 
 [HTML:mixin]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <h2><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong> Heading</h2>
 <p>Content</p>
 </section>

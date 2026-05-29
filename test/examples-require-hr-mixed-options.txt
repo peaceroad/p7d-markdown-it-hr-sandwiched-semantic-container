@@ -1,19 +1,16 @@
 [Markdown]
 [Warning] No hr bracket.
-
 [HTML]
 <p>[Warning] No hr bracket.</p>
-
 
 [Markdown]
 > [!NOTE]
 > Works without hr.
 [HTML]
-<section class="sc-note" role="doc-notice">
+<section class="sc-note">
 <p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
 <p>Works without hr.</p>
 </section>
-
 
 [Markdown]
 ---

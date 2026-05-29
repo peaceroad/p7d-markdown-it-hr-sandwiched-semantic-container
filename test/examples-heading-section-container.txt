@@ -20,7 +20,6 @@ After.
 <h2>Next</h2>
 <p>After.</p>
 
-
 [Markdown]
 ## Notice. Heading
 ## Next
@@ -29,7 +28,6 @@ After.
 <h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
 </section>
 <h2>Next</h2>
-
 
 [Markdown]
 ### Notice. Heading
@@ -47,7 +45,6 @@ After.
 <h2>Next</h2>
 <p>After.</p>
 
-
 [Markdown]
 ## Notice. Heading
 
@@ -57,7 +54,6 @@ Body.
 <h2><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Heading</h2>
 <p>Body.</p>
 </section>
-
 
 [Markdown]
 > ## Notice. Heading
@@ -73,7 +69,6 @@ Body.
 </section>
 </blockquote>
 <h2>Next</h2>
-
 
 [Markdown]
 - item
@@ -95,7 +90,6 @@ Body.
 </ul>
 <h2>Next</h2>
 
-
 [Markdown]
 ## Notice. Outer
 
@@ -114,7 +108,6 @@ Text.
 </section>
 <h2>Next</h2>
 
-
 [Markdown]
 Notice. Heading
 ---
@@ -130,7 +123,6 @@ Next
 </section>
 <h1>Next</h1>
 
-
 [Markdown]
 ---
 
@@ -144,7 +136,6 @@ Next
 <h2><span class="sc-column-label">コラム<span class="sc-column-label-joint">：</span></span>コラムタイトル</h2>
 <p>コラム本文</p>
 </aside>
-
 
 [Markdown]
 ---
@@ -164,7 +155,6 @@ Next
 <h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> Second</h2>
 </aside>
 
-
 [Markdown]
 ## Column: First
 
@@ -182,6 +172,7 @@ Notice. Second.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Second.</p>
 </section>
+
 [HTML:requireHrAtOneParagraph]
 <aside class="sc-column">
 <h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
@@ -189,7 +180,6 @@ Notice. Second.
 </aside>
 <h2>Next</h2>
 <p>Notice. Second.</p>
-
 
 [Markdown]
 ---
@@ -206,12 +196,12 @@ Notice. Second.
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Second.</p>
 </section>
+
 [HTML:requireHrAtOneParagraph]
 <aside class="sc-column">
 <h2><span class="sc-column-label">Column<span class="sc-column-label-joint">:</span></span> First</h2>
 </aside>
 <p>Notice. Second.</p>
-
 
 [Markdown]
 ---

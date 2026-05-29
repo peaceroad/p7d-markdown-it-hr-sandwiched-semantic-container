@@ -11,6 +11,7 @@ import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import mditFigureWithPCaption from '@peaceroad/markdown-it-figure-with-p-caption'
 import { resolveLabelControl } from '../src/label-control.js'
+import { runSemanticCatalogTests } from './semantic-catalog.test.js'
 
 
 const md = mdit().use(mditSemanticContainer).use(mditFootnoteHere)
@@ -398,7 +399,7 @@ pass = runDirectTest('labelControl works without markdown-it-attrs (bracket)', p
 pass = runDirectTest('labelControl works without markdown-it-attrs (github)', pass, () => {
   const markdown = '> [!NOTE] {label="通知"}\n>\n> Body.\n'
   const html = mdLabelControlGitHubNoAttrs.render(markdown)
-  const expected = '<section class="sc-note" role="doc-notice">\n'
+  const expected = '<section class="sc-note">\n'
     + '<p><strong class="sc-note-label">通知</strong></p>\n'
     + '<p></p>\n'
     + '<p>Body.</p>\n'
@@ -667,6 +668,8 @@ pass = runDirectTest('default consecutive one-line containers render as siblings
   assert.strictEqual(html, expected)
 })
 
+pass = runSemanticCatalogTests(pass, runDirectTest, md)
+
 pass = runDirectTest('github candidate lines are collected and reset on env reuse', pass, () => {
   const env = {}
   mdGitHubAlerts.render('> [!NOTE]\n> body\n', env)
@@ -751,7 +754,7 @@ pass = runDirectTest('githubTypeInlineLabelJoint is ignored when githubTypeInlin
     labelControl: true,
   })
   const html = mdGitHubSeparateAutoJoint.render('> [!NOTE]\n> Body text. {label="重要メモ"}\n')
-  const expected = '<section class="sc-note" role="doc-notice">\n'
+  const expected = '<section class="sc-note">\n'
     + '<p><strong class="sc-note-label">重要メモ</strong></p>\n'
     + '<p>Body text.</p>\n'
     + '</section>\n'
@@ -764,7 +767,7 @@ pass = runDirectTest('githubTypeInlineLabelHeadingMixin is ignored when githubTy
     githubTypeInlineLabelHeadingMixin: true,
   })
   const html = mdGitHubSeparateHeadingMixin.render('> [!NOTE]\n>\n> ## Heading\n> Body\n')
-  const expected = '<section class="sc-note" role="doc-notice">\n'
+  const expected = '<section class="sc-note">\n'
     + '<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>\n'
     + '<h2>Heading</h2>\n'
     + '<p>Body</p>\n'
