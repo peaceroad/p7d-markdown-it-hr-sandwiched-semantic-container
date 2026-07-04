@@ -14,7 +14,8 @@ Japanese version: [semantic-catalog_ja.md](semantic-catalog_ja.md).
 - Built-in aliases may use regex-like patterns. Runtime `semanticContainerSc` aliases are literal strings.
 - The package emits stable `sc-*` classes for all semantics.
 - This plugin handles semantics that wrap content as `section`, `aside`, or `div`.
-- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`.
+- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`; no plugin option is required for that control.
+- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`.
 - `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are not inferred as h1 titlepages by default. Use explicit semantic labels for those DPUB section semantics, or handle whole-document wrapping in EPUB-level tooling.
 - Figure-like examples are intentionally delegated to figure/caption plugins such as `p7d-markdown-it-figure-with-p-caption`.
 - `role="doc-*"` is emitted only for close DPUB-ARIA matches.
@@ -60,7 +61,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-appendix-titlepage">`
   - English labels: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
   - Japanese labels: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Appendix titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Appendix A. Reference Data`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `author`: Use for author information.
   - Output: `<section class="sc-author">`
   - English labels: `author`
@@ -82,7 +83,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-chapter-titlepage">`
   - English labels: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
   - Japanese labels: `章扉`, `章タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Chapter titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Chapter 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `colophon`: Use for colophon/publication-information sections.
   - Output: `<section class="sc-colophon" role="doc-colophon">`
   - English labels: `colophon`
@@ -152,7 +153,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-part-titlepage">`
   - English labels: `part-titlepage`, `part titlepage`, `part title page`
   - Japanese labels: `部扉`, `部タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Part titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Part 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `postscript`: Use for postscripts or dated additions.
   - Output: `<section class="sc-postscript">`
   - English labels: `postscript`

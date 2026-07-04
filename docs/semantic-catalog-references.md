@@ -160,6 +160,13 @@ Titlepage inference notes:
   roles.
 - Built-in h1 titlepage inference is limited to conservative numbered,
   lettered, or Roman-numeral chapter/appendix/part openings.
+- Explicit titlepage labels such as `Chapter titlepage.` and `章扉。` remain
+  available as direct semantic labels, but they are marker-like compared with
+  natural document labels. Prefer h1 titlepage inference or parsed
+  frontmatter/meta `sc.titlepage: true` for ebook title pages.
+- Because explicit titlepage labels use the same semantic-label flow as
+  `Note.` or `Warning.`, their label text remains visible unless hidden with
+  `labelControl` or `semanticContainerSc`.
 - `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`,
   `プロローグ`, and `エピローグ` remain explicit semantic labels for their
   existing DPUB section roles where applicable, but are intentionally not

@@ -14,7 +14,8 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - built-in aliasでは正規表現に近いパターンを使うことがあります。実行時の`semanticContainerSc` aliasはリテラル文字列として扱います。
 - すべてのsemanticで安定した`sc-*` classを出力します。
 - このプラグインは、`section`、`aside`、`div`としてラップするsemanticを扱います。
-- 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、本文側の開始`hr`なしでファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。
+- 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、追加オプションなしで本文側の開始`hr`なしにファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。
+- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。
 - `Prologue`、`Epilogue`、`Introduction`、`Conclusion`、`序章`、`終章`、`プロローグ`、`エピローグ`は、既定ではh1 titlepageとして推定しません。これらのDPUB section semanticは明示ラベルで使うか、文書全体のラップをEPUB処理ツール側で扱います。
 - figure的な例示は、`p7d-markdown-it-figure-with-p-caption`などのfigure/caption系プラグインに委譲します。
 - `role="doc-*"`はDPUB-ARIAに近い対応がある場合だけ出力します。
@@ -62,7 +63,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-appendix-titlepage">`
   - 英語ラベル: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
   - 日本語ラベル: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `author`: 著者情報に使います。
   - 出力: `<section class="sc-author">`
   - 英語ラベル: `author`
@@ -84,7 +85,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-chapter-titlepage">`
   - 英語ラベル: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
   - 日本語ラベル: `章扉`, `章タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `colophon`: 奥付に使います。
   - 出力: `<section class="sc-colophon" role="doc-colophon">`
   - 英語ラベル: `colophon`
@@ -154,7 +155,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-part-titlepage">`
   - 英語ラベル: `part-titlepage`, `part titlepage`, `part title page`
   - 日本語ラベル: `部扉`, `部タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `postscript`: 追記に使います。
   - 出力: `<section class="sc-postscript">`
   - 英語ラベル: `postscript`

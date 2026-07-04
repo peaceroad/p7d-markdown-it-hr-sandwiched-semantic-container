@@ -195,8 +195,8 @@ const JA_OVERVIEWS = {
 
 const EN_NOTES = {
   "bibliography": "Plural `References` maps here; singular `Reference` remains `reference`.",
-  "appendix-titlepage": "No default `role` is emitted. Explicit labels such as `Appendix titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Appendix A. Reference Data`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.",
-  "chapter-titlepage": "No default `role` is emitted. Explicit labels such as `Chapter titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Chapter 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "appendix-titlepage": "No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "chapter-titlepage": "No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
   "glossary": "Has a close DPUB-ARIA match and emits `doc-glossary`.",
   "note": "No default `role` is emitted. Kept as a section-level document block because many notes are part of the main flow, not tangential asides. Use `notice`, `warning`, `caution`, `important`, or `danger` for notice-like alerts.",
   "caution": "Use for preventable mistakes or care-needed points. Use `warning` or `danger` when the risk is stronger.",
@@ -218,15 +218,15 @@ const EN_NOTES = {
   "reference": "Japanese bare `参考` is intentionally not a built-in alias because it is broad; use `参考資料` when you mean reference material.",
   "related-link": "Use `bibliography` for formal references lists; use this for navigational links.",
   "next-steps": "Use `task` for specific assignments or action items, and `planning` for plans.",
-  "part-titlepage": "No default `role` is emitted. Explicit labels such as `Part titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Part 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "part-titlepage": "No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
   "planning": "Use `proposal` when the section is an offer or project proposal for approval.",
   "proposal": "Japanese `企画案` maps here, but bare `企画` remains unregistered because it can mean planning more broadly."
 }
 
 const JA_NOTES = {
   "bibliography": "文献一覧・文献表はここです。単なる参考資料は`reference`や`resources`と使い分けます。",
-  "appendix-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。",
-  "chapter-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。",
+  "appendix-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
+  "chapter-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
   "glossary": "DPUB-ARIAに近いroleがあり、`doc-glossary`を出します。",
   "note": "中立的な注です。本文の流れに含まれる注も多いため、補足的な`aside`ではなくsection相当の文書ブロックとして扱います。警告・注意・重要事項は`warning`/`caution`/`important`を使います。",
   "caution": "避けるべきミスや注意点に使います。より強い危険性がある場合は`warning`または`danger`を使います。",
@@ -249,7 +249,7 @@ const JA_NOTES = {
   "reference": "`参考`単独は広いため既定aliasにはしません。参考資料として明示する場合は`参考資料`を使います。",
   "related-link": "リンク集としての関連リンク・参考リンクに使います。正式な文献一覧は`bibliography`です。",
   "next-steps": "具体的な作業項目は`task`、計画そのものは`planning`を使います。",
-  "part-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルは通常のsemantic labelとして使えます。組み込みのtitlepage推定では`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`で指定されたファイル先頭の`h1`からも推定できます。",
+  "part-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
   "planning": "承認を求める企画案・提案書は`proposal`を使います。",
   "proposal": "`企画案`はproposalとして認識しますが、裸の`企画`はplanningとの境界が曖昧なため未登録です。"
 }
@@ -455,7 +455,8 @@ const renderEnglish = (semantics, ja) => [
   '- Built-in aliases may use regex-like patterns. Runtime `semanticContainerSc` aliases are literal strings.',
   '- The package emits stable `sc-*` classes for all semantics.',
   '- This plugin handles semantics that wrap content as `section`, `aside`, or `div`.',
-  '- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`.',
+  '- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`; no plugin option is required for that control.',
+  '- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`.',
   '- `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are not inferred as h1 titlepages by default. Use explicit semantic labels for those DPUB section semantics, or handle whole-document wrapping in EPUB-level tooling.',
   '- Figure-like examples are intentionally delegated to figure/caption plugins such as `p7d-markdown-it-figure-with-p-caption`.',
   '- `role="doc-*"` is emitted only for close DPUB-ARIA matches.',
@@ -499,7 +500,8 @@ const renderJapanese = (semantics, ja) => [
   '- built-in aliasでは正規表現に近いパターンを使うことがあります。実行時の`semanticContainerSc` aliasはリテラル文字列として扱います。',
   '- すべてのsemanticで安定した`sc-*` classを出力します。',
   '- このプラグインは、`section`、`aside`、`div`としてラップするsemanticを扱います。',
-  '- 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、本文側の開始`hr`なしでファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。',
+  '- 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、追加オプションなしで本文側の開始`hr`なしにファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。',
+  '- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。',
   '- `Prologue`、`Epilogue`、`Introduction`、`Conclusion`、`序章`、`終章`、`プロローグ`、`エピローグ`は、既定ではh1 titlepageとして推定しません。これらのDPUB section semanticは明示ラベルで使うか、文書全体のラップをEPUB処理ツール側で扱います。',
   '- figure的な例示は、`p7d-markdown-it-figure-with-p-caption`などのfigure/caption系プラグインに委譲します。',
   '- `role="doc-*"`はDPUB-ARIAに近い対応がある場合だけ出力します。',

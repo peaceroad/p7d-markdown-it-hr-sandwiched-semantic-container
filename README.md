@@ -584,6 +584,7 @@ For semantic alias/hide configuration, `sc` data is read in priority order:
 For `md.frontmatter.sc` / `md.meta.sc`, this plugin only consumes values from the current render context (front matter token present) or when object reference changed, to avoid leaking stale metadata across renders.
 The reserved `sc.titlepage` key is a plugin control flag, not a semantic alias entry, so it is ignored by the alias/hide normalizer.
 For titlepage control, `state.env.semanticContainerSc.titlepage` has the highest priority, followed by parsed frontmatter/meta keys such as `sc.titlepage` and nested `sc.titlepage`.
+This control is honored by default when already-parsed frontmatter/meta is supplied; no plugin option is required.
 
 Recommended explicit input:
 
@@ -962,7 +963,9 @@ Implicit hr-sandwich detection only applies when the first block after the openi
 It does not turn ordinary later headings or `### Column: ...` blocks into titlepages.
 `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are intentionally not inferred as titlepages from `h1` headings.
 Use their explicit semantic labels when you want those DPUB section semantics; whole-document wrapping belongs to EPUB-level structuring tools rather than this local container plugin.
-Use explicit semantic labels such as `Chapter titlepage.` / `Appendix titlepage.` / `章扉。` / `付録扉。` / `付属扉。` when you want normal label-driven conversion instead.
+
+Explicit titlepage labels such as `Chapter titlepage.` / `Appendix titlepage.` / `章扉。` / `付録扉。` / `付属扉。` are available for direct label-driven conversion, but they follow the normal semantic-label flow: the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`.
+For ebook title pages, prefer the `h1` titlepage inference above or parsed frontmatter/meta `sc.titlepage: true`, because those routes avoid adding marker-like control text to the Markdown body.
 
 For files with parsed frontmatter, you can omit the extra opening body `hr` and ask the plugin to wrap from the first content `h1` to before the first `h2` or next `h1`:
 
