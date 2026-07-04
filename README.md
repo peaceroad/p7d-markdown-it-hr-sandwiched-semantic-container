@@ -90,12 +90,14 @@ alert (alerts,警報,アラート,注意喚起)
 annotation (注釈)
 answer (answers,回答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,答え([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?)
 appendix (appendices,付録,付属資料)
+appendix-titlepage (appendix titlepage,appendix title page,付録扉,付録タイトルページ,付属扉,付属タイトルページ)
 assessments (assessment,quiz,quizzes,exam,exams,評価,採点,試験,小テスト,確認テスト)
 author (著者)
 bibliography (references,reference list,works cited,(参考)?文献(一覧)?,文献表)
 book (magazine,(書籍|雑誌)(情報|案内)?,書誌(情報)?)
 caution (cautions,注意,注意事項,ご注意,注意点,使用上の注意,留意事項)
 chapter-toc (chapter toc,章目次)
+chapter-titlepage (chapter titlepage,chapter title page,章扉,章タイトルページ)
 check (checklist,チェック,確認事項,チェックリスト)
 colophon (奥付)
 column (コラム)
@@ -136,6 +138,7 @@ next-steps (next steps,next step,次のステップ,今後の対応,今後の予
 opinion (意見,見解,オピニオン)
 outline (概略,アウトライン)
 overview (概要,概観,大要,あらまし)
+part-titlepage (part titlepage,part title page,部扉,部タイトルページ)
 planning (plan,計画,計画案,プラン)
 point (ポイント,要点)
 postscript ((([0-9]+年)?[0-9]+月[0-9]+日)?追記)
@@ -530,6 +533,7 @@ Consumers can style the generated containers with these stable selectors:
 - Container class: `sc-${semanticName}` (for example, `sc-notice`)
 - Label class: `sc-${semanticName}-label`
 - Label joint class: `sc-${semanticName}-label-joint`
+- Heading titlepage part classes: `sc-${semanticName}-label`, `sc-${semanticName}-number`, `sc-${semanticName}-label-joint`, `sc-${semanticName}-title`, and, for Japanese `第...章/部` labels, `sc-${semanticName}-label-prefix`
 
 The canonical semantic name, output tag, and default attributes come from [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json).
 For example, a semantic may render as `<section class="sc-notice" role="doc-notice">` or `<aside class="sc-column">`.
@@ -568,7 +572,8 @@ mdit().use(mditSemanticContainer, { languages: [] })
 ### frontmatter `sc` input sources
 
 This plugin does not parse frontmatter text by itself.
-It reads already-parsed `sc` data from these sources (in priority order):
+It reads already-parsed `sc` data and titlepage control data from these sources.
+For semantic alias/hide configuration, `sc` data is read in priority order:
 
 1. `state.env.semanticContainerSc`
 2. `state.env.frontmatter.sc`
@@ -577,6 +582,8 @@ It reads already-parsed `sc` data from these sources (in priority order):
 5. `md.meta.sc` (`markdown-it-meta` style)
 
 For `md.frontmatter.sc` / `md.meta.sc`, this plugin only consumes values from the current render context (front matter token present) or when object reference changed, to avoid leaking stale metadata across renders.
+The reserved `sc.titlepage` key is a plugin control flag, not a semantic alias entry, so it is ignored by the alias/hide normalizer.
+For titlepage control, `state.env.semanticContainerSc.titlepage` has the highest priority, followed by parsed frontmatter/meta keys such as `sc.titlepage` and nested `sc.titlepage`.
 
 Recommended explicit input:
 
@@ -620,6 +627,7 @@ md.use(mditSemanticContainer)
 
 Behavior:
 - Non-empty `sc.<semantic>` values extend aliases for semantic detection.
+- `sc.titlepage` controls frontmatter titlepage inference and is not treated as a semantic name.
 - Runtime `sc` aliases are treated as literal strings, not regex patterns. If you need regex-capable aliases, define them in locale data (`semantics/*.json`).
 - `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior.
 - `labelControl` inline `label="..."` takes precedence over `sc` default hide.
@@ -632,6 +640,16 @@ Example frontmatter shape (from your own frontmatter parser):
 sc:
   notice: "お知らせ"
   warning: ""
+  titlepage: true
+---
+```
+
+If you want a one-line frontmatter flag for titlepage inference, use `sc.titlepage: true`.
+Top-level `titlepage: true` is intentionally not recognized, because that name is too likely to collide with book-level metadata owned by another tool.
+
+```yaml
+---
+sc.titlepage: true
 ---
 ```
 
@@ -909,6 +927,59 @@ When using heading mixin, put `label` on the heading line (not on `[!TYPE]` line
 
 GitHub canonical alert types are `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`.
 This plugin also accepts any registered semantic label/alias as `TYPE`.
+
+### Titlepage inference
+
+The plugin includes ebook-oriented titlepage inference for chapter/appendix/part opening material.
+It converts conservative numbered or lettered `h1` patterns inside an `hr` sandwich into `chapter-titlepage`, `appendix-titlepage`, or `part-titlepage` containers.
+This is built into the titlepage semantics rather than controlled by a separate feature option.
+
+```md
+---
+
+# Chapter 1. A Title
+
+Lead text.
+
+---
+```
+
+This renders the hr-sandwiched range as a `div.sc-chapter-titlepage` and wraps heading parts with stable inline classes:
+
+```html
+<div class="sc-chapter-titlepage">
+<h1><span class="sc-chapter-titlepage-label">Chapter</span> <span class="sc-chapter-titlepage-number">1</span><span class="sc-chapter-titlepage-label-joint">.</span> <span class="sc-chapter-titlepage-title">A Title</span></h1>
+<p>Lead text.</p>
+</div>
+```
+
+Supported implicit heading shapes are deliberately conservative:
+
+- English: `Chapter 1`, `Chapter A. Title`, `Appendix A`, `Appendix A. Reference Data`, `Part 1`, `Part 1. Title`
+- Japanese: `第1章`, `第II章`, `第1章 はじめに`, `1章 はじめに`, `付録A`, `付録A 参考データ`, `付属A`, `付属A 参考データ`, `第1部`, `第1部 扉タイトル`
+
+Implicit hr-sandwich detection only applies when the first block after the opening `hr` is an `h1`.
+It does not turn ordinary later headings or `### Column: ...` blocks into titlepages.
+`Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are intentionally not inferred as titlepages from `h1` headings.
+Use their explicit semantic labels when you want those DPUB section semantics; whole-document wrapping belongs to EPUB-level structuring tools rather than this local container plugin.
+Use explicit semantic labels such as `Chapter titlepage.` / `Appendix titlepage.` / `章扉。` / `付録扉。` / `付属扉。` when you want normal label-driven conversion instead.
+
+For files with parsed frontmatter, you can omit the extra opening body `hr` and ask the plugin to wrap from the first content `h1` to before the first `h2` or next `h1`:
+
+```yaml
+---
+sc.titlepage: true
+---
+
+# Chapter 1. A Title
+
+Lead text.
+
+## 1.1 A Heading
+```
+
+This form avoids a visually noisy `---` immediately after frontmatter.
+The frontmatter delimiter itself is not treated as an `hr`; if you prefer the explicit hr-sandwich form after frontmatter, keep the separate `---` line in the Markdown body.
 
 ### headingSectionContainer
 

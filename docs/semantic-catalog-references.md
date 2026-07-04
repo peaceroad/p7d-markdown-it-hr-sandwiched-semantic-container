@@ -12,6 +12,11 @@ is:
   `div`. Figure-like examples are intentionally delegated to figure/caption
   plugins such as
   [`p7d-markdown-it-figure-with-p-caption`](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).
+- This plugin does not infer wrappers for the entire rendered document from a
+  top-level heading. Whole-document EPUB structures such as chapter,
+  prologue, epilogue, introduction, or conclusion pages should be owned by the
+  EPUB-level structuring tool unless the author uses explicit local semantic
+  markup.
 - Choose HTML elements before ARIA roles: use `section` for standalone document
   sections, `aside` for tangential or sidebar-like material, and `div` only
   when a more specific HTML element would overstate the structure.
@@ -148,6 +153,18 @@ These are intentionally conservative rules for default output:
   - `troubleshooting`
   - `topic`
 
+Titlepage inference notes:
+
+- `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage` are roleless
+  `div` containers for page-like opening material, not DPUB document section
+  roles.
+- Built-in h1 titlepage inference is limited to conservative numbered,
+  lettered, or Roman-numeral chapter/appendix/part openings.
+- `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`,
+  `プロローグ`, and `エピローグ` remain explicit semantic labels for their
+  existing DPUB section roles where applicable, but are intentionally not
+  inferred as h1 titlepages by default.
+
 ## Japanese alias policy notes
 
 - Japanese aliases are package-maintained recognition terms, not normative
@@ -169,4 +186,4 @@ These are intentionally conservative rules for default output:
 
 ## Date checked
 
-These references were checked on 2026-05-25.
+These references were checked against the editor's drafts on 2026-07-04.

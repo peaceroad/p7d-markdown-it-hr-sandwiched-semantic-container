@@ -40,6 +40,16 @@ const createGitHubTypeContainer = (semantics) => {
     }
     return index === 0 ? value : value.slice(index)
   }
+  const trimLeadingMarkerWhitespace = (value) => {
+    if (!value) return value
+    let index = 0
+    while (index < value.length) {
+      const code = value.charCodeAt(index)
+      if (code !== CODE_SPACE && code !== CODE_TAB) break
+      index++
+    }
+    return index === 0 ? value : value.slice(index)
+  }
   const hasNonWhitespace = (value) => {
     if (!value) return false
     for (let i = 0; i < value.length; i++) {
@@ -53,6 +63,7 @@ const createGitHubTypeContainer = (semantics) => {
   }
   const stripAlertMarkerPrefix = (value) => {
     if (!value) return value
+    value = trimLeadingMarkerWhitespace(value)
 
     const firstCode = value.charCodeAt(0)
     const secondCode = value.charCodeAt(1)
@@ -122,6 +133,7 @@ const createGitHubTypeContainer = (semantics) => {
   }
 
   const findGitHubSemanticMatch = (content) => {
+    content = trimLeadingMarkerWhitespace(content)
     if (!content || !hasAlertPrefix(content)) return null
     const cached = matchCache.get(content)
     if (cached !== undefined) {
@@ -491,7 +503,7 @@ const createGitHubTypeContainer = (semantics) => {
 
     if (state.src.charCodeAt(pos) !== 0x3E) return false
 
-    const firstLineContent = trimLeadingWhitespace(state.src.slice(pos + 1, state.eMarks[start]))
+    const firstLineContent = state.src.slice(pos + 1, state.eMarks[start])
     if (!findGitHubSemanticMatch(firstLineContent)) return false
 
     const env = state.env || (state.env = {})

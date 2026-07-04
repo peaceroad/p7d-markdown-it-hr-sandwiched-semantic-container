@@ -6,7 +6,7 @@ canonical semantic only when it is useful as a standalone document label across
 multiple document types, and do not emit a default `role` unless DPUB-ARIA has a
 close match.
 
-## Added in the current 0.12.0 work
+## Catalog candidates promoted in 0.13.0
 
 These started as review candidates and were promoted to canonical semantics
 because they are common headings in technical documents, office documents, or
@@ -70,7 +70,7 @@ roles.
 The `proposal` semantic also gained the narrow Japanese alias `企画案`; bare
 `企画` remains a future candidate because it can mean planning more broadly.
 
-The previous broad `example` semantic is intentionally not part of the 0.12.0
+The previous broad `example` semantic is intentionally not part of the 0.13.0
 built-in catalog. DPUB-ARIA 1.1 treats `doc-example` as figure-like, and
 examples often overlap with captioned code, terminal, image, or table figures.
 Use `p7d-markdown-it-figure-with-p-caption` with `roleDocExample: true` for
@@ -87,7 +87,7 @@ locally with `semanticContainerSc`.
   - Japanese candidates: `設定`, `設定項目`
   - Notes: Useful, but `設定` and `Settings` can be broad. Add tests for false
     positives if promoted.
-- `troubleshooting` was promoted in 0.12.0 without `問題解決`. Keep
+- `troubleshooting` was promoted in 0.13.0 without `問題解決`. Keep
   `問題解決` under observation because it can overlap with `solution` and
   general problem-solving sections.
 
@@ -109,6 +109,17 @@ locally with `semanticContainerSc`.
 
 ## Candidates to keep out by default
 
+- `Prologue` / `Epilogue` h1 titlepage inference and Japanese equivalents
+  (`序章`, `終章`, `プロローグ`, `エピローグ`)
+  - These labels remain supported as explicit `prologue` / `epilogue`
+    semantics and keep their DPUB-ARIA roles (`doc-prologue`,
+    `doc-epilogue`).
+  - Keep them out of automatic h1 titlepage inference by default. They often
+    describe a whole EPUB document or a major document section, while this
+    plugin should not infer a wrapper for the entire rendered document.
+  - If a project wants `序章` or `Prologue` to share the same visual design as a
+    numbered chapter titlepage, handle that in an EPUB-level structuring tool or
+    with explicit project-local markup rather than broad built-in inference.
 - `test` / `テスト`
   - Too broad, especially in software documentation.
   - Prefer `quiz`, `exam`, `小テスト`, or `確認テスト`.
@@ -137,4 +148,4 @@ Before promoting a candidate:
 4. Update `semantics/en.json`, `semantics/ja.json`, and
    `docs/semantic-catalog-references.md` when the role policy changes.
 5. Regenerate docs with `npm run docs:semantic-catalog`.
-6. Run `npm test`, `npm run labels:audit:strict`, and `npm run smoke:pack`.
+6. Run `npm test`, `npm run labels:audit:strict`, and `npm run performance:quick`.

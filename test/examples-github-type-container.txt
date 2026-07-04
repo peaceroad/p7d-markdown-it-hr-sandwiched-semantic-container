@@ -271,7 +271,7 @@ second line.</p>
 > 　[!NOTE]
 > full-width leading space.
 [HTML]
-<section class="sc-note">
-<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>
-<p>full-width leading space.</p>
-</section>
+<blockquote>
+<p>　[!NOTE]
+full-width leading space.</p>
+</blockquote>

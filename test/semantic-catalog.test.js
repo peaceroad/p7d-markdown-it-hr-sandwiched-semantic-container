@@ -22,6 +22,34 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     assert.strictEqual(html, expected)
   })
 
+  pass = runDirectTest('titlepage semantics use div without default roles', pass, () => {
+    const markdown = 'Chapter titlepage. Body.\n\n章扉：本文。\n\nAppendix title page. Body.\n\n付録扉：本文。\n\n付属扉：本文。\n\nPart title page. Body.\n\n部扉：本文。\n'
+    const html = md.render(markdown)
+    const expected = '<div class="sc-chapter-titlepage">\n'
+      + '<p><span class="sc-chapter-titlepage-label">Chapter titlepage<span class="sc-chapter-titlepage-label-joint">.</span></span> Body.</p>\n'
+      + '</div>\n'
+      + '<div class="sc-chapter-titlepage">\n'
+      + '<p><span class="sc-chapter-titlepage-label">章扉<span class="sc-chapter-titlepage-label-joint">：</span></span>本文。</p>\n'
+      + '</div>\n'
+      + '<div class="sc-appendix-titlepage">\n'
+      + '<p><span class="sc-appendix-titlepage-label">Appendix title page<span class="sc-appendix-titlepage-label-joint">.</span></span> Body.</p>\n'
+      + '</div>\n'
+      + '<div class="sc-appendix-titlepage">\n'
+      + '<p><span class="sc-appendix-titlepage-label">付録扉<span class="sc-appendix-titlepage-label-joint">：</span></span>本文。</p>\n'
+      + '</div>\n'
+      + '<div class="sc-appendix-titlepage">\n'
+      + '<p><span class="sc-appendix-titlepage-label">付属扉<span class="sc-appendix-titlepage-label-joint">：</span></span>本文。</p>\n'
+      + '</div>\n'
+      + '<div class="sc-part-titlepage">\n'
+      + '<p><span class="sc-part-titlepage-label">Part title page<span class="sc-part-titlepage-label-joint">.</span></span> Body.</p>\n'
+      + '</div>\n'
+      + '<div class="sc-part-titlepage">\n'
+      + '<p><span class="sc-part-titlepage-label">部扉<span class="sc-part-titlepage-label-joint">：</span></span>本文。</p>\n'
+      + '</div>\n'
+    assert.strictEqual(html, expected)
+    assert.strictEqual(html.includes('role='), false)
+  })
+
   pass = runDirectTest('English document labels cover technical office and school headings', pass, () => {
     const markdown = 'Table of contents. Body.\n\nContents. Body.\n\nReferences. Body.\n\nWorks cited. Body.\n\nAcknowledgment. Body.\n\nGlossary. Body.\n\nGlossary of terms. Body.\n\nQuiz. Body.\n\nExam. Body.\n\nExercise. Body.\n\nPractice problems. Body.\n\nExample. Body.\n\nSample. Body.\n\nChecklist. Body.\n\nAction items. Body.\n\nFurther reading. Body.\n\nTest. Body.\n\nPractice. Body.\n'
     const html = md.render(markdown)
@@ -152,7 +180,7 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     assert.strictEqual(html.includes('role="doc-decision"'), false)
   })
 
-  pass = runDirectTest('0.12 semantic promotions cover technical office and school labels conservatively', pass, () => {
+  pass = runDirectTest('0.13 semantic promotions cover technical office and school labels conservatively', pass, () => {
     const markdown = 'Troubleshooting. Body.\n\nPrerequisites. Body.\n\nNext steps. Body.\n\nMinutes. Body.\n\nLearning objectives. Body.\n\nGrading rubric. Body.\n\n困ったときは：本文。\n\n事前準備：本文。\n\n今後の対応：本文。\n\n議事録：本文。\n\n学習目標：本文。\n\n採点基準：本文。\n\n企画案：本文。\n\nConfiguration. Body.\n\n設定：本文。\n\n企画：本文。\n\n問題解決：本文。\n'
     const html = md.render(markdown)
     const expectedClasses = [

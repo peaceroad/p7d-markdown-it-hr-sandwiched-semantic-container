@@ -14,6 +14,8 @@ Japanese version: [semantic-catalog_ja.md](semantic-catalog_ja.md).
 - Built-in aliases may use regex-like patterns. Runtime `semanticContainerSc` aliases are literal strings.
 - The package emits stable `sc-*` classes for all semantics.
 - This plugin handles semantics that wrap content as `section`, `aside`, or `div`.
+- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`.
+- `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are not inferred as h1 titlepages by default. Use explicit semantic labels for those DPUB section semantics, or handle whole-document wrapping in EPUB-level tooling.
 - Figure-like examples are intentionally delegated to figure/caption plugins such as `p7d-markdown-it-figure-with-p-caption`.
 - `role="doc-*"` is emitted only for close DPUB-ARIA matches.
 - `epub:type` is not emitted by default.
@@ -25,6 +27,7 @@ This section explains boundaries between easily confused semantics and shows whi
 - `answer` vs `solution`: `answer` is a direct response. `solution` can include a worked method or explanation.
 - `question` vs `problem`: `question` asks something. `problem`/`exercise` is something to solve.
 - `bibliography` vs `reference` vs `resources` vs `related-link`: `bibliography` is a formal references list. `reference` is reference information. `resources` is supporting material. `related-link` is a see-also/further-reading link list.
+- `chapter-titlepage`/`appendix-titlepage`/`part-titlepage` vs `chapter-toc`/`toc`: titlepage semantics wrap chapter/appendix/part opening design material. TOC semantics wrap navigational lists.
 - `note` vs `notice`/`alert`/`important`: `note` is neutral and emits no default `role`. `notice` and `alert` are notification-like, while `important` marks emphasis without necessarily implying risk.
 - `caution` vs `warning` vs `danger`: `caution` is for care-needed points or preventable trouble. `warning` is stronger. `danger` is reserved for the strongest hazard level.
 - `requirements` vs `prerequisites` vs `procedure` vs `limitations`: `requirements` are conditions to satisfy. `prerequisites` are preconditions before starting. `procedure` is how to do something. `limitations` are restrictions or constraints.
@@ -53,6 +56,11 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<section class="sc-appendix" role="doc-appendix">`
   - English labels: `appendix`, `appendices`
   - Japanese labels: `付録`, `付属資料`
+- `appendix-titlepage`: Use for ebook appendix-opening title pages, usually detected from an `h1` appendix heading.
+  - Output: `<div class="sc-appendix-titlepage">`
+  - English labels: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
+  - Japanese labels: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
+  - Notes: No default `role` is emitted. Explicit labels such as `Appendix titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Appendix A. Reference Data`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `author`: Use for author information.
   - Output: `<section class="sc-author">`
   - English labels: `author`
@@ -70,6 +78,11 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<nav class="sc-chapter-toc" role="doc-toc">`
   - English labels: `chapter-toc`, `chapter toc`
   - Japanese labels: `章目次`
+- `chapter-titlepage`: Use for ebook chapter-opening title pages, usually detected from an `h1` chapter heading.
+  - Output: `<div class="sc-chapter-titlepage">`
+  - English labels: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
+  - Japanese labels: `章扉`, `章タイトルページ`
+  - Notes: No default `role` is emitted. Explicit labels such as `Chapter titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Chapter 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `colophon`: Use for colophon/publication-information sections.
   - Output: `<section class="sc-colophon" role="doc-colophon">`
   - English labels: `colophon`
@@ -135,6 +148,11 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<section class="sc-lead" aria-label="NAME">`
   - English labels: `lead`, `lede`
   - Japanese labels: `リード(文)?`, `導入(文)?`
+- `part-titlepage`: Use for ebook part-opening title pages, usually detected from an `h1` part heading.
+  - Output: `<div class="sc-part-titlepage">`
+  - English labels: `part-titlepage`, `part titlepage`, `part title page`
+  - Japanese labels: `部扉`, `部タイトルページ`
+  - Notes: No default `role` is emitted. Explicit labels such as `Part titlepage.` work through the normal semantic-label flow; built-in titlepage inference can also infer this container from an hr-sandwiched `h1` like `Part 1. Title`, or from the first content `h1` when parsed frontmatter sets `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `postscript`: Use for postscripts or dated additions.
   - Output: `<section class="sc-postscript">`
   - English labels: `postscript`

@@ -6,6 +6,7 @@ import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 import { createStandardContainerApplier } from './src/standard-applier.js'
 import { resolveContainerRangeEnd, resolveHeadingSectionRangeEnd } from './src/container-range.js'
+import { createFrontmatterTitlepageFinder, createHeadingTitlepageMatcher, setHeadingTitlepageContainer } from './src/heading-titlepage.js'
 
 const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
@@ -35,6 +36,16 @@ const EMPTY_RUNTIME_PLAN = Object.freeze({
   hrStartLineKeySet: null,
   hrCandidates: null,
   githubCandidateLineSet: null,
+})
+const EMPTY_HR_CANDIDATE_PLAN = Object.freeze({
+  handledAll: true,
+  appliedStartLineSet: null,
+  plannedEdits: null,
+})
+const EMPTY_GITHUB_CANDIDATE_PLAN = Object.freeze({
+  handledAll: true,
+  appliedLineSet: null,
+  plannedEdits: null,
 })
 
 const isAsciiAlnum = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
@@ -74,6 +85,13 @@ const normalizeAliasToken = (value) => {
   const token = String(value).trim()
   return token ? token.toLowerCase() : ''
 }
+
+const parseBooleanFlag = (value) => (
+  value === true
+  || value === 1
+  || value === '1'
+  || (typeof value === 'string' && value.trim().toLowerCase() === 'true')
+)
 
 const buildSemanticNameMap = (semantics) => {
   const semanticNameByLower = new Map()
@@ -145,6 +163,7 @@ const resolveSemanticContainerSc = (rawSc, semanticNameByLower, baseAliasOwnerMa
     const rawKey = keys[i]
     const key = String(rawKey).trim().toLowerCase()
     if (!key) continue
+    if (key === 'titlepage') continue
 
     const semanticName = semanticNameByLower.get(key)
     if (!semanticName) {
@@ -261,6 +280,13 @@ const withScHideSet = (opt, hideSet) => {
   if (!hideSet || hideSet.size === 0) return opt
   const renderOpt = Object.create(opt)
   renderOpt.scHideSet = hideSet
+  return renderOpt
+}
+
+const withFrontmatterTitlepage = (opt, enabled) => {
+  if (!enabled) return opt
+  const renderOpt = Object.create(opt)
+  renderOpt.frontmatterTitlepage = true
   return renderOpt
 }
 
@@ -385,7 +411,59 @@ const buildRuntimePlan = (state) => {
     : EMPTY_RUNTIME_PLAN
 }
 
-const resolveRawScInput = (state, md, mdStateRef) => {
+const readTitlepageFlag = (source) => {
+  if (!source || typeof source !== 'object') return undefined
+  if (hasOwn(source, 'sc.titlepage')) return parseBooleanFlag(source['sc.titlepage'])
+  const sc = source.sc
+  if (hasOwn(sc, 'titlepage')) return parseBooleanFlag(sc.titlepage)
+  return undefined
+}
+
+const readScTitlepageFlag = (sc) => (
+  hasOwn(sc, 'titlepage')
+    ? parseBooleanFlag(sc.titlepage)
+    : undefined
+)
+
+const resolveRawScInputFromSources = (sources) => {
+  if (hasOwn(sources.env, 'semanticContainerSc')) {
+    return sources.env.semanticContainerSc
+  }
+
+  if (hasOwn(sources.envFrontmatter, 'sc')) {
+    return sources.envFrontmatter.sc
+  }
+
+  if (hasOwn(sources.envMeta, 'sc')) {
+    return sources.envMeta.sc
+  }
+
+  if (hasOwn(sources.mdFrontmatter, 'sc')) return sources.mdFrontmatter.sc
+  if (hasOwn(sources.mdMeta, 'sc')) return sources.mdMeta.sc
+
+  return null
+}
+
+const resolveTitlepageInputFromSources = (sources) => {
+  let value = readScTitlepageFlag(sources.envSemanticContainerSc)
+  if (value !== undefined) return value
+
+  value = readTitlepageFlag(sources.envFrontmatter)
+  if (value !== undefined) return value
+
+  value = readTitlepageFlag(sources.envMeta)
+  if (value !== undefined) return value
+
+  value = readTitlepageFlag(sources.mdFrontmatter)
+  if (value !== undefined) return value
+
+  value = readTitlepageFlag(sources.mdMeta)
+  if (value !== undefined) return value
+
+  return false
+}
+
+const resolveRenderInputs = (state, md, mdStateRef) => {
   const env = state?.env
   const mdMeta = md?.meta
   const mdFrontmatter = md?.frontmatter
@@ -394,35 +472,21 @@ const resolveRawScInput = (state, md, mdStateRef) => {
   mdStateRef.meta = mdMeta
   mdStateRef.frontmatter = mdFrontmatter
 
-  if (hasOwn(env, 'semanticContainerSc')) {
-    return env.semanticContainerSc
-  }
-
-  const envFrontmatter = env?.frontmatter
-  if (hasOwn(envFrontmatter, 'sc')) {
-    return envFrontmatter.sc
-  }
-
-  const envMeta = env?.meta
-  if (hasOwn(envMeta, 'sc')) {
-    return envMeta.sc
-  }
-
   const firstTokenType = state?.tokens?.[0]?.type
   const hasFrontMatterToken = firstTokenType === 'front_matter'
-  if (hasFrontMatterToken) {
-    if (hasOwn(mdFrontmatter, 'sc')) return mdFrontmatter.sc
-    if (hasOwn(mdMeta, 'sc')) return mdMeta.sc
+  const sources = {
+    env,
+    envSemanticContainerSc: env?.semanticContainerSc,
+    envFrontmatter: env?.frontmatter,
+    envMeta: env?.meta,
+    mdFrontmatter: (hasFrontMatterToken || frontmatterChangedInThisRender) ? mdFrontmatter : null,
+    mdMeta: (hasFrontMatterToken || metaChangedInThisRender) ? mdMeta : null,
   }
 
-  if (frontmatterChangedInThisRender && hasOwn(mdFrontmatter, 'sc')) {
-    return mdFrontmatter.sc
+  return {
+    rawScInput: resolveRawScInputFromSources(sources),
+    frontmatterTitlepage: resolveTitlepageInputFromSources(sources),
   }
-  if (metaChangedInThisRender && hasOwn(mdMeta, 'sc')) {
-    return mdMeta.sc
-  }
-
-  return null
 }
 
 const buildSemanticsReg = (semantics) => semantics.map((sem) => {
@@ -707,12 +771,16 @@ const createContainerRangeChecker = (activeCheck) => (state, n, hrType, sc) => {
 
 const createContainerApplier = (semantics, featureHelpers) => {
   const applyStandardContainer = createStandardContainerApplier(semantics)
+  const applyHeadingTitlepageContainer = setHeadingTitlepageContainer(semantics)
   return (state, n, hrType, sc, sci, optLocal) => {
     if (sc.isGitHubAlert && featureHelpers.github?.setGitHubAlertsSemanticContainer) {
       return featureHelpers.github.setGitHubAlertsSemanticContainer(state, n, hrType, sc, sci, optLocal)
     }
     if (sc.isBracketFormat && featureHelpers.bracket?.setBracketSemanticContainer) {
       return featureHelpers.bracket.setBracketSemanticContainer(state, n, hrType, sc, sci, optLocal)
+    }
+    if (sc.isHeadingTitlepage) {
+      return applyHeadingTitlepageContainer(state, hrType, sc, sci)
     }
     return applyStandardContainer(state, hrType, sc, sci, optLocal)
   }
@@ -896,10 +964,20 @@ const applyPlannedEdits = (state, optLocal, applyContainer, plannedEdits) => {
   }
 }
 
+const createFrontmatterTitlepageApplier = (findFrontmatterTitlepage, applyContainer) => (state, optLocal) => {
+  if (!optLocal.frontmatterTitlepage) return false
+
+  const sc = findFrontmatterTitlepage(state)
+  if (!sc) return false
+
+  applyContainer(state, sc.range[0], '', sc, -1, optLocal)
+  return true
+}
+
 const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePlan) => {
   const candidates = runtimePlan?.hrCandidates
   if (!Array.isArray(candidates) || candidates.length === 0) {
-    return { handledAll: true, appliedStartLineSet: null, plannedEdits: null }
+    return EMPTY_HR_CANDIDATE_PLAN
   }
 
   const candidateKeys = new Array(candidates.length)
@@ -1066,9 +1144,9 @@ const createHrCandidatePlanner = (findHrCandidateSemantic) => (state, runtimePla
 }
 
 const createGitHubCandidatePlanner = (githubCheck) => (state, runtimePlan) => {
-  if (typeof githubCheck !== 'function') return { handledAll: true, appliedLineSet: null, plannedEdits: null }
+  if (typeof githubCheck !== 'function') return EMPTY_GITHUB_CANDIDATE_PLAN
   const candidateLineSet = runtimePlan?.githubCandidateLineSet
-  if (!candidateLineSet || candidateLineSet.size === 0) return { handledAll: true, appliedLineSet: null, plannedEdits: null }
+  if (!candidateLineSet || candidateLineSet.size === 0) return EMPTY_GITHUB_CANDIDATE_PLAN
 
   const tokenIndexByLine = buildBlockquoteTokenIndexByLine(state.tokens, candidateLineSet)
   const matchedCandidates = []
@@ -1113,10 +1191,12 @@ const createGitHubCandidatePlanner = (githubCheck) => (state, runtimePlan) => {
   }
 }
 
-const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandidates, applyContainer) => (state, optLocal, runtimePlan = EMPTY_RUNTIME_PLAN) => {
-  const hrCandidatePlan = planHrCandidates(state, runtimePlan)
+const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandidates, applyContainer, applyFrontmatterTitlepage) => (state, optLocal, runtimePlan = EMPTY_RUNTIME_PLAN) => {
+  const hrCandidatePlan = runtimePlan?.hrCandidates
+    ? planHrCandidates(state, runtimePlan)
+    : EMPTY_HR_CANDIDATE_PLAN
   const githubCandidatePlan = (
-    optLocal.githubTypeContainer
+    optLocal.githubTypeContainer && runtimePlan?.githubCandidateLineSet
     ? planGitHubCandidates(state, runtimePlan)
     : null
   )
@@ -1125,6 +1205,9 @@ const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandi
     githubCandidatePlan?.plannedEdits
   )
   applyPlannedEdits(state, optLocal, applyContainer, plannedEdits)
+  if (applyFrontmatterTitlepage) {
+    applyFrontmatterTitlepage(state, optLocal)
+  }
 
   const appliedHrCandidateStartLineSet = hrCandidatePlan?.appliedStartLineSet || null
   const appliedGitHubCandidateLineSet = githubCandidatePlan?.appliedLineSet || null
@@ -1175,17 +1258,28 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
     findMatchedSemantic,
     findBracketSemanticMatch,
   ])
+  const findHeadingTitlepageSemantic = createHeadingTitlepageMatcher(semantics)
+  const findHrSemantic = createSemanticFinder([
+    findHeadingTitlepageSemantic,
+    findMatchedSemantic,
+    findBracketSemanticMatch,
+  ])
+  const findFrontmatterTitlepage = createFrontmatterTitlepageFinder(semantics, findHeadingTitlepageSemantic)
+  const applyFrontmatterTitlepage = findFrontmatterTitlepage
+    ? createFrontmatterTitlepageApplier(findFrontmatterTitlepage, applyContainer)
+    : null
   const findHeadingSectionContainer = opt.headingSectionContainer
     ? createHeadingSectionFinder(findNonGitHubSemantic)
     : null
   const walkContainers = createContainerWalker(activeCheck, findHeadingSectionContainer, checkContainerRanges, applyContainer)
-  const planHrCandidates = createHrCandidatePlanner(findNonGitHubSemantic)
+  const planHrCandidates = createHrCandidatePlanner(findHrSemantic)
   const planGitHubCandidates = createGitHubCandidatePlanner(githubCheck)
   const semanticContainer = createContainerRunner(
     walkContainers,
     planHrCandidates,
     planGitHubCandidates,
-    applyContainer
+    applyContainer,
+    applyFrontmatterTitlepage
   )
   return { semanticContainer }
 }
@@ -1342,9 +1436,9 @@ const mditSemanticContainer = (md, option) => {
   // Run late in core (after text_join when available).
   // Running too early can shift token positions for later core transforms.
   registerCoreRuleAfterSafeAnchor(md, 'semantic_container', (state) => {
-    const rawScInput = resolveRawScInput(state, md, mdStateRef)
+    const renderInputs = resolveRenderInputs(state, md, mdStateRef)
     const scConfig = resolveSemanticContainerSc(
-      rawScInput,
+      renderInputs.rawScInput,
       semanticNameByLower,
       baseAliasOwnerMap
     )
@@ -1352,7 +1446,8 @@ const mditSemanticContainer = (md, option) => {
       pushScWarnings(state, scConfig.warnings)
     }
     const semanticContainer = getSemanticContainerWithSc(scConfig)
-    const renderOpt = withScHideSet(opt, scConfig?.hideSet)
+    let renderOpt = withScHideSet(opt, scConfig?.hideSet)
+    renderOpt = withFrontmatterTitlepage(renderOpt, renderInputs.frontmatterTitlepage)
     const runtimePlan = buildRuntimePlan(state)
     semanticContainer(state, renderOpt, runtimePlan)
   })

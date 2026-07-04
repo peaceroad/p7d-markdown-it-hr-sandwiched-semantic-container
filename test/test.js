@@ -140,9 +140,23 @@ const mdLabelControlGitHubInlineTitleOff = mdit().use(mditAttrs).use(mditSemanti
 })
 const mdMetaSc = mdit().use(mditMeta).use(mditSemanticContainer)
 const parseFrontMatterNotice = (raw) => {
-  const match = String(raw || '').match(/(?:^|\n)\s*notice\s*:\s*["']?([^"'\n]+)["']?\s*$/m)
-  if (!match) return {}
-  return { sc: { notice: match[1].trim() } }
+  const source = String(raw || '')
+  const noticeMatch = source.match(/(?:^|\n)\s*notice\s*:\s*["']?([^"'\n]+)["']?\s*$/m)
+  const result = {}
+  const sc = {}
+  if (noticeMatch) {
+    sc.notice = noticeMatch[1].trim()
+  }
+  if (/(?:^|\n)\s*sc\s*:\s*\n(?:[ \t]+[^\n]*\n)*?[ \t]+titlepage\s*:\s*true\s*$/m.test(source)) {
+    sc.titlepage = true
+  }
+  if (Object.keys(sc).length > 0) {
+    result.sc = sc
+  }
+  if (/(?:^|\n)\s*sc\.titlepage\s*:\s*true\s*$/m.test(source)) {
+    result['sc.titlepage'] = true
+  }
+  return result
 }
 const mdFrontMatterSc = mdit()
 mdFrontMatterSc.use(mditFrontMatter, (fm) => {
@@ -337,6 +351,168 @@ pass = runTest(mdHeadingSection, testData.headingSection, pass)
 pass = runTest(mdHeadingSectionRequireHr, testData.headingSection, pass, undefined, 'requireHrAtOneParagraph')
 pass = runTest(mdHeadingSectionBracket, testData.headingSectionBracket, pass)
 pass = runTest(mdLabelControlHeadingSection, testData.headingSectionLabelControl, pass)
+
+pass = runDirectTest('legacy headingTitlepageContainer option is ignored by built-in titlepage inference', pass, () => {
+  const markdown = '---\n\n# Chapter 1. A Title\n\n---\n'
+  const mdRemovedOption = mdit().use(mditSemanticContainer, { headingTitlepageContainer: false })
+  assert.strictEqual(md.render(markdown).includes('<div class="sc-chapter-titlepage">'), true)
+  assert.strictEqual(mdRemovedOption.render(markdown).includes('<div class="sc-chapter-titlepage">'), true)
+})
+
+pass = runDirectTest('titlepage inference wraps English chapter h1 parts without extra inline newlines', pass, () => {
+  const markdown = '---\n\n# Chapter 1. A Title\n\nOpening text.\n\n---\n'
+  const html = md.render(markdown)
+  const expected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label">Chapter</span> <span class="sc-chapter-titlepage-number">1</span><span class="sc-chapter-titlepage-label-joint">.</span> <span class="sc-chapter-titlepage-title">A Title</span></h1>\n'
+    + '<p>Opening text.</p>\n'
+    + '</div>\n'
+  assert.strictEqual(html, expected)
+
+  const letterHtml = md.render('---\n\n# Chapter A. A Lettered Chapter\n\n---\n')
+  const letterExpected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label">Chapter</span> <span class="sc-chapter-titlepage-number">A</span><span class="sc-chapter-titlepage-label-joint">.</span> <span class="sc-chapter-titlepage-title">A Lettered Chapter</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(letterHtml, letterExpected)
+
+  const bareLetterHtml = md.render('---\n\n# Chapter A.\n\n---\n')
+  const bareLetterExpected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label">Chapter</span> <span class="sc-chapter-titlepage-number">A</span><span class="sc-chapter-titlepage-label-joint">.</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(bareLetterHtml, bareLetterExpected)
+})
+
+pass = runDirectTest('titlepage inference wraps Japanese chapter h1 parts', pass, () => {
+  const markdown = '---\n\n# 第1章 はじめに\n\n---\n'
+  const html = md.render(markdown)
+  const expected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label-prefix">第</span><span class="sc-chapter-titlepage-number">1</span><span class="sc-chapter-titlepage-label">章</span> <span class="sc-chapter-titlepage-title">はじめに</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(html, expected)
+
+  const prefixlessHtml = md.render('---\n\n# 2章 続き\n\n---\n')
+  const prefixlessExpected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-number">2</span><span class="sc-chapter-titlepage-label">章</span> <span class="sc-chapter-titlepage-title">続き</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(prefixlessHtml, prefixlessExpected)
+
+  const romanHtml = md.render('---\n\n# 第II章 ローマ数字\n\n---\n')
+  const romanExpected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label-prefix">第</span><span class="sc-chapter-titlepage-number">II</span><span class="sc-chapter-titlepage-label">章</span> <span class="sc-chapter-titlepage-title">ローマ数字</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(romanHtml, romanExpected)
+
+  const unicodeRomanHtml = md.render('---\n\n# 第Ⅱ章 ローマ数字\n\n---\n')
+  const unicodeRomanExpected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label-prefix">第</span><span class="sc-chapter-titlepage-number">Ⅱ</span><span class="sc-chapter-titlepage-label">章</span> <span class="sc-chapter-titlepage-title">ローマ数字</span></h1>\n'
+    + '</div>\n'
+  assert.strictEqual(unicodeRomanHtml, unicodeRomanExpected)
+})
+
+pass = runDirectTest('titlepage inference wraps English and Japanese part h1 parts', pass, () => {
+  const englishHtml = md.render('---\n\n# Part 2. A Part\n\n---\n')
+  const japaneseHtml = md.render('---\n\n# 第2部 扉タイトル\n\n---\n')
+  assert.strictEqual(
+    englishHtml,
+    '<div class="sc-part-titlepage">\n'
+      + '<h1><span class="sc-part-titlepage-label">Part</span> <span class="sc-part-titlepage-number">2</span><span class="sc-part-titlepage-label-joint">.</span> <span class="sc-part-titlepage-title">A Part</span></h1>\n'
+      + '</div>\n'
+  )
+  assert.strictEqual(
+    japaneseHtml,
+    '<div class="sc-part-titlepage">\n'
+      + '<h1><span class="sc-part-titlepage-label-prefix">第</span><span class="sc-part-titlepage-number">2</span><span class="sc-part-titlepage-label">部</span> <span class="sc-part-titlepage-title">扉タイトル</span></h1>\n'
+      + '</div>\n'
+  )
+})
+
+pass = runDirectTest('titlepage inference wraps English and Japanese appendix h1 parts', pass, () => {
+  const englishHtml = md.render('---\n\n# Appendix A. Reference Data\n\n---\n')
+  const japaneseHtml = md.render('---\n\n# 付録A 参考データ\n\n---\n')
+  const japaneseAttachedHtml = md.render('---\n\n# 付属A 参考データ\n\n---\n')
+  assert.strictEqual(
+    englishHtml,
+    '<div class="sc-appendix-titlepage">\n'
+      + '<h1><span class="sc-appendix-titlepage-label">Appendix</span> <span class="sc-appendix-titlepage-number">A</span><span class="sc-appendix-titlepage-label-joint">.</span> <span class="sc-appendix-titlepage-title">Reference Data</span></h1>\n'
+      + '</div>\n'
+  )
+  assert.strictEqual(
+    japaneseHtml,
+    '<div class="sc-appendix-titlepage">\n'
+      + '<h1><span class="sc-appendix-titlepage-label">付録</span><span class="sc-appendix-titlepage-number">A</span> <span class="sc-appendix-titlepage-title">参考データ</span></h1>\n'
+      + '</div>\n'
+  )
+  assert.strictEqual(
+    japaneseAttachedHtml,
+    '<div class="sc-appendix-titlepage">\n'
+      + '<h1><span class="sc-appendix-titlepage-label">付属</span><span class="sc-appendix-titlepage-number">A</span> <span class="sc-appendix-titlepage-title">参考データ</span></h1>\n'
+      + '</div>\n'
+  )
+})
+
+pass = runDirectTest('titlepage inference does not infer non-h1 or non-hr titlepages', pass, () => {
+  const h3Markdown = '---\n\n### Column: Side story\n\n---\n'
+  const noHrMarkdown = '# Chapter 2. Not a titlepage\n\nBody.\n'
+  const noNumberTitleMarkdown = '---\n\n# Chapter Opening\n\n---\n'
+  const noNumberChapterMarkdown = '---\n\n# Chapter\n\n---\n'
+  const noNumberPartMarkdown = '---\n\n# Part\n\n---\n'
+  const noNumberAppendixMarkdown = '---\n\n# Appendix\n\n---\n'
+  const englishPrologueMarkdown = '---\n\n# Prologue\n\n---\n'
+  const englishEpilogueMarkdown = '---\n\n# Epilogue\n\n---\n'
+  const namedPrologueMarkdown = '---\n\n# プロローグ\n\n---\n'
+  const namedEpilogueMarkdown = '---\n\n# エピローグ\n\n---\n'
+  assert.strictEqual(md.render(h3Markdown).includes('titlepage'), false)
+  assert.strictEqual(md.render(noHrMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(noNumberTitleMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(noNumberChapterMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(noNumberPartMarkdown).includes('sc-part-titlepage'), false)
+  assert.strictEqual(md.render(noNumberAppendixMarkdown).includes('sc-appendix-titlepage'), false)
+  assert.strictEqual(md.render(englishPrologueMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(englishEpilogueMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(namedPrologueMarkdown).includes('sc-chapter-titlepage'), false)
+  assert.strictEqual(md.render(namedEpilogueMarkdown).includes('sc-chapter-titlepage'), false)
+})
+
+pass = runDirectTest('frontmatter sc.titlepage wraps first h1 to next h2 without hr', pass, () => {
+  const markdown = '# Chapter 1. A Title\n\nOpening text.\n\n## 1.1 A Heading\n\nBody.\n'
+  const env = { frontmatter: { 'sc.titlepage': true } }
+  const html = md.render(markdown, env)
+  const expected = '<div class="sc-chapter-titlepage">\n'
+    + '<h1><span class="sc-chapter-titlepage-label">Chapter</span> <span class="sc-chapter-titlepage-number">1</span><span class="sc-chapter-titlepage-label-joint">.</span> <span class="sc-chapter-titlepage-title">A Title</span></h1>\n'
+    + '<p>Opening text.</p>\n'
+    + '</div>\n'
+    + '<h2>1.1 A Heading</h2>\n'
+    + '<p>Body.</p>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('frontmatter sc.titlepage and nested sc.titlepage are accepted', pass, () => {
+  const markdown = '# 第1章 はじめに\n\nLead.\n\n## 1.1\n'
+  assert.strictEqual(md.render(markdown, { frontmatter: { 'sc.titlepage': true } }).startsWith('<div class="sc-chapter-titlepage">'), true)
+  assert.strictEqual(md.render(markdown, { frontmatter: { sc: { titlepage: true } } }).startsWith('<div class="sc-chapter-titlepage">'), true)
+  assert.strictEqual(md.render(markdown, { semanticContainerSc: { titlepage: true } }).startsWith('<div class="sc-chapter-titlepage">'), true)
+})
+
+pass = runDirectTest('frontmatter titlepage false does not wrap no-hr h1', pass, () => {
+  const markdown = '# Chapter 2. Not a titlepage\n\nBody.\n'
+  assert.strictEqual(md.render(markdown, { frontmatter: { 'sc.titlepage': false } }).includes('sc-chapter-titlepage'), false)
+})
+
+pass = runDirectTest('legacy headingTitlepageContainer option does not disable frontmatter titlepage control', pass, () => {
+  const markdown = '# Chapter 2. A Title\n\nLead.\n\n## 2.1\n'
+  const mdRemovedOption = mdit().use(mditSemanticContainer, { headingTitlepageContainer: false })
+  assert.strictEqual(mdRemovedOption.render(markdown, { frontmatter: { 'sc.titlepage': true } }).startsWith('<div class="sc-chapter-titlepage">'), true)
+})
+
+pass = runDirectTest('frontmatter sc-titlepage is not a supported titlepage control', pass, () => {
+  const markdown = '# Chapter 1. A Title\n\nLead.\n\n## 1.1\n'
+  assert.strictEqual(md.render(markdown, { frontmatter: { 'sc-titlepage': true } }).includes('sc-chapter-titlepage'), false)
+})
+
+pass = runDirectTest('frontmatter sc.titlepage does not warn as unknown semantic', pass, () => {
+  const env = { frontmatter: { sc: { titlepage: true, notice: 'お知らせ' } } }
+  md.render('# Chapter 1. A Title\n\n---\n\nお知らせ：本文。\n\n---\n', env)
+  assert.strictEqual(Array.isArray(env.semanticContainerWarnings), false)
+})
 
 pass = runDirectTest('sc alias standard', pass, () => {
   const env = { semanticContainerSc: { notice: 'お知らせ' } }
@@ -567,10 +743,21 @@ pass = runDirectTest('sc alias via markdown-it-front-matter (md.frontmatter.sc)'
   assert.strictEqual(html.includes('特別通知'), true)
 })
 
+pass = runDirectTest('frontmatter titlepage via markdown-it-front-matter dotted one-line key', pass, () => {
+  const dottedTitlepageHtml = mdFrontMatterSc.render('---\nsc.titlepage: true\n---\n\n# Part 1. A Part\n\nLead.\n\n## 1.1\n')
+  assert.strictEqual(dottedTitlepageHtml.includes('<div class="sc-part-titlepage">'), true)
+})
+
 pass = runDirectTest('markdown-it-front-matter md.frontmatter.sc does not leak to next render', pass, () => {
   mdFrontMatterSc.render('---\nsc:\n  notice: "特別通知"\n---\n\n---\n\n特別通知：本文。\n\n---\n')
   const html = mdFrontMatterSc.render('---\n\n特別通知：本文。\n\n---\n')
   assert.strictEqual(html.includes('<section class="sc-notice"'), false)
+})
+
+pass = runDirectTest('markdown-it-front-matter titlepage control does not leak to next render', pass, () => {
+  mdFrontMatterSc.render('---\nsc.titlepage: true\n---\n\n# Chapter 1. A Title\n\nLead.\n')
+  const html = mdFrontMatterSc.render('# Chapter 2. Body Heading\n\nBody.\n')
+  assert.strictEqual(html.includes('sc-chapter-titlepage'), false)
 })
 
 pass = runDirectTest('sc alias via markdown-it-front-matter (md.meta.sc)', pass, () => {
@@ -811,4 +998,8 @@ pass = runDirectTest('github container html_block maps are present', pass, () =>
   assert.strictEqual(close.map[0] <= close.map[1], true)
 })
 
-if (pass) console.log('Passed all test.')
+if (pass) {
+  console.log('Passed all test.')
+} else {
+  process.exitCode = 1
+}

@@ -19,7 +19,8 @@ Update this file in the same change set when you change any of these behavior co
 1) **Options & data**
    - Options: `requireHrAtOneParagraph`, `headingSectionContainer`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
    - Option normalization is intentionally tolerant: unknown options are ignored, invalid enum-like values fall back to safe defaults, and dependent options are disabled when their parent feature flag is off.
-   - Per-render SC input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
+   - Per-render SC alias/hide input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
+   - Per-render titlepage control sources (priority): `state.env.semanticContainerSc.titlepage` -> `state.env.frontmatter["sc.titlepage"]` / `state.env.frontmatter.sc.titlepage` -> corresponding `env.meta`, `md.frontmatter`, and `md.meta` keys. `sc.titlepage` is reserved control data, not a semantic alias entry.
    - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
    - Semantics are built via `buildSemantics(languages)` (see `src/semantics.js`), then regexes are generated once per init.
 
@@ -31,6 +32,7 @@ Update this file in the same change set when you change any of these behavior co
    - `resolveContainerRangeEnd(...)` / `resolveHeadingSectionRangeEnd(...)` (in `src/container-range.js`): shared range-end resolvers for standard/bracket detection; the first handles hr-close and paragraph-only standalone contracts, while the second resolves heading-scoped standalone sections using heading rank + token nesting level.
    - `createContainerStartToken(...)` / `createContainerEndToken(...)` (in `src/container-token.js`): shared HTML container start/end token generation for standard, bracket, and GitHub paths.
    - `createWrappedLabelTokens(...)` / `createBracketWrappedLabelTokens(...)` (in `src/label-token-builder.js`): shared inline label token builders reused by bracket/GitHub appliers.
+   - `createHeadingTitlepageMatcher(...)` / `createFrontmatterTitlepageFinder(...)` / `setHeadingTitlepageContainer(...)` (in `src/heading-titlepage.js`): matcher/applier for `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage` h1 opening pages, including token-level span parts for label, number, joint, and title text. Hr-sandwich matching is candidate-only; frontmatter titlepage matching is first-content-heading-only.
    - `createLabelMatcher(...)`: checks the next inline token for a semantic label and finds the container end (hr or paragraph close); includes a cheap leading-char guard to avoid regex work on non-candidates.
    - `createActiveCheck(...)`: delegates to GitHub alert check, then bracket check, then the core checker, with an early token-type gate for non paragraph/heading targets.
    - `createContainerRangeChecker(...)`: walks forward to find continued containers.
@@ -68,6 +70,8 @@ Update this file in the same change set when you change any of these behavior co
      - With `labelControlInlineFallback`, trailing inline `{label=...}` can be consumed safely even without `markdown-it-attrs`.
      - Empty/whitespace `label` values are treated as hide-label directives in all three paths.
    - `headingSectionContainer: true` allows semantic headings to open a no-`hr` section that continues through smaller headings and closes before the next same-level/higher-level heading or before leaving the parent token structure.
+   - Titlepage inference is built in. It allows an hr-sandwiched `h1` such as `Chapter 1. Title`, `Chapter A. Title`, `Appendix A. Reference Data`, `Part 1. Title`, `第1章 はじめに`, `第II章 ローマ数字`, `付録A 参考データ`, `付属A 参考データ`, or `第1部 扉タイトル` to become `chapter-titlepage`/`appendix-titlepage`/`part-titlepage`. It is not a standalone heading-section mode; hr detection is intentionally limited to block-collected hr candidates.
+   - Parsed frontmatter can set `sc.titlepage: true` or `sc: { titlepage: true }` to wrap from the first content `h1` to before the first `h2` or next `h1` without an opening body `hr`. Top-level `titlepage: true` and hyphenated `sc-titlepage: true` are intentionally not recognized.
    - `semanticContainerSc` default hide flags are applied in standard/bracket/GitHub appliers; inline `label` (when `labelControl` is enabled) takes precedence.
 
 4) **Initialization**
@@ -78,6 +82,7 @@ Update this file in the same change set when you change any of these behavior co
    - Locale data: `semantics/en.json` (canonical entries with tags/attrs/aliases), `semantics/ja.json` (label map). Additional locales can be added similarly and passed via `languages`.
    - Semantic catalog documentation is generated from `semantics/*.json` plus documentation copy in `docs/generate-semantic-catalog.js`; run `npm run docs:semantic-catalog` when canonical semantics, default tags/attrs, or important alias policy changes.
    - This plugin handles semantics that wrap content as `section`, `aside`, or `div`. HTML tag selection follows native HTML semantics first: use `section` for standalone document sections, `aside` for tangential/sidebar-like material, and `div` only when a stronger sectioning element would overstate the structure (`question`). This plugin does not include `example` as a built-in semantic; figure-like examples and figure-specific `role="doc-example"` output are intentionally delegated to figure/caption tooling such as `p7d-markdown-it-figure-with-p-caption`.
+   - `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage` use `div` by default because they represent page-like opening material inside a chapter/appendix-or-attachment/part structure rather than standalone sectioning content.
    - The default `role="doc-*"` attributes prioritize DPUB-ARIA close matches. If a semantic label has no close DPUB-ARIA role, keep the `sc-*` class and do not emit a default `role` rather than forcing a broad document role. `glossary` is included as a close DPUB-ARIA role match (`doc-glossary`); workflow-oriented semantics such as `requirements`, `procedure`, `resources`, `explanation`, `limitations`, `decision`, `troubleshooting`, `prerequisites`, `next-steps`, `minutes`, `learning-objectives`, and `rubric` do not emit default `role` attributes.
    - `epub:type` is not emitted by default; EPUB structural vocabulary is reference material for future EPUB-specific output only.
 
@@ -86,6 +91,8 @@ Performance considerations:
 - Hot paths avoid extra allocations and repeated scans; the walker uses a Set for checked positions.
 - Non-hr standalone detection for heading/paragraph/blockquote paths is centralized in one helper, reducing duplicated branch logic and keeping skip guards consistent across edge/non-edge positions.
 - Heading-section standalone ranges are closed from parser-derived heading tokens and `token.level`, avoiding raw-source section scans and preventing the section from escaping parent list/blockquote structure.
+- Heading-titlepage hr-sandwich matching only runs inside hr-candidate planning; non-hr headings do not pay the regex cost unless frontmatter titlepage control is present.
+- Frontmatter titlepage matching runs after planned hr/GitHub edits, so its range is resolved against the current token stream and does not stale-shift around nested planned edits.
 - Per-render env reset is done once in core (`semantic_container_prepare_env`), then block collectors only append matched candidates; this avoids stale candidate leakage when `env` is reused and removes per-line init checks.
 - Candidate gating is based on hr-sandwich structure only (not semantic name matching), so it can be applied safely before semantic regex checks across standard/bracket/github enabled renders.
 - Hr candidates are applied before the general walker in both require/non-require modes; the walker skips applied candidate-start paragraphs and heading tokens so hr-delimited heading sections are not re-applied by standalone heading-section checks.
@@ -112,5 +119,6 @@ Testing notes:
 - Direct semantic catalog tests lock DPUB-ARIA close-match roles, no-default-role fallbacks, canonical-name class output, narrowed alias behavior, and technical/office/school label coverage in English and Japanese.
 - Direct tests include block candidate collection/reset checks to lock per-render env behavior.
 - Direct tests include non-requireHr candidate re-apply skip checks and headingSectionContainer hr-delimited double-apply regression coverage.
+- Direct tests include built-in titlepage inference, ignored legacy titlepage option behavior, English/Japanese chapter/appendix/part span output, non-h1/non-hr non-conversion behavior, and frontmatter titlepage control aliases.
 - Fixture coverage includes heading-section boundary checks for same/higher heading closure, nested smaller headings, and structural exits from blockquotes/lists.
 - Local preflight checks are `npm test` and `npm run labels:audit:strict`; use `performance:ab` when parser phases, hot paths, or rule ordering change.
