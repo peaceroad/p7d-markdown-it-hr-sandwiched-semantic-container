@@ -41,7 +41,7 @@ const createContainerStartToken = (state, sem, displayLabel, hideLabel, fallback
     }
   }
 
-  if (hideLabel && !hasAriaLabel) {
+  if (hideLabel && !hasAriaLabel && sem.tag !== 'div') {
     content += ' aria-label="' + escapeHtmlForAttr(state, fallbackAriaLabel) + '"'
   }
 

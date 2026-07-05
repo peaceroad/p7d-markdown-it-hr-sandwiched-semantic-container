@@ -97,7 +97,8 @@ const EN_OVERVIEWS = {
   "next-steps": "Use for follow-up actions or forward-looking next-step sections.",
   "prerequisites": "Use for prerequisite knowledge, setup, or preconditions.",
   "rubric": "Use for grading rubrics or evaluation criteria.",
-  "troubleshooting": "Use for troubleshooting and diagnostic help sections."
+  "troubleshooting": "Use for troubleshooting and diagnostic help sections.",
+  "updates": "Use for update notes, revision history, or change-history sections."
 }
 
 const JA_OVERVIEWS = {
@@ -119,7 +120,7 @@ const JA_OVERVIEWS = {
   "endnotes": "後注、章末注、巻末注に使います。",
   "epigraph": "題辞・題句・題言に使います。",
   "epilogue": "エピローグ・終章に使います。",
-  "errata": "正誤表に使います。",
+  "errata": "正誤表や訂正に使います。",
   "first-published": "初出情報に使います。",
   "foreword": "刊行・発行に寄せた前置きに使います。",
   "glossary": "用語集・用語一覧に使います。",
@@ -190,14 +191,16 @@ const JA_OVERVIEWS = {
   "next-steps": "次のステップや今後の対応を示す部分に使います。",
   "prerequisites": "前提条件や事前準備を示す部分に使います。",
   "rubric": "評価基準・採点基準を示す部分に使います。",
-  "troubleshooting": "トラブルシューティングや困ったときの案内に使います。"
+  "troubleshooting": "トラブルシューティングや困ったときの案内に使います。",
+  "updates": "更新、更新履歴、改訂履歴に使います。"
 }
 
 const EN_NOTES = {
   "bibliography": "Plural `References` maps here; singular `Reference` remains `reference`.",
-  "appendix-titlepage": "No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
-  "chapter-titlepage": "No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "appendix-titlepage": "No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role=\"group\"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "chapter-titlepage": "No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role=\"group\"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
   "glossary": "Has a close DPUB-ARIA match and emits `doc-glossary`.",
+  "errata": "Has a close DPUB-ARIA match and emits `doc-errata`. Use for corrections after publication; use `updates` for general update or revision-history notes.",
   "note": "No default `role` is emitted. Kept as a section-level document block because many notes are part of the main flow, not tangential asides. Use `notice`, `warning`, `caution`, `important`, or `danger` for notice-like alerts.",
   "caution": "Use for preventable mistakes or care-needed points. Use `warning` or `danger` when the risk is stronger.",
   "warning": "Use for stronger warnings. Use `danger` only for the strongest hazard wording.",
@@ -212,22 +215,24 @@ const EN_NOTES = {
   "check": "No default `role` is emitted because a checklist is a workflow section, not a DPUB notice by default.",
   "limitations": "No default `role` is emitted; this is a practical technical-document section rather than a DPUB structural role.",
   "procedure": "No default `role` is emitted; use for how-to steps rather than requirements or resources.",
-  "requirements": "No default `role` is emitted; use `procedure` for steps and `limitations` for restrictions.",
+  "requirements": "No default `role` is emitted; use `procedure` for steps and `limitations` for restrictions. System, hardware, and software requirements map here.",
   "resources": "Use `bibliography` for formal citations and `related-link` for link-only see-also lists.",
   "task": "Includes school assignments and office action items.",
   "reference": "Japanese bare `参考` is intentionally not a built-in alias because it is broad; use `参考資料` when you mean reference material.",
   "related-link": "Use `bibliography` for formal references lists; use this for navigational links.",
   "next-steps": "Use `task` for specific assignments or action items, and `planning` for plans.",
-  "part-titlepage": "No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
+  "part-titlepage": "No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role=\"group\"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.",
   "planning": "Use `proposal` when the section is an offer or project proposal for approval.",
-  "proposal": "Japanese `企画案` maps here, but bare `企画` remains unregistered because it can mean planning more broadly."
+  "proposal": "Japanese `企画案` maps here, but bare `企画` remains unregistered because it can mean planning more broadly.",
+  "updates": "No default `role` is emitted. Use for general update notes or revision history; use `postscript` for added after-notes and `errata` for corrections."
 }
 
 const JA_NOTES = {
   "bibliography": "文献一覧・文献表はここです。単なる参考資料は`reference`や`resources`と使い分けます。",
-  "appendix-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
-  "chapter-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
+  "appendix-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=\"\"`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role=\"group\"`などのrole付きwrapperを明示してください。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
+  "chapter-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=\"\"`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role=\"group\"`などのrole付きwrapperを明示してください。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
   "glossary": "DPUB-ARIAに近いroleがあり、`doc-glossary`を出します。",
+  "errata": "DPUB-ARIAに近いroleがあり、`doc-errata`を出します。公開後の訂正に使い、一般的な更新や改訂履歴は`updates`を使います。",
   "note": "中立的な注です。本文の流れに含まれる注も多いため、補足的な`aside`ではなくsection相当の文書ブロックとして扱います。警告・注意・重要事項は`warning`/`caution`/`important`を使います。",
   "caution": "避けるべきミスや注意点に使います。より強い危険性がある場合は`warning`または`danger`を使います。",
   "warning": "注意より強い警告に使います。最上位の危険表示だけ`danger`を使います。",
@@ -241,7 +246,7 @@ const JA_NOTES = {
   "check": "チェックリストは業務・技術文書の作業用セクションなので、既定の`role`属性は出力しません。",
   "limitations": "技術文書では重要ですが、DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。",
   "procedure": "`requirements`/`要件`や`resources`/`資料`とは分け、実際の手順に使います。",
-  "requirements": "要件や条件に使います。手順は`procedure`、制約は`limitations`に分けます。",
+  "requirements": "要件や条件に使います。動作環境・推奨環境もここです。手順は`procedure`、制約は`limitations`に分けます。",
   "resources": "資料・教材に使います。正式な参考文献は`bibliography`、リンク集は`related-link`です。",
   "lesson": "`教訓`は学習単元よりも強い意味になりやすいため既定aliasにはしません。",
   "issue": "`検討課題`は会議の議題にも見えますが、内容としては検討すべき論点・懸案に近いため`issue`に寄せます。",
@@ -249,9 +254,10 @@ const JA_NOTES = {
   "reference": "`参考`単独は広いため既定aliasにはしません。参考資料として明示する場合は`参考資料`を使います。",
   "related-link": "リンク集としての関連リンク・参考リンクに使います。正式な文献一覧は`bibliography`です。",
   "next-steps": "具体的な作業項目は`task`、計画そのものは`planning`を使います。",
-  "part-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
+  "part-titlepage": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=\"\"`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role=\"group\"`などのrole付きwrapperを明示してください。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。",
   "planning": "承認を求める企画案・提案書は`proposal`を使います。",
-  "proposal": "`企画案`はproposalとして認識しますが、裸の`企画`はplanningとの境界が曖昧なため未登録です。"
+  "proposal": "`企画案`はproposalとして認識しますが、裸の`企画`はplanningとの境界が曖昧なため未登録です。",
+  "updates": "DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。一般的な更新や改訂履歴に使います。追記は`postscript`、訂正は`errata`と分けます。"
 }
 
 const CATEGORIES = [
@@ -347,7 +353,8 @@ const CATEGORIES = [
       "requirements",
       "resources",
       "task",
-      "troubleshooting"
+      "troubleshooting",
+      "updates"
     ]
   },
   {
@@ -456,7 +463,7 @@ const renderEnglish = (semantics, ja) => [
   '- The package emits stable `sc-*` classes for all semantics.',
   '- This plugin handles semantics that wrap content as `section`, `aside`, or `div`.',
   '- Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`; no plugin option is required for that control.',
-  '- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`.',
+  '- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`, and hidden labels on roleless `div` titlepages do not add an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role=\"group\"` in that workflow.',
   '- `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are not inferred as h1 titlepages by default. Use explicit semantic labels for those DPUB section semantics, or handle whole-document wrapping in EPUB-level tooling.',
   '- Figure-like examples are intentionally delegated to figure/caption plugins such as `p7d-markdown-it-figure-with-p-caption`.',
   '- `role="doc-*"` is emitted only for close DPUB-ARIA matches.',
@@ -474,6 +481,7 @@ const renderEnglish = (semantics, ja) => [
   '- `caution` vs `warning` vs `danger`: `caution` is for care-needed points or preventable trouble. `warning` is stronger. `danger` is reserved for the strongest hazard level.',
   '- `requirements` vs `prerequisites` vs `procedure` vs `limitations`: `requirements` are conditions to satisfy. `prerequisites` are preconditions before starting. `procedure` is how to do something. `limitations` are restrictions or constraints.',
   '- `agenda` vs `issue`: `agenda` is the list of meeting or class topics. `issue` is a point to discuss, dispute, or resolve.',
+  '- `postscript` vs `errata` vs `updates`: `postscript` is an added after-note. `errata` is corrections after publication and emits `doc-errata`. `updates` is general update notes or revision history and emits no default role.',
   '- `minutes` vs `agenda` vs `decision`: `agenda` is the plan for a meeting. `minutes` is the record of a meeting. `decision` is a decision item.',
   '- `planning` vs `proposal`: `planning` describes plans, schedules, or intended courses of action. `proposal` is a suggested plan or project submitted for consideration or approval.',
   '- `learning-objectives` vs `rubric` vs `assessments`: `learning-objectives` states goals. `rubric` states evaluation criteria. `assessments` contains tests or grading sections.',
@@ -501,7 +509,7 @@ const renderJapanese = (semantics, ja) => [
   '- すべてのsemanticで安定した`sc-*` classを出力します。',
   '- このプラグインは、`section`、`aside`、`div`としてラップするsemanticを扱います。',
   '- 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、追加オプションなしで本文側の開始`hr`なしにファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。',
-  '- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。',
+  '- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。非表示にしてもroleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role=\"group\"`などのrole付きwrapperを明示します。',
   '- `Prologue`、`Epilogue`、`Introduction`、`Conclusion`、`序章`、`終章`、`プロローグ`、`エピローグ`は、既定ではh1 titlepageとして推定しません。これらのDPUB section semanticは明示ラベルで使うか、文書全体のラップをEPUB処理ツール側で扱います。',
   '- figure的な例示は、`p7d-markdown-it-figure-with-p-caption`などのfigure/caption系プラグインに委譲します。',
   '- `role="doc-*"`はDPUB-ARIAに近い対応がある場合だけ出力します。',
@@ -521,6 +529,7 @@ const renderJapanese = (semantics, ja) => [
   '- `caution`、`warning`、`danger`: `caution`は注意点や避けるべきミス、`warning`はそれより強い警告、`danger`は最も強い危険表示です。',
   '- `requirements`、`prerequisites`、`procedure`、`limitations`: `requirements`は満たすべき条件、`prerequisites`は始める前の前提、`procedure`は手順、`limitations`は制限や制約です。',
   '- `agenda`と`issue`: `agenda`は会議や授業の議題一覧です。`issue`は検討・解決すべき論点や懸案です。',
+  '- `postscript`、`errata`、`updates`: `postscript`は後から加える追記、`errata`は公開後の訂正で`doc-errata`を出します。`updates`は一般的な更新・改訂履歴で、既定のroleは出力しません。',
   '- `minutes`、`agenda`、`decision`: `agenda`は会議前の議題、`minutes`は会議記録、`decision`は決定事項です。',
   '- `planning`と`proposal`: `planning`は計画・予定・段取りです。`proposal`は検討や承認を求める提案・企画案です。',
   '- `learning-objectives`、`rubric`、`assessments`: `learning-objectives`は学習目標、`rubric`は評価基準、`assessments`は試験・評価セクションです。',

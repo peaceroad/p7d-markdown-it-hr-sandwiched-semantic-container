@@ -110,7 +110,7 @@ editor-note (editornote,editor('s)? note,editors note,編注,編集注,編集者
 endnotes (後注,章末注,巻末注)
 epigraph (題辞,題句,題言)
 epilogue (エピローグ,終幕,終章)
-errata (正誤表)
+errata (correction,corrections,corrigenda,正誤表,(([0-9]+年)?[0-9]+月[0-9]+日)?訂正)
 event (イベント(情報|案内)?,行事(情報|案内)?,催し物(情報|案内)?,出来事)
 explanation (explanations,解説)
 faq (ＦＡＱ,よくある(質問|問い合わせ))
@@ -124,7 +124,7 @@ information (info,案内,(参考)?情報,インフォメーション)
 index (索引)
 interview (インタビュー)
 introduction (序論,序説,はじめに,始めに)
-issue (issues,問題点,争点,論点,イシュー,検討課題,懸案事項)
+issue (issues,known issue,known issues,問題点,争点,論点,イシュー,検討課題,懸案事項,既知の問題,既知の問題点)
 keywords (キーワード,手がかり(語)?)
 lead (lede,リード(文)?,導入(文)?)
 lesson (lessons,learning unit,learning units,レッスン,単元)
@@ -159,7 +159,7 @@ related-article (related article,related articles,関連(した)?記事)
 related-link (related link,related links,see also,further reading,関連(した)?リンク,参考リンク)
 related (relation,関連,関連情報,関連資料)
 recommendation (recommend,recommended,勧告,勧め,おすすめ,お勧め,推薦,推奨,リコメンド)
-requirements (requirement,system requirements,要件,必要条件,動作要件,システム要件)
+requirements (requirement,system requirements,hardware requirements,software requirements,要件,必要条件,動作要件,システム要件,動作環境,推奨環境)
 resources (resource,materials,資料,教材)
 rubric (grading rubric,評価基準,採点基準,ルーブリック)
 supplement (supplements,補足(情報)?,補遺)
@@ -171,6 +171,7 @@ tip (tips,コツ,秘訣,助言,アドバイス,豆知識)
 troubleshooting (トラブルシューティング,困ったときは)
 toc (table of contents,contents,目次,もくじ)
 topic (トピック,話題)
+updates (revision history,change history,(([0-9]+年)?[0-9]+月[0-9]+日)?更新,更新履歴,改訂履歴)
 warning (warn,warnings,警告,警告事項)
 
 ```
@@ -539,6 +540,7 @@ The canonical semantic name, output tag, and default attributes come from [`sema
 For example, a semantic may render as `<section class="sc-notice" role="doc-notice">` or `<aside class="sc-column">`.
 DPUB-ARIA roles are emitted only for close matches; otherwise the semantic class remains the styling and integration contract.
 When a label is hidden by `labelControl` or `semanticContainerSc`, the container receives an `aria-label` fallback when the semantic does not already define one.
+Roleless `div` containers are the exception: they keep only the `sc-*` class because generic containers should not be named with `aria-label`.
 
 ## Option
 
@@ -546,6 +548,8 @@ When a label is hidden by `labelControl` or `semanticContainerSc`, the container
 | --- | --- | --- |
 | `languages` | `["ja"]` | Adds locale-specific recognition labels on top of English. |
 | `requireHrAtOneParagraph` | `false` | Requires horizontal rules for one-paragraph containers. |
+| `requireHeadingLabelJoint` | `false` | Requires `:` / `：` / similar joints for hr-sandwiched heading labels. |
+| `headingLabelWithoutJointDenySemantics` | `[]` | Disables jointless heading-label matching for canonical semantic names. |
 | `headingSectionContainer` | `false` | Allows semantic headings to open heading-scoped containers without `hr`. |
 | `removeJointAtLineEnd` | `false` | Removes the label joint when the label is the whole line. |
 | `allowBracketJoint` | `false` | Enables `[Label] body` / `［Label］body` syntax. |
@@ -630,7 +634,7 @@ Behavior:
 - Non-empty `sc.<semantic>` values extend aliases for semantic detection.
 - `sc.titlepage` controls frontmatter titlepage inference and is not treated as a semantic name.
 - Runtime `sc` aliases are treated as literal strings, not regex patterns. If you need regex-capable aliases, define them in locale data (`semantics/*.json`).
-- `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior.
+- `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior, except for roleless `div` containers.
 - `labelControl` inline `label="..."` takes precedence over `sc` default hide.
 - Alias conflicts are ignored deterministically and warnings are collected in `env.semanticContainerWarnings`.
 
@@ -712,7 +716,7 @@ Notice. A notice body. {label=""}
 
 Notes:
 - `label="..."` replaces only the displayed label text.
-- `label=""` hides the label and sets `aria-label` on the container with the actual keyword written in Markdown.
+- `label=""` hides the label and sets `aria-label` on the container with the actual keyword written in Markdown, except for roleless `div` containers.
 - This applies to standard labels, bracket format (`allowBracketJoint`), and GitHub alert format (`githubTypeContainer`).
 - Strong-label forms are also supported, including both `**Notice**。 body` and `**Notice。** body`.
 - If `labelControl` is disabled (or `label` is not parsed by another plugin), behavior is unchanged.
@@ -774,6 +778,61 @@ A paragraph.
 </aside>
 <p>A paragraph.</p>
 ~~~
+
+### requireHeadingLabelJoint
+
+By default, an `hr`-sandwiched heading can match a semantic label even when the heading has no trailing label joint.
+This keeps the Markdown heading natural without requiring a marker-like `:` or `：` that later needs to be removed from the rendered output.
+
+```md
+---
+
+## 動作環境
+
+本文
+
+---
+```
+
+```html
+<section class="sc-requirements">
+<h2><span class="sc-requirements-label">動作環境</span></h2>
+<p>本文</p>
+</section>
+```
+
+Jointless heading matching is intentionally narrow:
+
+- It only applies inside `hr`-sandwiched containers.
+- It only applies to headings, not paragraphs.
+- The heading text must exactly match a semantic label or alias.
+- Partial headings such as `## 動作環境について` are not matched.
+
+Set `requireHeadingLabelJoint: true` to require the traditional label joint for headings too.
+
+```js
+mdit().use(mditSemanticContainer, { requireHeadingLabelJoint: true })
+```
+
+When this option is enabled, write a heading label with a joint:
+
+```md
+---
+
+## 動作環境：
+
+本文
+
+---
+```
+
+Use `headingLabelWithoutJointDenySemantics` to keep the default behavior but disable jointless heading matching for selected canonical semantic names.
+
+```js
+mdit().use(mditSemanticContainer, {
+  headingLabelWithoutJointDenySemantics: ["summary", "introduction"]
+})
+```
 
 ### allowBracketJoint
 
@@ -966,6 +1025,8 @@ Use their explicit semantic labels when you want those DPUB section semantics; w
 
 Explicit titlepage labels such as `Chapter titlepage.` / `Appendix titlepage.` / `章扉。` / `付録扉。` / `付属扉。` are available for direct label-driven conversion, but they follow the normal semantic-label flow: the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`.
 For ebook title pages, prefer the `h1` titlepage inference above or parsed frontmatter/meta `sc.titlepage: true`, because those routes avoid adding marker-like control text to the Markdown body.
+When an explicit titlepage label is hidden with `label=""`, the roleless `div` container does not receive an `aria-label` fallback; titlepage is treated as a page-like design block unless a separate role-bearing wrapper is introduced by another tool.
+If a workflow needs titlepages to be exposed as accessible named groups, add an explicit role-bearing wrapper such as `role="group"` in that workflow instead of relying on the default roleless `div`.
 
 For files with parsed frontmatter, you can omit the extra opening body `hr` and ask the plugin to wrap from the first content `h1` to before the first `h2` or next `h1`:
 

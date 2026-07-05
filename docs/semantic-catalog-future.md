@@ -13,8 +13,8 @@ because they are common headings in technical documents, office documents, or
 school materials:
 
 - `requirements`
-  - English labels: `Requirements`, `System requirements`
-  - Japanese labels: `要件`, `必要条件`, `動作要件`, `システム要件`
+  - English labels: `Requirements`, `System requirements`, `Hardware requirements`, `Software requirements`
+  - Japanese labels: `要件`, `必要条件`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
   - Default role: none
 - `procedure`
   - English labels: `Procedure`, `Steps`, `Instructions`
@@ -43,6 +43,10 @@ school materials:
 - `troubleshooting`
   - English labels: `Troubleshooting`
   - Japanese labels: `トラブルシューティング`, `困ったときは`
+  - Default role: none
+- `updates`
+  - English labels: `Updates`, `Revision history`, `Change history`
+  - Japanese labels: `更新`, `更新履歴`, `改訂履歴`, date-prefixed `更新`
   - Default role: none
 - `prerequisites`
   - English labels: `Prerequisites`, `Prerequisite`

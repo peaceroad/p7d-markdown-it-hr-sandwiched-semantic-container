@@ -152,6 +152,7 @@ These are intentionally conservative rules for default output:
   - `task`
   - `troubleshooting`
   - `topic`
+  - `updates`
 
 Titlepage inference notes:
 

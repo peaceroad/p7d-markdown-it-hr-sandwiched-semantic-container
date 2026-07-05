@@ -2,7 +2,7 @@ import assert from 'assert'
 
 export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
   pass = runDirectTest('semantic catalog keeps DPUB roles close and neutral otherwise', pass, () => {
-    const markdown = 'Toc. Items.\n\nTip. Helpful.\n\nErrata. Fixes.\n\nNote. Neutral.\n\nPull quote. Repeated.\n'
+    const markdown = 'Toc. Items.\n\nTip. Helpful.\n\nErrata. Fixes.\n\nCorrections. Fixes.\n\n7月4日訂正：修正。\n\nNote. Neutral.\n\nPull quote. Repeated.\n'
     const html = md.render(markdown)
     const expected = '<nav class="sc-toc" role="doc-toc">\n'
       + '<p><span class="sc-toc-label">Toc<span class="sc-toc-label-joint">.</span></span> Items.</p>\n'
@@ -12,6 +12,12 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '</aside>\n'
       + '<section class="sc-errata" role="doc-errata">\n'
       + '<p><span class="sc-errata-label">Errata<span class="sc-errata-label-joint">.</span></span> Fixes.</p>\n'
+      + '</section>\n'
+      + '<section class="sc-errata" role="doc-errata">\n'
+      + '<p><span class="sc-errata-label">Corrections<span class="sc-errata-label-joint">.</span></span> Fixes.</p>\n'
+      + '</section>\n'
+      + '<section class="sc-errata" role="doc-errata">\n'
+      + '<p><span class="sc-errata-label">7月4日訂正<span class="sc-errata-label-joint">：</span></span>修正。</p>\n'
       + '</section>\n'
       + '<section class="sc-note">\n'
       + '<p><span class="sc-note-label">Note<span class="sc-note-label-joint">.</span></span> Neutral.</p>\n'
@@ -178,6 +184,30 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     assert.strictEqual(html.includes('role="doc-explanation"'), false)
     assert.strictEqual(html.includes('role="doc-limitations"'), false)
     assert.strictEqual(html.includes('role="doc-decision"'), false)
+  })
+
+  pass = runDirectTest('technical prefixed issue requirement and update labels stay bounded', pass, () => {
+    const markdown = 'Known issues. Body.\n\nHardware requirements. Body.\n\nSoftware requirements. Body.\n\nUpdates. Body.\n\nRevision history. Body.\n\nChange history. Body.\n\n既知の問題：本文。\n\n既知の問題点：本文。\n\n動作環境：本文。\n\n推奨環境：本文。\n\n更新：本文。\n\n2026年7月4日更新：本文。\n\n更新履歴：本文。\n\n改訂履歴：本文。\n\nKnown problems. Body.\n\n環境：本文。\n'
+    const html = md.render(markdown)
+    assert.ok(html.includes('<span class="sc-issue-label">Known issues'))
+    assert.ok(html.includes('<span class="sc-issue-label">既知の問題'))
+    assert.ok(html.includes('<span class="sc-issue-label">既知の問題点'))
+    assert.ok(html.includes('<span class="sc-requirements-label">Hardware requirements'))
+    assert.ok(html.includes('<span class="sc-requirements-label">Software requirements'))
+    assert.ok(html.includes('<span class="sc-requirements-label">動作環境'))
+    assert.ok(html.includes('<span class="sc-requirements-label">推奨環境'))
+    assert.ok(html.includes('<span class="sc-updates-label">Updates'))
+    assert.ok(html.includes('<span class="sc-updates-label">Revision history'))
+    assert.ok(html.includes('<span class="sc-updates-label">Change history'))
+    assert.ok(html.includes('<span class="sc-updates-label">更新'))
+    assert.ok(html.includes('<span class="sc-updates-label">2026年7月4日更新'))
+    assert.ok(html.includes('<span class="sc-updates-label">更新履歴'))
+    assert.ok(html.includes('<span class="sc-updates-label">改訂履歴'))
+    assert.ok(html.includes('<p>Known problems. Body.</p>'))
+    assert.ok(html.includes('<p>環境：本文。</p>'))
+    assert.strictEqual(html.includes('role="doc-updates"'), false)
+    assert.strictEqual(html.includes('role="doc-requirements"'), false)
+    assert.strictEqual(html.includes('role="doc-issue"'), false)
   })
 
   pass = runDirectTest('0.13 semantic promotions cover technical office and school labels conservatively', pass, () => {

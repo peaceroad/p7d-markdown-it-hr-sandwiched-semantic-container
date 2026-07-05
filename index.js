@@ -505,6 +505,31 @@ const buildSemanticsReg = (semantics) => semantics.map((sem) => {
   return new RegExp(pattern, 'i')
 })
 
+const buildHeadingNoJointSemanticsReg = (semantics) => semantics.map((sem) => {
+  const aliasPatterns = buildSemanticAliasPatterns(sem)
+  const aliasStr = aliasPatterns.length
+    ? '|' + aliasPatterns.join('|')
+    : ''
+  return new RegExp('^((?:' + sem.name + aliasStr + ')' + sNumber + ')$', 'i')
+})
+
+const normalizeSemanticDenySet = (value) => {
+  const list = typeof value === 'string'
+    ? [value]
+    : value instanceof Set
+      ? Array.from(value)
+      : value
+  if (!Array.isArray(list) || list.length === 0) return null
+  const denySet = new Set()
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    if (item === null || item === undefined) continue
+    const name = String(item).trim().toLowerCase()
+    if (name) denySet.add(name)
+  }
+  return denySet.size > 0 ? denySet : null
+}
+
 const createLabelMatcher = (semantics, semanticsReg) => {
   const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
   const parseMatchedSemantic = (sn, actualMatch) => {
@@ -622,6 +647,82 @@ const createLabelMatcher = (semantics, semanticsReg) => {
   }
 
   return { checkStandardLabel, findMatchedSemantic }
+}
+
+const getPlainTextInlineContent = (token) => {
+  const children = token?.children
+  if (!Array.isArray(children) || children.length === 0) return token?.content || ''
+  let content = ''
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if (child?.type !== 'text') return token.content || ''
+    content += child.content || ''
+  }
+  return content
+}
+
+const createHeadingNoJointMatcher = (semantics, headingNoJointReg, denySet) => {
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  const matchCache = new Map()
+  const cacheSet = (key, value) => {
+    if (matchCache.size >= MATCH_CACHE_MAX) {
+      const firstKey = matchCache.keys().next().value
+      matchCache.delete(firstKey)
+    }
+    matchCache.set(key, value)
+  }
+
+  return (state, n) => {
+    const tokens = state.tokens
+    const token = tokens[n]
+    if (token?.type !== 'heading_open') return null
+
+    const nextToken = tokens[n + 1]
+    if (nextToken?.type !== 'inline') return null
+    const content = getPlainTextInlineContent(nextToken)
+    if (!content) return null
+
+    const leadCode = content.charCodeAt(0)
+    if (!leadCode || !isPotentialLabelLeadCode(leadCode)) return null
+    if (leadCode === CODE_LEFT_BRACKET || leadCode === CODE_FULLWIDTH_LEFT_BRACKET) return null
+
+    const cached = matchCache.get(content)
+    if (cached !== undefined) return cached === CACHE_MISS ? null : cached
+
+    const leadKey = content[0].toLowerCase()
+    let candidates = candidatesByLead.get(leadKey)
+    if (!candidates) {
+      if (fallback.length === 0) {
+        cacheSet(content, CACHE_MISS)
+        return null
+      }
+      candidates = fallback
+    }
+
+    for (let ci = 0; ci < candidates.length; ci++) {
+      const sn = candidates[ci]
+      const sem = semantics[sn]
+      if (denySet?.has(sem.name.toLowerCase())) continue
+
+      const matched = content.match(headingNoJointReg[sn])
+      if (!matched) continue
+      const actualName = matched[1]
+      const result = {
+        sn,
+        actualCont: actualName,
+        actualContNoStrong: actualName,
+        actualName,
+        actualNameJoint: '',
+        hasLastJoint: false,
+        hasHalfJoint: false,
+      }
+      cacheSet(content, result)
+      return result
+    }
+
+    cacheSet(content, CACHE_MISS)
+    return null
+  }
 }
 
 const createSemanticFinder = (matchers) => {
@@ -1247,7 +1348,11 @@ const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandi
 
 const createSemanticEngine = (semantics, opt, featureHelpers) => {
   const semanticsReg = buildSemanticsReg(semantics)
+  const headingNoJointReg = opt.requireHeadingLabelJoint ? null : buildHeadingNoJointSemanticsReg(semantics)
   const { checkStandardLabel: semanticLabelMatcher, findMatchedSemantic } = createLabelMatcher(semantics, semanticsReg)
+  const findHeadingNoJointSemantic = headingNoJointReg
+    ? createHeadingNoJointMatcher(semantics, headingNoJointReg, opt.headingLabelWithoutJointDenySemanticSet)
+    : null
   const githubCheck = opt.githubTypeContainer ? featureHelpers.github?.checkGitHubAlertsCore : null
   const bracketCheck = opt.allowBracketJoint ? featureHelpers.bracket?.checkBracketSemanticContainerCore : null
   const activeCheck = createActiveCheck({ githubCheck, bracketCheck, defaultCheck: semanticLabelMatcher })
@@ -1261,6 +1366,7 @@ const createSemanticEngine = (semantics, opt, featureHelpers) => {
   const findHeadingTitlepageSemantic = createHeadingTitlepageMatcher(semantics)
   const findHrSemantic = createSemanticFinder([
     findHeadingTitlepageSemantic,
+    findHeadingNoJointSemantic,
     findMatchedSemantic,
     findBracketSemanticMatch,
   ])
@@ -1316,6 +1422,8 @@ const mditSemanticContainer = (md, option) => {
 
   let opt = {
     requireHrAtOneParagraph: false,
+    requireHeadingLabelJoint: false,
+    headingLabelWithoutJointDenySemantics: [],
     headingSectionContainer: false,
     removeJointAtLineEnd: false,
     allowBracketJoint: false,
@@ -1344,6 +1452,8 @@ const mditSemanticContainer = (md, option) => {
     languages: ['ja'],
   }
   if (option) Object.assign(opt, option)
+  opt.requireHeadingLabelJoint = !!opt.requireHeadingLabelJoint
+  opt.headingLabelWithoutJointDenySemanticSet = normalizeSemanticDenySet(opt.headingLabelWithoutJointDenySemantics)
   opt.headingSectionContainer = !!opt.headingSectionContainer
   if (opt.bracketLabelJointMode !== 'remove' && opt.bracketLabelJointMode !== 'auto') {
     opt.bracketLabelJointMode = 'keep'

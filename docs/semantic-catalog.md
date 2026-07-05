@@ -15,7 +15,7 @@ Japanese version: [semantic-catalog_ja.md](semantic-catalog_ja.md).
 - The package emits stable `sc-*` classes for all semantics.
 - This plugin handles semantics that wrap content as `section`, `aside`, or `div`.
 - Built-in titlepage inference converts conservative numbered, lettered, and Roman-numeral hr-sandwiched `h1` headings into `chapter-titlepage`, `appendix-titlepage`, and `part-titlepage`. Parsed frontmatter can also set `sc.titlepage: true` or nested `sc: { titlepage: true }` to wrap from the first content `h1` without an opening body `hr`; no plugin option is required for that control.
-- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`.
+- Explicit titlepage labels are supported as direct semantic labels, but they are marker-like compared with natural document labels. Prefer `h1` inference or `sc.titlepage: true` for ebook title pages; explicit labels remain visible unless hidden with `labelControl` or `semanticContainerSc`, and hidden labels on roleless `div` titlepages do not add an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role="group"` in that workflow.
 - `Prologue`, `Epilogue`, `Introduction`, `Conclusion`, `序章`, `終章`, `プロローグ`, and `エピローグ` are not inferred as h1 titlepages by default. Use explicit semantic labels for those DPUB section semantics, or handle whole-document wrapping in EPUB-level tooling.
 - Figure-like examples are intentionally delegated to figure/caption plugins such as `p7d-markdown-it-figure-with-p-caption`.
 - `role="doc-*"` is emitted only for close DPUB-ARIA matches.
@@ -33,6 +33,7 @@ This section explains boundaries between easily confused semantics and shows whi
 - `caution` vs `warning` vs `danger`: `caution` is for care-needed points or preventable trouble. `warning` is stronger. `danger` is reserved for the strongest hazard level.
 - `requirements` vs `prerequisites` vs `procedure` vs `limitations`: `requirements` are conditions to satisfy. `prerequisites` are preconditions before starting. `procedure` is how to do something. `limitations` are restrictions or constraints.
 - `agenda` vs `issue`: `agenda` is the list of meeting or class topics. `issue` is a point to discuss, dispute, or resolve.
+- `postscript` vs `errata` vs `updates`: `postscript` is an added after-note. `errata` is corrections after publication and emits `doc-errata`. `updates` is general update notes or revision history and emits no default role.
 - `minutes` vs `agenda` vs `decision`: `agenda` is the plan for a meeting. `minutes` is the record of a meeting. `decision` is a decision item.
 - `planning` vs `proposal`: `planning` describes plans, schedules, or intended courses of action. `proposal` is a suggested plan or project submitted for consideration or approval.
 - `learning-objectives` vs `rubric` vs `assessments`: `learning-objectives` states goals. `rubric` states evaluation criteria. `assessments` contains tests or grading sections.
@@ -61,7 +62,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-appendix-titlepage">`
   - English labels: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
   - Japanese labels: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Appendix titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role="group"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Appendix A. Reference Data`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `author`: Use for author information.
   - Output: `<section class="sc-author">`
   - English labels: `author`
@@ -83,7 +84,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-chapter-titlepage">`
   - English labels: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
   - Japanese labels: `章扉`, `章タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Chapter titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role="group"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Chapter 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `colophon`: Use for colophon/publication-information sections.
   - Output: `<section class="sc-colophon" role="doc-colophon">`
   - English labels: `colophon`
@@ -118,8 +119,9 @@ This section explains boundaries between easily confused semantics and shows whi
   - Japanese labels: `エピローグ`, `終幕`, `終章`
 - `errata`: Use for errata or correction lists.
   - Output: `<section class="sc-errata" role="doc-errata">`
-  - English labels: `errata`
-  - Japanese labels: `正誤表`
+  - English labels: `errata`, `correction`, `corrections`, `corrigenda`
+  - Japanese labels: `正誤表`, `(([0-9]+年)?[0-9]+月[0-9]+日)?訂正`
+  - Notes: Has a close DPUB-ARIA match and emits `doc-errata`. Use for corrections after publication; use `updates` for general update or revision-history notes.
 - `first-published`: Use for first-publication information.
   - Output: `<section class="sc-first-published">`
   - English labels: `first-published`, `first (published|publication)`
@@ -153,7 +155,7 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<div class="sc-part-titlepage">`
   - English labels: `part-titlepage`, `part titlepage`, `part title page`
   - Japanese labels: `部扉`, `部タイトルページ`
-  - Notes: No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
+  - Notes: No default `role` is emitted. Explicit labels such as `Part titlepage.` are available, but they follow the normal semantic-label flow and the label text remains visible unless hidden with `labelControl` or `semanticContainerSc`. When hidden, the roleless `div` does not receive an `aria-label` fallback. If a workflow needs accessible named titlepage groups, add an explicit role-bearing wrapper such as `role="group"` in that workflow. For ebook title pages, prefer hr-sandwiched `h1` inference such as `Part 1. Title`, or parsed frontmatter `sc.titlepage: true` / `sc: { titlepage: true }`.
 - `postscript`: Use for postscripts or dated additions.
   - Output: `<section class="sc-postscript">`
   - English labels: `postscript`
@@ -317,8 +319,8 @@ This section explains boundaries between easily confused semantics and shows whi
   - Japanese labels: `決定事項`, `決定内容`
 - `issue`: Use for issues, points of dispute, or problems to discuss.
   - Output: `<section class="sc-issue">`
-  - English labels: `issue`, `issues`
-  - Japanese labels: `問題点`, `争点`, `論点`, `イシュー`, `検討課題`, `懸案事項`
+  - English labels: `issue`, `issues`, `known issue`, `known issues`
+  - Japanese labels: `問題点`, `争点`, `論点`, `イシュー`, `検討課題`, `懸案事項`, `既知の問題`, `既知の問題点`
 - `limitations`: Use for limitations, constraints, restrictions, or caveats.
   - Output: `<section class="sc-limitations">`
   - English labels: `limitations`, `limitation`, `constraints`, `constraint`, `restrictions`, `restriction`
@@ -340,9 +342,9 @@ This section explains boundaries between easily confused semantics and shows whi
   - Notes: No default `role` is emitted; use for how-to steps rather than requirements or resources.
 - `requirements`: Use for requirements or conditions that must be satisfied.
   - Output: `<section class="sc-requirements">`
-  - English labels: `requirements`, `requirement`, `system requirements`
-  - Japanese labels: `要件`, `必要条件`, `動作要件`, `システム要件`
-  - Notes: No default `role` is emitted; use `procedure` for steps and `limitations` for restrictions.
+  - English labels: `requirements`, `requirement`, `system requirements`, `hardware requirements`, `software requirements`
+  - Japanese labels: `要件`, `必要条件`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
+  - Notes: No default `role` is emitted; use `procedure` for steps and `limitations` for restrictions. System, hardware, and software requirements map here.
 - `resources`: Use for resources, materials, handouts, or supporting assets.
   - Output: `<section class="sc-resources">`
   - English labels: `resources`, `resource`, `materials`
@@ -357,6 +359,11 @@ This section explains boundaries between easily confused semantics and shows whi
   - Output: `<section class="sc-troubleshooting">`
   - English labels: `troubleshooting`
   - Japanese labels: `トラブルシューティング`, `困ったときは`
+- `updates`: Use for update notes, revision history, or change-history sections.
+  - Output: `<section class="sc-updates">`
+  - English labels: `updates`, `revision history`, `change history`
+  - Japanese labels: `(([0-9]+年)?[0-9]+月[0-9]+日)?更新`, `更新履歴`, `改訂履歴`
+  - Notes: No default `role` is emitted. Use for general update notes or revision history; use `postscript` for added after-notes and `errata` for corrections.
 
 ### Editorial, planning, and related material
 

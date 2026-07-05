@@ -27,7 +27,7 @@
   {"name": "endnotes", "aliases": [], "tag": "section", "attrs": [["role", "doc-endnotes"]]},
   {"name": "epigraph", "aliases": [], "tag": "section", "attrs": [["role", "doc-epigraph"]]},
   {"name": "epilogue", "aliases": [], "tag": "section", "attrs": [["role", "doc-epilogue"]]},
-  {"name": "errata", "aliases": [], "tag": "section", "attrs": [["role", "doc-errata"]]},
+  {"name": "errata", "aliases": ["correction", "corrections", "corrigenda"], "tag": "section", "attrs": [["role", "doc-errata"]]},
   {"name": "event", "aliases": [], "tag": "section", "attrs": []},
   {"name": "explanation", "aliases": ["explanations"], "tag": "section", "attrs": []},
   {"name": "faq", "aliases": [], "tag": "section", "attrs": [["role", "doc-qna"]]},
@@ -41,7 +41,7 @@
   {"name": "index", "aliases": [], "tag": "section", "attrs": [["role", "doc-index"]]},
   {"name": "interview", "aliases": [], "tag": "section", "attrs": [["role", "doc-qna"]]},
   {"name": "introduction", "aliases": [], "tag": "section", "attrs": [["role", "doc-introduction"]]},
-  {"name": "issue", "aliases": ["issues"], "tag": "section", "attrs": []},
+  {"name": "issue", "aliases": ["issues", "known issue", "known issues"], "tag": "section", "attrs": []},
   {"name": "keywords", "aliases": [], "tag": "section", "attrs": []},
   {"name": "lead", "aliases": ["lede"], "tag": "section", "attrs": [["aria-label", "NAME"]]},
   {"name": "lesson", "aliases": ["lessons", "learning unit", "learning units"], "tag": "section", "attrs": []},
@@ -76,7 +76,7 @@
   {"name": "related-link", "aliases": ["related link", "related links", "see also", "further reading"], "tag": "aside", "attrs": []},
   {"name": "related", "aliases": ["relation"], "tag": "aside", "attrs": []},
   {"name": "recommendation", "aliases": ["recommend", "recommended"], "tag": "section", "attrs": []},
-  {"name": "requirements", "aliases": ["requirement", "system requirements"], "tag": "section", "attrs": []},
+  {"name": "requirements", "aliases": ["requirement", "system requirements", "hardware requirements", "software requirements"], "tag": "section", "attrs": []},
   {"name": "resources", "aliases": ["resource", "materials"], "tag": "section", "attrs": []},
   {"name": "rubric", "aliases": ["grading rubric"], "tag": "section", "attrs": []},
   {"name": "supplement", "aliases": ["supplements"], "tag": "section", "attrs": []},
@@ -88,5 +88,6 @@
   {"name": "troubleshooting", "aliases": [], "tag": "section", "attrs": []},
   {"name": "toc", "aliases": ["table of contents", "contents"], "tag": "nav", "attrs": [["role", "doc-toc"]]},
   {"name": "topic", "aliases": [], "tag": "section", "attrs": []},
+  {"name": "updates", "aliases": ["revision history", "change history"], "tag": "section", "attrs": []},
   {"name": "warning", "aliases": ["warn", "warnings"], "tag": "section", "attrs": [["role", "doc-notice"]]}
 ]

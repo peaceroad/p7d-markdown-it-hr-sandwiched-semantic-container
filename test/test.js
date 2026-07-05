@@ -24,6 +24,13 @@ const mdJaWithFigure = mdit()
 
 const mdRequireHrAtOneParagraph = mdit().use(mditSemanticContainer, {requireHrAtOneParagraph: true})
 const mdRequireHrAtOneParagraphJa = mdit().use(mditStrongJa).use(mditSemanticContainer, {requireHrAtOneParagraph: true})
+const mdRequireHeadingLabelJoint = mdit().use(mditSemanticContainer, { requireHeadingLabelJoint: true })
+const mdHeadingLabelWithoutJointDenyRequirements = mdit().use(mditSemanticContainer, {
+  headingLabelWithoutJointDenySemantics: ['requirements'],
+})
+const mdHeadingLabelWithoutJointDenyUpdatesString = mdit().use(mditSemanticContainer, {
+  headingLabelWithoutJointDenySemantics: 'updates',
+})
 const mdRequireHrBracket = mdit().use(mditSemanticContainer, {
   requireHrAtOneParagraph: true,
   allowBracketJoint: true,
@@ -535,6 +542,15 @@ pass = runDirectTest('sc hide standard', pass, () => {
   assert.strictEqual(html, expected)
 })
 
+pass = runDirectTest('hidden labels do not add aria-label fallback to roleless div containers', pass, () => {
+  const markdown = '---\n\n章扉： {label=""}\n\n---\n'
+  const html = mdLabelControl.render(markdown)
+  const expected = '<div class="sc-chapter-titlepage">\n'
+    + '<p></p>\n'
+    + '</div>\n'
+  assert.strictEqual(html, expected)
+})
+
 pass = runDirectTest('inline label overrides sc hide', pass, () => {
   const env = { semanticContainerSc: { notice: '' } }
   const markdown = '---\n\nNotice. Body. {label="Custom"}\n\n---\n'
@@ -892,6 +908,59 @@ pass = runDirectTest('semantic core rule falls back to inline anchor when text_j
   assert.strictEqual(semanticIndex > -1, true)
   assert.strictEqual(inlineIndex > -1, true)
   assert.strictEqual(semanticIndex > inlineIndex, true)
+})
+
+pass = runDirectTest('hr-sandwiched headings can match semantic labels without joints by default', pass, () => {
+  const html = md.render('---\n\n## 動作環境\n\n本文\n\n---\n')
+  const expected = '<section class="sc-requirements">\n'
+    + '<h2><span class="sc-requirements-label">動作環境</span></h2>\n'
+    + '<p>本文</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+
+  const partialHtml = md.render('---\n\n## 動作環境について\n\n本文\n\n---\n')
+  assert.strictEqual(partialHtml, '<hr>\n<h2>動作環境について</h2>\n<p>本文</p>\n<hr>\n')
+})
+
+pass = runDirectTest('requireHeadingLabelJoint and deny semantics keep jointless heading matching opt-out paths', pass, () => {
+  const markdown = '---\n\n## 動作環境\n\n本文\n\n---\n'
+  assert.strictEqual(
+    mdRequireHeadingLabelJoint.render(markdown),
+    '<hr>\n<h2>動作環境</h2>\n<p>本文</p>\n<hr>\n'
+  )
+  assert.strictEqual(
+    mdHeadingLabelWithoutJointDenyRequirements.render(markdown),
+    '<hr>\n<h2>動作環境</h2>\n<p>本文</p>\n<hr>\n'
+  )
+  assert.strictEqual(
+    mdHeadingLabelWithoutJointDenyRequirements.render('---\n\n## 更新履歴\n\n本文\n\n---\n'),
+    '<section class="sc-updates">\n'
+      + '<h2><span class="sc-updates-label">更新履歴</span></h2>\n'
+      + '<p>本文</p>\n'
+      + '</section>\n'
+  )
+  assert.strictEqual(
+    mdHeadingLabelWithoutJointDenyUpdatesString.render('---\n\n## 更新履歴\n\n本文\n\n---\n'),
+    '<hr>\n<h2>更新履歴</h2>\n<p>本文</p>\n<hr>\n'
+  )
+  assert.strictEqual(
+    mdRequireHrAtOneParagraph.render(markdown),
+    '<section class="sc-requirements">\n'
+      + '<h2><span class="sc-requirements-label">動作環境</span></h2>\n'
+      + '<p>本文</p>\n'
+      + '</section>\n'
+  )
+  assert.strictEqual(
+    mdHeadingSection.render('## 動作環境\n\n本文\n'),
+    '<h2>動作環境</h2>\n<p>本文</p>\n'
+  )
+  assert.strictEqual(
+    mdLabelControl.render('---\n\n## 動作環境 {label="実行環境"}\n\n本文\n\n---\n'),
+    '<section class="sc-requirements">\n'
+      + '<h2><span class="sc-requirements-label">実行環境</span></h2>\n'
+      + '<p>本文</p>\n'
+      + '</section>\n'
+  )
 })
 
 pass = runDirectTest('duplicate plugin use is ignored without duplicate transforms', pass, () => {

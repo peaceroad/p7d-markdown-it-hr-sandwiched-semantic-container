@@ -15,7 +15,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - すべてのsemanticで安定した`sc-*` classを出力します。
 - このプラグインは、`section`、`aside`、`div`としてラップするsemanticを扱います。
 - 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、追加オプションなしで本文側の開始`hr`なしにファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。
-- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。
+- titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。非表示にしてもroleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示します。
 - `Prologue`、`Epilogue`、`Introduction`、`Conclusion`、`序章`、`終章`、`プロローグ`、`エピローグ`は、既定ではh1 titlepageとして推定しません。これらのDPUB section semanticは明示ラベルで使うか、文書全体のラップをEPUB処理ツール側で扱います。
 - figure的な例示は、`p7d-markdown-it-figure-with-p-caption`などのfigure/caption系プラグインに委譲します。
 - `role="doc-*"`はDPUB-ARIAに近い対応がある場合だけ出力します。
@@ -35,6 +35,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - `caution`、`warning`、`danger`: `caution`は注意点や避けるべきミス、`warning`はそれより強い警告、`danger`は最も強い危険表示です。
 - `requirements`、`prerequisites`、`procedure`、`limitations`: `requirements`は満たすべき条件、`prerequisites`は始める前の前提、`procedure`は手順、`limitations`は制限や制約です。
 - `agenda`と`issue`: `agenda`は会議や授業の議題一覧です。`issue`は検討・解決すべき論点や懸案です。
+- `postscript`、`errata`、`updates`: `postscript`は後から加える追記、`errata`は公開後の訂正で`doc-errata`を出します。`updates`は一般的な更新・改訂履歴で、既定のroleは出力しません。
 - `minutes`、`agenda`、`decision`: `agenda`は会議前の議題、`minutes`は会議記録、`decision`は決定事項です。
 - `planning`と`proposal`: `planning`は計画・予定・段取りです。`proposal`は検討や承認を求める提案・企画案です。
 - `learning-objectives`、`rubric`、`assessments`: `learning-objectives`は学習目標、`rubric`は評価基準、`assessments`は試験・評価セクションです。
@@ -63,7 +64,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-appendix-titlepage">`
   - 英語ラベル: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
   - 日本語ラベル: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=""`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示してください。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `author`: 著者情報に使います。
   - 出力: `<section class="sc-author">`
   - 英語ラベル: `author`
@@ -85,7 +86,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-chapter-titlepage">`
   - 英語ラベル: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
   - 日本語ラベル: `章扉`, `章タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`章扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=""`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示してください。電子書籍の章扉では、`第1章 はじめに`、`第II章 ローマ数字`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `colophon`: 奥付に使います。
   - 出力: `<section class="sc-colophon" role="doc-colophon">`
   - 英語ラベル: `colophon`
@@ -118,10 +119,11 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-epilogue" role="doc-epilogue">`
   - 英語ラベル: `epilogue`
   - 日本語ラベル: `エピローグ`, `終幕`, `終章`
-- `errata`: 正誤表に使います。
+- `errata`: 正誤表や訂正に使います。
   - 出力: `<section class="sc-errata" role="doc-errata">`
-  - 英語ラベル: `errata`
-  - 日本語ラベル: `正誤表`
+  - 英語ラベル: `errata`, `correction`, `corrections`, `corrigenda`
+  - 日本語ラベル: `正誤表`, `(([0-9]+年)?[0-9]+月[0-9]+日)?訂正`
+  - 注意: DPUB-ARIAに近いroleがあり、`doc-errata`を出します。公開後の訂正に使い、一般的な更新や改訂履歴は`updates`を使います。
 - `first-published`: 初出情報に使います。
   - 出力: `<section class="sc-first-published">`
   - 英語ラベル: `first-published`, `first (published|publication)`
@@ -155,7 +157,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<div class="sc-part-titlepage">`
   - 英語ラベル: `part-titlepage`, `part titlepage`, `part title page`
   - 日本語ラベル: `部扉`, `部タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`部扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=""`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示してください。電子書籍の部扉では、`第1部 扉タイトル`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `postscript`: 追記に使います。
   - 出力: `<section class="sc-postscript">`
   - 英語ラベル: `postscript`
@@ -319,8 +321,8 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 日本語ラベル: `決定事項`, `決定内容`
 - `issue`: 問題点、争点、論点、検討課題、懸案事項に使います。
   - 出力: `<section class="sc-issue">`
-  - 英語ラベル: `issue`, `issues`
-  - 日本語ラベル: `問題点`, `争点`, `論点`, `イシュー`, `検討課題`, `懸案事項`
+  - 英語ラベル: `issue`, `issues`, `known issue`, `known issues`
+  - 日本語ラベル: `問題点`, `争点`, `論点`, `イシュー`, `検討課題`, `懸案事項`, `既知の問題`, `既知の問題点`
   - 注意: `検討課題`は会議の議題にも見えますが、内容としては検討すべき論点・懸案に近いため`issue`に寄せます。
 - `limitations`: 制限事項、制約、制約事項に使います。
   - 出力: `<section class="sc-limitations">`
@@ -343,9 +345,9 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 注意: `requirements`/`要件`や`resources`/`資料`とは分け、実際の手順に使います。
 - `requirements`: 要件、必要条件、動作要件、システム要件に使います。
   - 出力: `<section class="sc-requirements">`
-  - 英語ラベル: `requirements`, `requirement`, `system requirements`
-  - 日本語ラベル: `要件`, `必要条件`, `動作要件`, `システム要件`
-  - 注意: 要件や条件に使います。手順は`procedure`、制約は`limitations`に分けます。
+  - 英語ラベル: `requirements`, `requirement`, `system requirements`, `hardware requirements`, `software requirements`
+  - 日本語ラベル: `要件`, `必要条件`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
+  - 注意: 要件や条件に使います。動作環境・推奨環境もここです。手順は`procedure`、制約は`limitations`に分けます。
 - `resources`: 資料や教材に使います。
   - 出力: `<section class="sc-resources">`
   - 英語ラベル: `resources`, `resource`, `materials`
@@ -360,6 +362,11 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-troubleshooting">`
   - 英語ラベル: `troubleshooting`
   - 日本語ラベル: `トラブルシューティング`, `困ったときは`
+- `updates`: 更新、更新履歴、改訂履歴に使います。
+  - 出力: `<section class="sc-updates">`
+  - 英語ラベル: `updates`, `revision history`, `change history`
+  - 日本語ラベル: `(([0-9]+年)?[0-9]+月[0-9]+日)?更新`, `更新履歴`, `改訂履歴`
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。一般的な更新や改訂履歴に使います。追記は`postscript`、訂正は`errata`と分けます。
 
 ### 編集・計画・関連資料
 
