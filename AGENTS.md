@@ -18,7 +18,7 @@ Update this file in the same change set when you change any of these behavior co
 
 1) **Options & data**
    - Options: `requireHrAtOneParagraph`, `requireHeadingLabelJoint`, `headingLabelWithoutJointDenySemantics`, `headingSectionContainer`, `removeJointAtLineEnd`, `allowBracketJoint`, `bracketLabelJointMode`, `githubTypeContainer`, `githubTypeInlineLabel`, `githubTypeInlineLabelHeadingMixin`, `githubTypeInlineLabelJoint`, `labelControl`, `labelControlInlineFallback`, `languages` (English always included, defaults to `["ja"]` for extra labels).
-   - Option normalization is intentionally tolerant: unknown options are ignored, invalid enum-like values fall back to safe defaults, and dependent options are disabled when their parent feature flag is off.
+   - Option normalization is intentionally tolerant: unknown options are ignored, boolean features require actual booleans, invalid values fall back to safe defaults, and dependent options are disabled when their parent feature flag is off. `labelControlInlineFallback: "auto"` is resolved at render time so later-installed `markdown-it-attrs` rules are detected.
    - Per-render SC alias/hide input sources (priority): `state.env.semanticContainerSc` -> `state.env.frontmatter.sc` -> `state.env.meta.sc` -> `md.frontmatter.sc` -> `md.meta.sc`.
    - Per-render titlepage control sources (priority): `state.env.semanticContainerSc.titlepage` -> `state.env.frontmatter["sc.titlepage"]` / `state.env.frontmatter.sc.titlepage` -> corresponding `env.meta`, `md.frontmatter`, and `md.meta` keys. `sc.titlepage` is reserved control data, not a semantic alias entry.
    - `md.frontmatter.sc` / `md.meta.sc` are consumed only in current-render context (front matter token present) or when object reference changed, to avoid stale cross-render metadata leakage.
@@ -27,7 +27,8 @@ Update this file in the same change set when you change any of these behavior co
 2) **Core factories**
    - `createHrBlockCandidateCollector(...)` (in `src/semantic-hr-candidates.js`): lightweight block-stage collector that records hr-sandwich candidates (`openHrLine`, `startLine`, `endHrLine`, `hrType`) into `env.semanticContainerHrCandidates` and precomputed candidate keys into `env.semanticContainerHrCandidateKeySet` (append-only in block phase; env stores are prepared/reset in core before block).
    - `buildSemanticsReg(semantics)`: builds regexes for the standard joint formats (`.` `:` `。` `：` etc.).
-   - `buildSemanticLeadCandidates(semantics)` (in `src/semantic-lead.js`): pre-buckets semantic candidates by leading label character for faster checks.
+   - `buildSemanticLeadCandidates(semantics)` (in `src/semantic-lead.js`): pre-buckets semantic candidates by leading label character once per semantic engine and shares the result across standard, jointless-heading, bracket, and GitHub matchers.
+     - Built-in regex-capable aliases use a conservative regex-FIRST analysis for groups, alternatives, character classes, and common quantifiers; unsupported constructs stay in the safe fallback bucket.
    - `resolveLabelControl(...)` / `escapeHtmlForAttr(...)` (in `src/label-control.js`): shared `label` extraction/removal and safe attribute escaping. Supports attrs-based extraction and optional inline-tail fallback (`{label=...}`) when attrs are unavailable.
    - `resolveContainerRangeEnd(...)` / `resolveHeadingSectionRangeEnd(...)` (in `src/container-range.js`): shared range-end resolvers for standard/bracket detection; the first handles hr-close and paragraph-only standalone contracts, while the second resolves heading-scoped standalone sections using heading rank + token nesting level.
    - `createContainerStartToken(...)` / `createContainerEndToken(...)` (in `src/container-token.js`): shared HTML container start/end token generation for standard, bracket, and GitHub paths.
@@ -44,6 +45,7 @@ Update this file in the same change set when you change any of these behavior co
    - `createGitHubCandidatePlanner(...)`: resolves GitHub alert candidates and produces descending planned edits + applied candidate-line sets.
    - `mergePlannedEditsDescending(...)`: linearly merges hr/github descending edit lists.
    - `applyPlannedEdits(...)`: applies merged planned edits as-is (no per-render sort), localizing splice-shift impact.
+     - When a nested planned edit changes token-array length, a lazily allocated Fenwick-tree delta index adjusts enclosing range and cached token indexes before their later application without quadratic pending-edit rescans.
    - Planned hr-candidate application records applied start lines; walker skips applied candidate-start paragraph and heading tokens to avoid double-application across hr-delimited and standalone heading-section paths.
    - `createContainerRunner(...)`: orchestrates candidate planners, applies planned edits, then runs the fallback walker only when needed.
    - Render-time SC helpers in `index.js` resolve SC input, normalize aliases/hide flags, collect conflicts, build runtime plans, and cache per-alias semantic engines.
@@ -65,6 +67,7 @@ Update this file in the same change set when you change any of these behavior co
      - The block rule only gates on the first line and records candidate start lines in `env.semanticContainerGitHubCandidateLineSet`; it then returns `false` so native blockquote parsing remains the single source of truth for blockquote structure.
      - Core detection uses a fast path when the first child block is marker paragraph (`> [!TYPE]`), with a depth-safe fallback scan for uncommon structures.
      - Core conversion trims the `[!TYPE]` marker from the first paragraph, removes leading breaks, and ensures inserted label paragraph tokens are block-level for renderer line breaks; label paragraph map is inherited from the original paragraph for editor jump accuracy.
+      - GitHub matching records fence/code token indexes while resolving the blockquote close; conversion reuses those indexes instead of rescanning the whole alert range, with a compatibility fallback for externally constructed match objects.
       - GitHub alert range detection accounts for nested blockquotes by tracking depth.
       - End `map` is resolved from the nearest mapped token within the blockquote, because `blockquote_close` has no map.
    - `labelControl` behavior is handled in standard/bracket/GitHub appliers via shared helper logic.
@@ -102,6 +105,7 @@ Performance considerations:
 - Candidate gating is based on hr-sandwich structure only (not semantic name matching), so it can be applied safely before semantic regex checks across standard/bracket/github enabled renders.
 - Hr candidates are applied before the general walker in both require/non-require modes; the walker skips applied candidate-start paragraphs and heading tokens so hr-delimited heading sections are not re-applied by standalone heading-section checks.
 - Candidate-based edits are collected first and then applied in descending token-index order, reducing forward index-shift risk and centralizing splice behavior.
+- Descending planned edits account for non-zero token deltas from nested conversions, so enclosing ranges remain valid even when an inner GitHub alert inserts a separate non-empty label paragraph.
 - With GitHub enabled, candidate-based GitHub conversion is also attempted before deciding whether a full walk is still necessary.
 - Hr candidate planning reuses normalized candidate token indexes when available and only falls back to start/end token re-indexing for candidates that lack token indexes, avoiding repeated scans on the common path.
 - Hr runtime plans normalize block-stage hr candidates against actual parsed `hr` tokens before planning, preventing raw-line closing mismatches from setext/fence-like content while preserving candidate gating.
@@ -109,6 +113,7 @@ Performance considerations:
 - `semanticContainerSc` alias engines are cached by deterministic alias signatures (bounded cache) to avoid rebuilding regex/helper pipelines on repeated renders.
 - SC normalization allocates alias conflict maps lazily (only when aliases exist), and semantics alias merging uses copy-on-write so unchanged semantics entries are reused.
 - GitHub/bracket/standard label checks use fast leading-char guards to reduce regex work on non-candidates.
+- Regex-capable built-in aliases are conservatively FIRST-bucketed, avoiding broad fallback-regex scans for supported group, alternation, character-class, and quantifier patterns.
 - Standard/bracket/GitHub label matchers keep small bounded match caches to reduce repeated regex scans for identical leading content.
 - Match caches store parsed semantic metadata instead of raw regex match arrays to reduce cache footprint and repeated group parsing.
 - Matchers also pre-bucket semantics by detectable leading label character and only scan candidate subsets (with safe fallback for regex-like alias patterns).

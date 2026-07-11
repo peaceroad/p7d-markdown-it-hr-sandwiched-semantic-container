@@ -561,6 +561,8 @@ Roleless `div` containers are the exception: they keep only the `sc-*` class bec
 | `labelControl` | `false` | Enables `label` override/hide handling. |
 | `labelControlInlineFallback` | `"auto"` | Parses trailing `{label=...}` without `markdown-it-attrs` when enabled. |
 
+Boolean feature options require actual JavaScript booleans. Invalid truthy values such as `"false"` are treated as disabled; invalid enum and locale values fall back to their safe defaults.
+
 ### languages
 
 Specify additional locale label files to load in addition to English. English is always included. Default: `["ja"]`.

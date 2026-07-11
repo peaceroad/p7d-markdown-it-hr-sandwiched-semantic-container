@@ -276,17 +276,17 @@ const pushScWarnings = (state, warnings) => {
   }
 }
 
-const withScHideSet = (opt, hideSet) => {
-  if (!hideSet || hideSet.size === 0) return opt
-  const renderOpt = Object.create(opt)
-  renderOpt.scHideSet = hideSet
-  return renderOpt
-}
+const createRenderOptions = (md, opt, hideSet, frontmatterTitlepage) => {
+  const hasHideSet = !!hideSet && hideSet.size > 0
+  const resolveInlineFallback = opt.labelControlInlineFallback === 'auto'
+  if (!hasHideSet && !frontmatterTitlepage && !resolveInlineFallback) return opt
 
-const withFrontmatterTitlepage = (opt, enabled) => {
-  if (!enabled) return opt
   const renderOpt = Object.create(opt)
-  renderOpt.frontmatterTitlepage = true
+  if (hasHideSet) renderOpt.scHideSet = hideSet
+  if (frontmatterTitlepage) renderOpt.frontmatterTitlepage = true
+  if (resolveInlineFallback) {
+    renderOpt.labelControlInlineFallback = !hasCoreRule(md, 'curly_attributes')
+  }
   return renderOpt
 }
 
@@ -530,8 +530,8 @@ const normalizeSemanticDenySet = (value) => {
   return denySet.size > 0 ? denySet : null
 }
 
-const createLabelMatcher = (semantics, semanticsReg) => {
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+const createLabelMatcher = (semantics, semanticsReg, semanticLeadCandidates) => {
+  const { candidatesByLead, fallback } = semanticLeadCandidates
   const parseMatchedSemantic = (sn, actualMatch) => {
     let actualNameJoint = ''
     let hasLastJoint = false
@@ -661,8 +661,8 @@ const getPlainTextInlineContent = (token) => {
   return content
 }
 
-const createHeadingNoJointMatcher = (semantics, headingNoJointReg, denySet) => {
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+const createHeadingNoJointMatcher = (semantics, headingNoJointReg, denySet, semanticLeadCandidates) => {
+  const { candidatesByLead, fallback } = semanticLeadCandidates
   const matchCache = new Map()
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
@@ -1056,12 +1056,91 @@ const mergePlannedEditsDescending = (left, right) => {
   return merged
 }
 
+const createPlannedEditDeltaIndex = (plannedEdits) => {
+  const positions = []
+  for (let i = plannedEdits.length - 1; i >= 0; i--) {
+    const position = plannedEdits[i]?.groupTokenStart
+    if (!Number.isInteger(position)) continue
+    if (positions.length === 0 || positions[positions.length - 1] !== position) {
+      positions.push(position)
+    }
+  }
+  const tree = new Int32Array(positions.length + 1)
+
+  const lowerBound = (value) => {
+    let low = 0
+    let high = positions.length
+    while (low < high) {
+      const middle = (low + high) >>> 1
+      if (positions[middle] < value) low = middle + 1
+      else high = middle
+    }
+    return low
+  }
+
+  return {
+    add(position, delta) {
+      let index = lowerBound(position) + 1
+      while (index < tree.length) {
+        tree[index] += delta
+        index += index & -index
+      }
+    },
+    sumBefore(position) {
+      let index = lowerBound(position)
+      let sum = 0
+      while (index > 0) {
+        sum += tree[index]
+        index -= index & -index
+      }
+      return sum
+    },
+  }
+}
+
+const adjustPlannedEditTokenIndexes = (edit, deltaIndex) => {
+  const sc = edit?.sc
+  if (!sc || !deltaIndex) return
+  const adjust = (value) => Number.isInteger(value)
+    ? value + deltaIndex.sumBefore(value)
+    : value
+
+  if (Array.isArray(sc.range) && Number.isInteger(sc.range[1])) {
+    sc.range[1] = adjust(sc.range[1])
+  }
+  sc.paragraphOpenIndex = adjust(sc.paragraphOpenIndex)
+  sc.paragraphInlineIndex = adjust(sc.paragraphInlineIndex)
+  sc.paragraphCloseIndex = adjust(sc.paragraphCloseIndex)
+  if (Array.isArray(sc.fenceTokenIndexes)) {
+    for (let i = 0; i < sc.fenceTokenIndexes.length; i++) {
+      sc.fenceTokenIndexes[i] = adjust(sc.fenceTokenIndexes[i])
+    }
+  }
+}
+
 const applyPlannedEdits = (state, optLocal, applyContainer, plannedEdits) => {
   if (!Array.isArray(plannedEdits) || plannedEdits.length === 0) return
 
+  let deltaIndex = null
+  let pendingDeltaPosition = null
+  let pendingDelta = 0
   for (let i = 0; i < plannedEdits.length; i++) {
     const edit = plannedEdits[i]
+    const editPosition = edit.groupTokenStart
+    if (pendingDeltaPosition !== null && editPosition !== pendingDeltaPosition) {
+      if (pendingDelta !== 0) {
+        if (!deltaIndex) deltaIndex = createPlannedEditDeltaIndex(plannedEdits)
+        deltaIndex.add(pendingDeltaPosition, pendingDelta)
+      }
+      pendingDeltaPosition = null
+      pendingDelta = 0
+    }
+    adjustPlannedEditTokenIndexes(edit, deltaIndex)
+    const previousLength = state.tokens.length
     applyContainer(state, edit.groupTokenStart, edit.hrType, edit.sc, edit.sci, optLocal)
+    const delta = state.tokens.length - previousLength
+    if (pendingDeltaPosition === null) pendingDeltaPosition = editPosition
+    pendingDelta += delta
   }
 }
 
@@ -1346,12 +1425,21 @@ const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandi
   return true
 }
 
-const createSemanticEngine = (semantics, opt, featureHelpers) => {
+const createSemanticEngine = (semantics, opt, featureHelpers, semanticLeadCandidates) => {
   const semanticsReg = buildSemanticsReg(semantics)
   const headingNoJointReg = opt.requireHeadingLabelJoint ? null : buildHeadingNoJointSemanticsReg(semantics)
-  const { checkStandardLabel: semanticLabelMatcher, findMatchedSemantic } = createLabelMatcher(semantics, semanticsReg)
+  const { checkStandardLabel: semanticLabelMatcher, findMatchedSemantic } = createLabelMatcher(
+    semantics,
+    semanticsReg,
+    semanticLeadCandidates
+  )
   const findHeadingNoJointSemantic = headingNoJointReg
-    ? createHeadingNoJointMatcher(semantics, headingNoJointReg, opt.headingLabelWithoutJointDenySemanticSet)
+    ? createHeadingNoJointMatcher(
+        semantics,
+        headingNoJointReg,
+        opt.headingLabelWithoutJointDenySemanticSet,
+        semanticLeadCandidates
+      )
     : null
   const githubCheck = opt.githubTypeContainer ? featureHelpers.github?.checkGitHubAlertsCore : null
   const bracketCheck = opt.allowBracketJoint ? featureHelpers.bracket?.checkBracketSemanticContainerCore : null
@@ -1414,78 +1502,90 @@ const registerCoreRuleAfterSafeAnchor = (md, ruleName, handler) => {
   md.core.ruler.push(ruleName, handler)
 }
 
+const normalizeLanguagesOption = (value) => {
+  if (value === undefined) return ['ja']
+  const source = typeof value === 'string'
+    ? [value]
+    : (Array.isArray(value) ? value : null)
+  if (!source) return ['ja']
+
+  const languages = []
+  for (let i = 0; i < source.length; i++) {
+    if (typeof source[i] !== 'string') continue
+    const language = source[i].trim().toLowerCase()
+    if (language) languages.push(language)
+  }
+  return source.length > 0 && languages.length === 0 ? ['ja'] : languages
+}
+
+const normalizePluginOptions = (option) => {
+  const input = option && typeof option === 'object' && !Array.isArray(option)
+    ? option
+    : {}
+  const enabled = (value) => value === true
+  const requireHeadingLabelJoint = enabled(input.requireHeadingLabelJoint)
+  const allowBracketJoint = enabled(input.allowBracketJoint)
+  const githubTypeContainer = enabled(input.githubTypeContainer)
+  const githubTypeInlineLabel = githubTypeContainer && enabled(input.githubTypeInlineLabel)
+  const labelControl = enabled(input.labelControl)
+
+  let labelControlInlineFallback = false
+  if (labelControl) {
+    labelControlInlineFallback = input.labelControlInlineFallback === true
+      ? true
+      : (input.labelControlInlineFallback === false ? false : 'auto')
+  }
+
+  return {
+    requireHrAtOneParagraph: enabled(input.requireHrAtOneParagraph),
+    requireHeadingLabelJoint,
+    headingLabelWithoutJointDenySemanticSet: requireHeadingLabelJoint
+      ? null
+      : normalizeSemanticDenySet(input.headingLabelWithoutJointDenySemantics),
+    headingSectionContainer: enabled(input.headingSectionContainer),
+    removeJointAtLineEnd: enabled(input.removeJointAtLineEnd),
+    allowBracketJoint,
+    bracketLabelJointMode: allowBracketJoint
+      && (input.bracketLabelJointMode === 'remove' || input.bracketLabelJointMode === 'auto')
+      ? input.bracketLabelJointMode
+      : 'keep',
+    githubTypeContainer,
+    githubTypeInlineLabel,
+    githubTypeInlineLabelHeadingMixin: githubTypeInlineLabel
+      && enabled(input.githubTypeInlineLabelHeadingMixin),
+    githubTypeInlineLabelJoint: githubTypeInlineLabel && input.githubTypeInlineLabelJoint === 'auto'
+      ? 'auto'
+      : 'none',
+    labelControl,
+    labelControlInlineFallback,
+    languages: normalizeLanguagesOption(input.languages),
+  }
+}
+
 const mditSemanticContainer = (md, option) => {
   if (md[INSTALL_SENTINEL]) return
   Object.defineProperty(md, INSTALL_SENTINEL, {
     value: true,
   })
 
-  let opt = {
-    requireHrAtOneParagraph: false,
-    requireHeadingLabelJoint: false,
-    headingLabelWithoutJointDenySemantics: [],
-    headingSectionContainer: false,
-    removeJointAtLineEnd: false,
-    allowBracketJoint: false,
-    // Bracket label rendering mode when allowBracketJoint is true.
-    // "keep": keep [] / ［］ around labels (default)
-    // "remove": remove bracket joints
-    // "auto": remove bracket joints and use locale-aware label joints
-    bracketLabelJointMode: 'keep',
-    githubTypeContainer: false,
-    // false: GitHub-like separate title paragraph (default)
-    // true: inline label in the first paragraph
-    githubTypeInlineLabel: false,
-    // false: keep heading and label as separate blocks in inline mode (default)
-    // true: when marker paragraph is empty and the next block is heading, prepend label to heading text
-    githubTypeInlineLabelHeadingMixin: false,
-    // Controls custom label suffix in GitHub inline mode.
-    // "none": no suffix
-    // "auto": CJK => "：", others => "."
-    githubTypeInlineLabelJoint: 'none',
-    labelControl: false,
-    // true: parse trailing {label=...} from inline text when attrs are unavailable
-    // false: attrs-only label control
-    // "auto": enable fallback when curly_attributes is not registered
-    labelControlInlineFallback: 'auto',
-    // Additional languages to load on top of English
-    languages: ['ja'],
-  }
-  if (option) Object.assign(opt, option)
-  opt.requireHeadingLabelJoint = !!opt.requireHeadingLabelJoint
-  opt.headingLabelWithoutJointDenySemanticSet = normalizeSemanticDenySet(opt.headingLabelWithoutJointDenySemantics)
-  opt.headingSectionContainer = !!opt.headingSectionContainer
-  if (opt.bracketLabelJointMode !== 'remove' && opt.bracketLabelJointMode !== 'auto') {
-    opt.bracketLabelJointMode = 'keep'
-  }
-  if (!opt.githubTypeContainer) {
-    opt.githubTypeInlineLabel = false
-    opt.githubTypeInlineLabelHeadingMixin = false
-    opt.githubTypeInlineLabelJoint = 'none'
-  } else {
-    opt.githubTypeInlineLabel = !!opt.githubTypeInlineLabel
-    opt.githubTypeInlineLabelHeadingMixin = opt.githubTypeInlineLabel && !!opt.githubTypeInlineLabelHeadingMixin
-    if (!opt.githubTypeInlineLabel || opt.githubTypeInlineLabelJoint !== 'auto') {
-      opt.githubTypeInlineLabelJoint = 'none'
-    }
-  }
-  if (!opt.labelControl) {
-    opt.labelControlInlineFallback = false
-  } else {
-    if (opt.labelControlInlineFallback !== true && opt.labelControlInlineFallback !== false) {
-      opt.labelControlInlineFallback = 'auto'
-    }
-    if (opt.labelControlInlineFallback === 'auto') {
-      opt.labelControlInlineFallback = !hasCoreRule(md, 'curly_attributes')
-    }
-  }
+  const opt = normalizePluginOptions(option)
   
   const baseSemantics = buildSemantics(opt.languages)
+  const baseSemanticLeadCandidates = buildSemanticLeadCandidates(baseSemantics)
   const hrBlockCandidateCollector = createHrBlockCandidateCollector()
-  const baseBracket = opt.allowBracketJoint ? createBracketFormat(baseSemantics) : null
-  const baseGithub = opt.githubTypeContainer ? createGitHubTypeContainer(baseSemantics) : null
+  const baseBracket = opt.allowBracketJoint
+    ? createBracketFormat(baseSemantics, baseSemanticLeadCandidates)
+    : null
+  const baseGithub = opt.githubTypeContainer
+    ? createGitHubTypeContainer(baseSemantics, baseSemanticLeadCandidates)
+    : null
   const baseFeatureHelpers = { bracket: baseBracket, github: baseGithub }
-  const { semanticContainer: baseSemanticContainer } = createSemanticEngine(baseSemantics, opt, baseFeatureHelpers)
+  const { semanticContainer: baseSemanticContainer } = createSemanticEngine(
+    baseSemantics,
+    opt,
+    baseFeatureHelpers,
+    baseSemanticLeadCandidates
+  )
   const semanticNameByLower = buildSemanticNameMap(baseSemantics)
   const baseAliasOwnerMap = buildBaseAliasOwnerMap(baseSemantics)
   const scEngineCache = new Map()
@@ -1500,10 +1600,20 @@ const mditSemanticContainer = (md, option) => {
     if (cached) return cached
 
     const semanticsWithSc = mergeSemanticsWithScAliases(baseSemantics, scConfig.aliasBySemantic)
-    const bracket = opt.allowBracketJoint ? createBracketFormat(semanticsWithSc) : null
-    const github = opt.githubTypeContainer ? createGitHubTypeContainer(semanticsWithSc) : null
+    const semanticLeadCandidates = buildSemanticLeadCandidates(semanticsWithSc)
+    const bracket = opt.allowBracketJoint
+      ? createBracketFormat(semanticsWithSc, semanticLeadCandidates)
+      : null
+    const github = opt.githubTypeContainer
+      ? createGitHubTypeContainer(semanticsWithSc, semanticLeadCandidates)
+      : null
     const featureHelpers = { bracket, github }
-    const { semanticContainer } = createSemanticEngine(semanticsWithSc, opt, featureHelpers)
+    const { semanticContainer } = createSemanticEngine(
+      semanticsWithSc,
+      opt,
+      featureHelpers,
+      semanticLeadCandidates
+    )
 
     if (scEngineCache.size >= SC_ENGINE_CACHE_MAX) {
       const firstKey = scEngineCache.keys().next().value
@@ -1556,8 +1666,12 @@ const mditSemanticContainer = (md, option) => {
       pushScWarnings(state, scConfig.warnings)
     }
     const semanticContainer = getSemanticContainerWithSc(scConfig)
-    let renderOpt = withScHideSet(opt, scConfig?.hideSet)
-    renderOpt = withFrontmatterTitlepage(renderOpt, renderInputs.frontmatterTitlepage)
+    const renderOpt = createRenderOptions(
+      md,
+      opt,
+      scConfig?.hideSet,
+      renderInputs.frontmatterTitlepage
+    )
     const runtimePlan = buildRuntimePlan(state)
     semanticContainer(state, renderOpt, runtimePlan)
   })

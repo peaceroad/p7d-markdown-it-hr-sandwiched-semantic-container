@@ -6,7 +6,7 @@ import { resolveContainerRangeEnd } from './container-range.js'
 import { resolveAutoJointLabelStyle } from './label-style.js'
 import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
-const createBracketFormat = (semantics) => {
+const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLeadCandidates(semantics)) => {
   const strongMark = '[*_]{2}'
   const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
   const MATCH_CACHE_MAX = 128
@@ -220,7 +220,7 @@ const createBracketFormat = (semantics) => {
     }
   }
   const matchCache = new Map()
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  const { candidatesByLead, fallback } = semanticLeadCandidates
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
       const firstKey = matchCache.keys().next().value

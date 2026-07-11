@@ -11,6 +11,8 @@ import mditFootnoteHere from '@peaceroad/markdown-it-footnote-here'
 import mditStrongJa from '@peaceroad/markdown-it-strong-ja'
 import mditFigureWithPCaption from '@peaceroad/markdown-it-figure-with-p-caption'
 import { resolveLabelControl } from '../src/label-control.js'
+import { buildSemanticLeadCandidates } from '../src/semantic-lead.js'
+import { buildSemantics } from '../src/semantics.js'
 import { runSemanticCatalogTests } from './semantic-catalog.test.js'
 
 
@@ -834,6 +836,25 @@ pass = runDirectTest('block hr candidates drop setext underline without an actua
   assert.strictEqual(env.semanticContainerHrCandidateKeySet.size, 0)
 })
 
+pass = runDirectTest('semantic lead buckets resolve supported regex FIRST sets without fallback scans', pass, () => {
+  const semantics = [
+    { name: 'bibliography', aliases: ['(参考)?文献'] },
+    { name: 'errata', aliases: ['(([0-9]+年)?[0-9]+月[0-9]+日)?訂正'] },
+    { name: 'reference', aliases: ['[レリ]ファレンス'] },
+  ]
+  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  assert.deepStrictEqual(fallback, [])
+  assert.strictEqual(candidatesByLead.get('参').includes(0), true)
+  assert.strictEqual(candidatesByLead.get('文').includes(0), true)
+  assert.strictEqual(candidatesByLead.get('7').includes(1), true)
+  assert.strictEqual(candidatesByLead.get('訂').includes(1), true)
+  assert.strictEqual(candidatesByLead.get('レ').includes(2), true)
+  assert.strictEqual(candidatesByLead.get('リ').includes(2), true)
+
+  const unsupported = buildSemanticLeadCandidates([{ name: 'unknown', aliases: ['.+dynamic'] }])
+  assert.deepStrictEqual(unsupported.fallback, [0])
+})
+
 pass = runDirectTest('requireHr hr-candidate runner handles standard + bracket mixed', pass, () => {
   const markdown = '---\n\nNotice. Standard body.\n\n---\n\n[Notice] Bracket body.\n\n---\n'
   const html = mdRequireHrBracket.render(markdown)
@@ -882,6 +903,38 @@ pass = runDirectTest('github candidate lines are collected and reset on env reus
   mdGitHubAlerts.render('Paragraph only.\n', env)
   assert.strictEqual(env.semanticContainerGitHubCandidateLineSet instanceof Set, true)
   assert.strictEqual(env.semanticContainerGitHubCandidateLineSet.size, 0)
+})
+
+pass = runDirectTest('nested github alerts keep enclosing ranges after inner token growth', pass, () => {
+  const markdown = '> [!NOTE]\n> Outer body.\n>\n> > [!WARNING]\n> > Inner body.\n> > More.\n>\n> Outer end.\n'
+  const html = mdGitHubAlerts.render(markdown)
+  const expected = '<section class="sc-note">\n'
+    + '<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>\n'
+    + '<p>Outer body.</p>\n'
+    + '<section class="sc-warning" role="doc-notice">\n'
+    + '<p><strong class="sc-warning-label"><span class="sc-warning-label-joint">[</span>WARNING<span class="sc-warning-label-joint">]</span></strong></p>\n'
+    + '<p>Inner body.\nMore.</p>\n'
+    + '</section>\n'
+    + '<p>Outer end.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('nested hr candidate groups keep enclosing github ranges after token growth', pass, () => {
+  const markdown = '> [!NOTE]\n> Outer.\n>\n> * * *\n>\n> Notice. One.\n>\n> * * *\n>\n> Notice. Two.\n>\n> * * *\n>\n> End.\n'
+  const html = mdGitHubAlerts.render(markdown)
+  const expected = '<section class="sc-note">\n'
+    + '<p><strong class="sc-note-label"><span class="sc-note-label-joint">[</span>NOTE<span class="sc-note-label-joint">]</span></strong></p>\n'
+    + '<p>Outer.</p>\n'
+    + '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> One.</p>\n'
+    + '</section>\n'
+    + '<section class="sc-notice" role="doc-notice">\n'
+    + '<p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> Two.</p>\n'
+    + '</section>\n'
+    + '<p>End.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
 })
 
 pass = runDirectTest('semantic core rule is after text_join and after curly_attributes when attrs is used', pass, () => {
@@ -990,6 +1043,40 @@ pass = runDirectTest('unknown and invalid options keep tolerant normalization', 
   })
   const html = mdTolerant.render('---\n\n[Notice] Body.\n\n---\n')
   assert.strictEqual(html.includes('<span class="sc-notice-label-joint">[</span>'), true)
+})
+
+pass = runDirectTest('invalid truthy boolean options fall back to disabled behavior', pass, () => {
+  const invalid = {
+    requireHrAtOneParagraph: 'false',
+    requireHeadingLabelJoint: 'false',
+    headingSectionContainer: 'false',
+    removeJointAtLineEnd: 'false',
+    allowBracketJoint: 'false',
+    githubTypeContainer: 'false',
+    labelControl: 'false',
+  }
+  const mdInvalid = mdit().use(mditSemanticContainer, invalid)
+  assert.strictEqual(mdInvalid.render('Notice. Body.\n').includes('<section class="sc-notice"'), true)
+  assert.strictEqual(mdInvalid.render('[Notice] Body.\n').includes('<section class="sc-notice"'), false)
+  assert.strictEqual(mdInvalid.render('> [!NOTE]\n> Body.\n').includes('<section class="sc-note"'), false)
+  assert.strictEqual(mdInvalid.render('## Notice.\n\nBody.\n').includes('<section class="sc-notice"'), false)
+  assert.strictEqual(
+    mdInvalid.render('---\n\n## 動作環境\n\n本文\n\n---\n').includes('<section class="sc-requirements"'),
+    true
+  )
+})
+
+pass = runDirectTest('invalid languages fall back to the default Japanese locale', pass, () => {
+  const mdInvalidLanguages = mdit().use(mditSemanticContainer, { languages: { locale: 'ja' } })
+  assert.strictEqual(mdInvalidLanguages.render('通知：本文。\n').includes('<section class="sc-notice"'), true)
+})
+
+pass = runDirectTest('semantic builds do not share mutable attribute arrays', pass, () => {
+  const first = buildSemantics([])
+  const abstract = first.find((sem) => sem.name === 'abstract')
+  abstract.attrs[0][1] = 'mutated-role'
+  const second = buildSemantics([])
+  assert.strictEqual(second.find((sem) => sem.name === 'abstract').attrs[0][1], 'doc-abstract')
 })
 
 pass = runDirectTest('detection priority keeps github alerts deterministic over other modes', pass, () => {

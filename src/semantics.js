@@ -26,7 +26,9 @@ const dedupeAliases = (aliases) => {
 export const buildSemantics = (languages = ['ja']) => {
   const includeLocales = Array.isArray(languages) ? languages : [languages]
   const semantics = enSemantics.map((entry) => {
-    const attrs = Array.isArray(entry.attrs) ? entry.attrs : []
+    const attrs = Array.isArray(entry.attrs)
+      ? entry.attrs.map((attr) => Array.isArray(attr) ? attr.slice() : attr)
+      : []
     return {
       name: entry.name,
       tag: entry.tag,

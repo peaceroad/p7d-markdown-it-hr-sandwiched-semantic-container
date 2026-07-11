@@ -5,7 +5,7 @@ import { resolveContainerMaps, createContainerStartToken, createContainerEndToke
 import { resolveAutoJointLabelStyle } from './label-style.js'
 import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
-const createGitHubTypeContainer = (semantics) => {
+const createGitHubTypeContainer = (semantics, semanticLeadCandidates = buildSemanticLeadCandidates(semantics)) => {
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
   const CODE_TAB = 9
@@ -103,7 +103,7 @@ const createGitHubTypeContainer = (semantics) => {
   })
 
   const matchCache = new Map()
-  const { candidatesByLead, fallback } = buildSemanticLeadCandidates(semantics)
+  const { candidatesByLead, fallback } = semanticLeadCandidates
   const cacheSet = (key, value) => {
     if (matchCache.size >= MATCH_CACHE_MAX) {
       const firstKey = matchCache.keys().next().value
@@ -161,6 +161,19 @@ const createGitHubTypeContainer = (semantics) => {
     }
     cacheSet(content, CACHE_MISS)
     return null
+  }
+
+  const collectFenceTokenIndex = (token, index, fenceTokenIndexes) => {
+    if (token?.type === 'fence' || token?.type === 'code_block') {
+      fenceTokenIndexes.push(index)
+    }
+  }
+
+  const ensureLeadingFenceNewline = (token) => {
+    if ((token?.type === 'fence' || token?.type === 'code_block')
+      && token.content && token.content.charCodeAt(0) !== CODE_LF) {
+      token.content = '\n' + token.content
+    }
   }
 
   const hasInlineContent = (inlineToken, children) => {
@@ -273,8 +286,10 @@ const createGitHubTypeContainer = (semantics) => {
       if (!semantic) return false
 
       let depth = 0
+      const fenceTokenIndexes = []
       for (let i = n; i < tokensLength; i++) {
         const token = tokens[i]
+        collectFenceTokenIndex(token, i, fenceTokenIndexes)
         if (token.type === 'blockquote_open') {
           depth++
         } else if (token.type === 'blockquote_close') {
@@ -289,6 +304,7 @@ const createGitHubTypeContainer = (semantics) => {
               paragraphOpenIndex: n + 1,
               paragraphInlineIndex: n + 2,
               paragraphCloseIndex: n + 3,
+              fenceTokenIndexes,
               isGitHubAlert: true
             })
             return true
@@ -305,8 +321,10 @@ const createGitHubTypeContainer = (semantics) => {
     let markerParagraphOpenIndex = -1
     let markerParagraphInlineIndex = -1
     let markerParagraphCloseIndex = -1
+    const fenceTokenIndexes = []
     for (let i = n; i < tokensLength; i++) {
       const token = tokens[i]
+      collectFenceTokenIndex(token, i, fenceTokenIndexes)
       if (token.type === 'blockquote_open') {
         depth++
         continue
@@ -338,6 +356,7 @@ const createGitHubTypeContainer = (semantics) => {
             paragraphOpenIndex: markerParagraphOpenIndex,
             paragraphInlineIndex: markerParagraphInlineIndex,
             paragraphCloseIndex: markerParagraphCloseIndex,
+            fenceTokenIndexes,
             isGitHubAlert: true
           })
           return true
@@ -395,13 +414,14 @@ const createGitHubTypeContainer = (semantics) => {
       : normalizeInlineLabelJointMode(opt?.githubTypeInlineLabelJoint)
     const inlineLabelHeadingMixin = !separateTitleParagraph && !!opt?.githubTypeInlineLabelHeadingMixin
 
-    for (let i = rs + 1; i < re; i++) {
-      const token = tokens[i]
-      if (!token) continue
-      if (token.type === 'fence' || token.type === 'code_block') {
-        if (token.content && token.content.charCodeAt(0) !== CODE_LF) {
-          token.content = '\n' + token.content
-        }
+    if (Array.isArray(sc.fenceTokenIndexes)) {
+      for (let i = 0; i < sc.fenceTokenIndexes.length; i++) {
+        ensureLeadingFenceNewline(tokens[sc.fenceTokenIndexes[i]])
+      }
+    } else {
+      // Compatibility fallback for externally constructed match objects.
+      for (let i = rs + 1; i < re; i++) {
+        ensureLeadingFenceNewline(tokens[i])
       }
     }
 
