@@ -1,4 +1,5 @@
 const REGEX_META_REG = /[|\\{}()[\]^$+*?.]/g
+const SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 
 const escapeRegExp = (value) => String(value).replace(REGEX_META_REG, '\\$&')
 
@@ -26,4 +27,25 @@ const buildSemanticAliasPatterns = (sem) => {
   return patterns
 }
 
-export { buildSemanticAliasPatterns }
+const buildSemanticAliasPatternLists = (semantics) => semantics.map(buildSemanticAliasPatterns)
+
+const buildExactSemanticLabelRegexes = (
+  semantics,
+  semanticAliasPatternLists = buildSemanticAliasPatternLists(semantics)
+) => semantics.map((sem, sn) => {
+  const aliasPatterns = semanticAliasPatternLists[sn]
+  const aliasStr = aliasPatterns.length
+    ? '|' + aliasPatterns.join('|')
+    : ''
+  return new RegExp(
+    '^((?:' + sem.name + aliasStr + ')' + SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN + ')$',
+    'i'
+  )
+})
+
+export {
+  SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN,
+  buildSemanticAliasPatterns,
+  buildSemanticAliasPatternLists,
+  buildExactSemanticLabelRegexes,
+}

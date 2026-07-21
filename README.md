@@ -86,16 +86,16 @@ abstract (要旨,抄録)
 acknowledgments (acknowledgement,acknowledgment,acknowledgements,謝辞)
 afterword (後書き,あとがき,跋文)
 agenda (meeting agenda,議題,アジェンダ,議事次第)
-alert (alerts,警報,アラート,注意喚起)
+alert (alerts,アラート,注意喚起)
 annotation (注釈)
 answer (answers,回答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,答え([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?)
-appendix (appendices,付録,付属資料)
-appendix-titlepage (appendix titlepage,appendix title page,付録扉,付録タイトルページ,付属扉,付属タイトルページ)
-assessments (assessment,quiz,quizzes,exam,exams,評価,採点,試験,小テスト,確認テスト)
+appendix (appendices,付録,付属書,附属書,付属資料,附属資料,(付録|付属|附属)[0-9０-９A-ZＡ-Ｚａ-ｚ一二三四五六七八九十百千]{1,8})
+appendix-titlepage (appendix titlepage,appendix title page,付録扉,付録タイトルページ,付属扉,付属タイトルページ,附属扉,附属タイトルページ)
+assessment (assessments,quiz,quizzes,exam,exams,アセスメント,試験,小テスト,確認テスト)
 author (著者)
 bibliography (references,reference list,works cited,(参考)?文献(一覧)?,文献表)
-book (magazine,(書籍|雑誌)(情報|案内)?,書誌(情報)?)
-caution (cautions,注意,注意事項,ご注意,注意点,使用上の注意,留意事項)
+book (book information,book info,magazine information,magazine info,magazine,publication,publication information,publication info,(書籍|雑誌)(情報|案内)?,書誌(情報)?,(出版物|刊行物)(情報|案内))
+caution (cautions,注意,注意事項,ご注意,注意点,注意書,注意書き,使用上の注意,留意事項)
 chapter-toc (chapter toc,章目次)
 chapter-titlepage (chapter titlepage,chapter title page,章扉,章タイトルページ)
 check (checklist,チェック,確認事項,チェックリスト)
@@ -106,73 +106,74 @@ credits (クレジット)
 danger (dangers,危険,危険事項)
 dedication (献呈)
 decision (decisions,決定事項,決定内容)
-editor-note (editornote,editor('s)? note,editors note,編注,編集注,編集者注)
+editor-note (editor note,editor's note,editors' note,editorial note,編注,編集注,編集者注)
 endnotes (後注,章末注,巻末注)
 epigraph (題辞,題句,題言)
 epilogue (エピローグ,終幕,終章)
 errata (correction,corrections,corrigenda,正誤表,(([0-9]+年)?[0-9]+月[0-9]+日)?訂正)
-event (イベント(情報|案内)?,行事(情報|案内)?,催し物(情報|案内)?,出来事)
+event (イベント(情報|案内)?,行事(情報|案内)?,催し物(情報|案内)?)
+evaluation (evaluations,product evaluation,product evaluations,quality evaluation,quality evaluations,performance evaluation,performance evaluations,製品評価,品質評価,性能評価,パフォーマンス評価)
 explanation (explanations,解説)
 faq (ＦＡＱ,よくある(質問|問い合わせ))
 feedback (フィードバック)
 first-published (first (published|publication),初出)
-foreword (((本書|日本語版)?の)?(刊行|発行|発刊)に寄せて)
+foreword (((本書|日本語版)の)?(刊行|発行|発刊)に寄せて)
 glossary (glossary of terms,用語集,用語一覧)
 hint (ヒント)
-important (importance,(重要|重大)(情報|なこと)?,重要事項)
-information (info,案内,(参考)?情報,インフォメーション)
+important (important notice,important information,重要(なこと|な事柄|な情報|な事項|情報|事項)?)
+information (info,案内,ご案内,お知らせ,告知,(参考)?情報,インフォメーション)
 index (索引)
 interview (インタビュー)
 introduction (序論,序説,はじめに,始めに)
 issue (issues,known issue,known issues,問題点,争点,論点,イシュー,検討課題,懸案事項,既知の問題,既知の問題点)
-keywords (キーワード,手がかり(語)?)
-lead (lede,リード(文)?,導入(文)?)
+keywords (キーワード,重要語,手がかり語)
+lead (lede,リード(文)?,導入文)
 lesson (lessons,learning unit,learning units,レッスン,単元)
-learning-objectives (learning objectives,objectives,学習目標,到達目標)
+learning-objective (learning-objectives,learning objective,learning objectives,学習目標,到達目標)
 limitations (limitation,constraints,constraint,restrictions,restriction,制限事項,制約,制約事項)
 memo (メモ)
 minutes (meeting minutes,議事録)
 note (ノート,注,註,注記,備考)
-notice (通知,通告,告知,掲示,(お)?(し|知)らせ)
+notice (通知,通告)
 next-steps (next steps,next step,次のステップ,今後の対応,今後の予定)
 opinion (意見,見解,オピニオン)
 outline (概略,アウトライン)
 overview (概要,概観,大要,あらまし)
 part-titlepage (part titlepage,part title page,部扉,部タイトルページ)
 planning (plan,計画,計画案,プラン)
-point (ポイント,要点)
+point (key point,key points,main point,main points,ポイント,要点)
 postscript ((([0-9]+年)?[0-9]+月[0-9]+日)?追記)
-preamble (序,序文)
+preamble (前文)
 preface (前書き,まえがき)
 prerequisites (prerequisite,前提条件,事前準備)
-problem (exercise,exercises,practice problem,practice problems,問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,演習問題,練習問題)
+problem (exercise,exercises,practice problem,practice problems,問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,演習問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,練習問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?)
 procedure (procedures,steps,instructions,手順,操作手順,作業手順)
 profile (プロフィール,人物紹介)
 prologue (プロローグ,序幕,序章)
-proposal (project proposal,プロポーザル,提言,企画案)
-pull-quote (pull quote,プル(・)?ク[オォ]ート)
-qna (Q&A,QA,Q and A,Questions and answers,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
-question (質問,問い([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,設問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,問[0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})
-reference ([レリ]ファレンス,参照,参考資料,参照先)
-related-book (related book,related books,related magazine,related magazines,関連(した)?(本|書籍|雑誌))
+proposal (project proposal,プロポーザル,提案書,企画案,企画書)
+pullquote (pull quote,pull-quote,プル(・)?ク[オォ]ート)
+qna (Q&A,Q and A,Questions and answers,Ｑ＆Ａ,質疑応答,一問一答,(問(題)?|質問)と(回答|答え))
+question (質問,問い([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,設問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,小問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,問[0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3},発問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,主発問,中心発問)
+reference ([レリ]ファレンス,参照,参照先,参照情報)
+related-book (related book,related books,related magazine,related magazines,related-publication,related publication,related publications,関連(した)?(本|書籍|雑誌|出版物|刊行物))
 related-article (related article,related articles,関連(した)?記事)
 related-link (related link,related links,see also,further reading,関連(した)?リンク,参考リンク)
-related (relation,関連,関連情報,関連資料)
-recommendation (recommend,recommended,勧告,勧め,おすすめ,お勧め,推薦,推奨,リコメンド)
-requirements (requirement,system requirements,hardware requirements,software requirements,要件,必要条件,動作要件,システム要件,動作環境,推奨環境)
-resources (resource,materials,資料,教材)
+related (related information,related resources,関連情報,関連資料)
+recommendation (recommendations,勧告,提言,おすすめ,お勧め,推薦,推奨,推奨事項,推奨項目,リコメンド)
+requirements (requirement,system requirements,hardware requirements,software requirements,要件,必要条件,必須要件,要求事項,必要事項,必須項目,動作要件,システム要件,動作環境,推奨環境)
+resources (resource,materials,資料,教材,参考資料)
 rubric (grading rubric,評価基準,採点基準,ルーブリック)
 supplement (supplements,補足(情報)?,補遺)
 solution (solutions,解答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?,解答例,解決(方法)?,解法)
-suggestion (suggest,提案,サジェスト)
+suggestion (suggestions,提案,サジェスト)
 summary (要約,まとめ,あらすじ)
-task (tasks,assignment,assignments,homework,action item,action items,課題,作業,タスク,宿題,アクションアイテム)
+task (tasks,assignment,assignments,homework,action item,action items,タスク,宿題,アクションアイテム)
 tip (tips,コツ,秘訣,助言,アドバイス,豆知識)
 troubleshooting (トラブルシューティング,困ったときは)
 toc (table of contents,contents,目次,もくじ)
 topic (トピック,話題)
 updates (revision history,change history,(([0-9]+年)?[0-9]+月[0-9]+日)?更新,更新履歴,改訂履歴)
-warning (warn,warnings,警告,警告事項)
+warning (warnings,警告,警告事項)
 
 ```
 
@@ -183,9 +184,81 @@ Removing a canonical semantic, changing its tag/attrs, or changing generated cla
 Aliases may be expanded in minor releases, but alias removal or a change that causes existing Markdown to stop matching is also treated as breaking.
 Runtime `semanticContainerSc` aliases are always literal strings; regex-capable aliases are limited to built-in locale catalog files.
 
+Version 0.14.0 keeps `book` as the canonical semantic so the established
+`sc-book` output and canonical-name configuration remain compatible. Its scope
+now explicitly includes book, magazine, and publication-information headings;
+`Publication.`, `Publication info.`, and `Publication information.` are input
+aliases. Bare plural `Publications.` is intentionally not recognized because it
+can describe an author bibliography or publication archive. Dual
+`sc-book`/`sc-publication` output was not added: preserving both correctly would
+also require a policy for label and joint classes, creating a general legacy
+class contract for little practical benefit.
+
+Canonical `related-book` also remains stable for compatibility. Its recognized
+headings now cover related books, magazines, and publications, including
+`related-publication`, but output and canonical-name configuration remain
+`sc-related-book` / `related-book`. The plugin does not emit a second legacy or
+replacement class.
+
+Version 0.14.0 renames canonical `pull-quote` to the current EPUB spelling
+`pullquote`. The former `Pull-quote.` input and the natural `Pull quote.` form
+remain aliases, but output classes and canonical-name configuration now use
+`sc-pullquote` / `pullquote`; the plugin does not emit `sc-pull-quote` as a
+legacy class. DPUB-ARIA requires a duplicated presentational pullquote to be
+hidden from assistive technologies. The plugin cannot determine whether a
+marked quotation is the source occurrence or a duplicate, so it does not add
+`aria-hidden` automatically; add it in a downstream transform when a rendered
+pullquote duplicates text elsewhere.
+
+The same release tightens several neighboring semantics. `point` now emits a
+roleless main-flow `<section class="sc-point">` instead of an
+`<aside role="doc-tip">`, and recognizes `key point(s)` / `main point(s)`;
+`hint` and `tip` retain the advice-oriented `doc-tip` output. The new roleless
+`evaluation` recognizes English `Evaluation.` / `Evaluations.` plus
+`Product evaluation.`, `Quality evaluation.`, and `Performance evaluation.`
+(including their plural forms), and specific judgment-oriented Japanese forms:
+`製品評価`, `品質評価`, `性能評価`, and `パフォーマンス評価`. Bare `評価`,
+`評価結果`, and `総合評価` remain unregistered
+because they cross assessment, grading, and judgment boundaries. Assessment-like
+`リスク評価`, grading-like `成績評価`, and bare `採点` also remain unregistered;
+`評価基準` maps to `rubric`. Bare `QA.` no longer maps to `qna` because it
+commonly means quality assurance in technical documents.
+
+Version 0.14.0 also renames canonical `assessments` to `assessment` and
+`learning-objectives` to `learning-objective`, following the current singular
+EPUB Structural Semantics Vocabulary terms. Natural singular/plural English
+headings remain recognized, and former `learning-objectives` remains an input
+compatibility alias, but output and canonical-name configuration now use
+`sc-assessment` / `assessment` and `sc-learning-objective` /
+`learning-objective`. Canonical grammatical number follows an intentionally
+corresponding external vocabulary when one exists; otherwise singular concept
+names are preferred, with plural canonicals retained for lexicalized or
+deliberately aggregate concepts rather than for list-wide visual uniformity.
+
+`problem` represents a unit to be solved and may contain its prompt or
+instructions directly; it does not require a nested `question`. `question`
+represents an independently labelled question, subquestion, or teaching
+prompt. `hint`, `answer`, and `explanation` blocks may appear inside a problem
+or elsewhere, but matching numbers do not create automatic links. `interview`
+is roleless because interviews can include narrative or conversational
+material; use `qna` when the content is explicitly a question-and-answer
+series and should emit `role="doc-qna"`.
+
+`lead` is the only built-in semantic whose marker label is hidden by default.
+It renders as a roleless `<div class="sc-lead">` in standard, bracket, and
+GitHub alert flows. A lead/lede is normally opening prose rather than a
+separately navigable document section, so hiding the control marker does not
+create a named `region` landmark. The behavior is represented explicitly as
+catalog data (`hideLabel: true`). `lead` itself is not an EPUB or DPUB-ARIA
+vocabulary term. A non-empty inline label control can override the default and
+display a replacement label. An exact jointless heading such as `## Lead` is
+intentionally not matched, because hiding its only text would leave an empty
+heading. The matcher applies this invariant to every hidden-by-default semantic;
+it does not contain a canonical-name exception for `lead`.
+
 The default ARIA attributes prioritize DPUB-ARIA roles where the semantic label closely matches a digital-publishing role.
 When no DPUB-ARIA role is a close fit, the package keeps the stable `sc-*` class and avoids forcing a `role="doc-*"` value.
-This plugin handles semantics that wrap content as `section`, `aside`, or `div`.
+This plugin handles semantics that wrap content as `section`, `aside`, `div`, or `nav`.
 Figure-like examples are intentionally delegated to figure/caption plugins such as
 [`p7d-markdown-it-figure-with-p-caption`](https://github.com/peaceroad/p7d-markdown-it-figure-with-p-caption).
 The package does not emit `epub:type`; EPUB structural vocabulary is treated as reference material for possible EPUB-specific output, not as default HTML output.
@@ -413,9 +486,9 @@ Lead. A lead.
 A paragraph.
 [HTML]
 <h1>A heading.</h1>
-<section class="sc-lead" aria-label="Lead">
+<div class="sc-lead">
 <p>A lead.</p>
-</section>
+</div>
 <p>A paragraph.</p>
 
 
@@ -539,6 +612,43 @@ Consumers can style the generated containers with these stable selectors:
 The canonical semantic name, output tag, and default attributes come from [`semantics/en.json`](https://github.com/peaceroad/p7d-markdown-it-hr-sandwiched-semantic-container/blob/main/semantics/en.json).
 For example, a semantic may render as `<section class="sc-notice" role="doc-notice">` or `<aside class="sc-column">`.
 DPUB-ARIA roles are emitted only for close matches; otherwise the semantic class remains the styling and integration contract.
+An alias is a semantic classification, not only a spelling variant. Once a
+built-in or runtime alias resolves to a canonical semantic, it inherits that
+semantic's tag, classes, and default attributes, including `role`. The plugin
+does not suppress a role per alias: ambiguous labels should remain unregistered
+or map to a suitable roleless semantic rather than being attached to a
+role-bearing canonical.
+`important` is deliberately roleless: importance alone does not imply the
+consequences described by `doc-notice`. `notice`, `alert`, `caution`, `warning`,
+and `danger` retain `doc-notice` because their catalog meanings are notice- or
+consequence-oriented.
+`doc-notice` is a structural DPUB-ARIA role, not the live-region
+`role="alert"`. Its superclass is `note`, so it does not by itself make the
+content pop up, move focus, or request immediate announcement. Its current
+EPUB/DPUB meaning is nevertheless narrow: it concerns
+consequences that might arise from an action or event; the specification gives
+warnings, cautions, and dangers as examples. Japanese `通知` and the more formal
+`通告` are built in as direct author-selected headings, just as English `Notice`
+is, although the content still needs to fit that definition. `注意書` and
+`注意書き` map to `caution`. Generic Japanese announcement headings `お知らせ`
+and `告知` map to roleless `information`, so they do not make a consequence
+claim merely by being recognized. Bare `掲示` remains unregistered. A project
+can opt a more specific local heading into `notice` with a literal
+`semanticContainerSc` alias when its use is deliberately consequence-oriented.
+
+For neighboring roleless information semantics, `情報` and `参考情報` map to
+`information`: the useful facts or guidance are presented in the block itself.
+`参照`, `参照先`, and `参照情報` map to `reference`: the block identifies what or
+where to consult. Supporting documents or assets headed `参考資料` map to
+`resources`. This is a practical heading boundary; the phrases can overlap in
+ordinary prose.
+The plugin does not generate IDs or `aria-labelledby` relationships for visible
+labels. If the same DPUB landmark role occurs more than once, downstream HTML
+or EPUB tooling must provide unique accessible names. Footnote/endnote tooling
+should own the note lists, references, and backlinks required by
+`doc-endnotes`; this plugin only recognizes an explicitly authored section
+label. Downstream tooling must also provide a descendant entry list for
+`doc-bibliography` and real navigation links for `doc-index` and `doc-toc`.
 When a label is hidden by `labelControl` or `semanticContainerSc`, the container receives an `aria-label` fallback when the semantic does not already define one.
 Roleless `div` containers are the exception: they keep only the `sc-*` class because generic containers should not be named with `aria-label`.
 
@@ -597,7 +707,7 @@ Recommended explicit input:
 ```js
 const env = {
   semanticContainerSc: {
-    notice: "お知らせ",  // alias extension
+    notice: "特別通知",  // project-local consequence-oriented alias
     warning: "",         // default hide label
     note: null           // default hide label
   }
@@ -633,23 +743,28 @@ md.use(mditSemanticContainer)
 ```
 
 Behavior:
-- Non-empty `sc.<semantic>` values extend aliases for semantic detection.
+- Non-empty string or string-array `sc.<semantic>` values extend aliases for semantic detection.
 - `sc.titlepage` controls frontmatter titlepage inference and is not treated as a semantic name.
 - Runtime `sc` aliases are treated as literal strings, not regex patterns. If you need regex-capable aliases, define them in locale data (`semantics/*.json`).
+- A runtime alias inherits the selected canonical semantic's output tag, classes, and default attributes, including any DPUB-ARIA `role`; adding `特別通知` to `notice`, for example, explicitly opts that local heading into `doc-notice`.
 - `""` / `null` in `sc.<semantic>` hides the label by default and keeps `aria-label` fallback behavior, except for roleless `div` containers.
 - `labelControl` inline `label="..."` takes precedence over `sc` default hide.
-- Alias conflicts are ignored deterministically and warnings are collected in `env.semanticContainerWarnings`.
+- Alias conflicts are ignored deterministically and warnings are collected in `env.semanticContainerWarnings`. Conflict checks include labels matched by regex-capable built-in aliases, not only identical catalog strings.
 
 Example frontmatter shape (from your own frontmatter parser):
 
 ```yaml
 ---
 sc:
-  notice: "お知らせ"
+  notice: "特別通知"
   warning: ""
   titlepage: true
 ---
 ```
+
+Here `特別通知` is an explicit project-local alias for consequence-oriented
+content. Generic `お知らせ` and `告知` are built-in roleless `information`
+labels because they do not necessarily satisfy the `doc-notice` definition.
 
 If you want a one-line frontmatter flag for titlepage inference, use `sc.titlepage: true`.
 Top-level `titlepage: true` is intentionally not recognized, because that name is too likely to collide with book-level metadata owned by another tool.
@@ -1018,7 +1133,7 @@ This renders the hr-sandwiched range as a `div.sc-chapter-titlepage` and wraps h
 Supported implicit heading shapes are deliberately conservative:
 
 - English: `Chapter 1`, `Chapter A. Title`, `Appendix A`, `Appendix A. Reference Data`, `Part 1`, `Part 1. Title`
-- Japanese: `第1章`, `第II章`, `第1章 はじめに`, `1章 はじめに`, `付録A`, `付録A 参考データ`, `付属A`, `付属A 参考データ`, `第1部`, `第1部 扉タイトル`
+- Japanese: `第1章`, `第II章`, `第1章 はじめに`, `1章 はじめに`, `付録A`, `付録A 参考データ`, `付属A`, `付属A 参考データ`, `附属A`, `附属A 参考データ`, `第1部`, `第1部 扉タイトル`
 
 Implicit hr-sandwich detection only applies when the first block after the opening `hr` is an `h1`.
 It does not turn ordinary later headings or `### Column: ...` blocks into titlepages.
@@ -1093,7 +1208,7 @@ A paragraph.
 
 ## Audit helper
 
-Use the included audit script to find repeated inline labels and `sc` alias conflicts in Markdown files.
+Use the included audit script to find repeated inline labels, built-in catalog drift or exact alias ownership conflicts, and `sc` alias conflicts in Markdown files.
 
 ```bash
 npm run labels:audit

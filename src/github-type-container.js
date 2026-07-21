@@ -1,11 +1,15 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
-import { buildSemanticAliasPatterns } from './semantic-alias.js'
+import { buildSemanticAliasPatternLists } from './semantic-alias.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 import { resolveAutoJointLabelStyle } from './label-style.js'
 import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
-const createGitHubTypeContainer = (semantics, semanticLeadCandidates = buildSemanticLeadCandidates(semantics)) => {
+const createGitHubTypeContainer = (
+  semantics,
+  semanticLeadCandidates = buildSemanticLeadCandidates(semantics),
+  semanticAliasPatternLists = buildSemanticAliasPatternLists(semantics)
+) => {
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
   const CODE_TAB = 9
@@ -92,8 +96,8 @@ const createGitHubTypeContainer = (semantics, semanticLeadCandidates = buildSema
 
     return trimLeadingWhitespace(value.slice(closeIndex + 1))
   }
-  const semanticsGitHubAlertsReg = semantics.map((sem) => {
-    const aliasPatterns = buildSemanticAliasPatterns(sem)
+  const semanticsGitHubAlertsReg = semantics.map((sem, sn) => {
+    const aliasPatterns = semanticAliasPatternLists[sn]
     const aliasStr = aliasPatterns.length
       ? '|' + aliasPatterns.join('|')
       : ''
@@ -440,7 +444,7 @@ const createGitHubTypeContainer = (semantics, semanticLeadCandidates = buildSema
     if (shouldDropOriginalParagraph && (inlineLabelHeadingMixin || opt?.labelControl)) {
       firstHeading = findHeadingAfter(tokens, paragraphCloseIndex + 1, re)
     }
-    const defaultHideLabel = !!opt?.scHideSet?.has(sem.name)
+    const defaultHideLabel = sem.hideLabel || !!opt?.scHideSet?.has(sem.name)
     const useHeadingLabelControl = !!(opt?.labelControl && shouldDropOriginalParagraph && firstHeading)
     const labelControl = !opt?.labelControl
       ? null
@@ -462,7 +466,6 @@ const createGitHubTypeContainer = (semantics, semanticLeadCandidates = buildSema
     const sToken = createContainerStartToken(
       state,
       sem,
-      labelText,
       hideLabel,
       sc.actualName,
       startMap

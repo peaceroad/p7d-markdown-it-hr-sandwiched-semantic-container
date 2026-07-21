@@ -1,5 +1,10 @@
 import fs from 'fs'
 import path from 'path'
+import { buildSemantics } from '../src/semantics.js'
+import {
+  buildExactSemanticLabelRegexes,
+  buildSemanticAliasPatternLists,
+} from '../src/semantic-alias.js'
 
 const STRICT = process.argv.includes('--strict')
 const ROOT = process.cwd()
@@ -52,6 +57,7 @@ const unquote = (value) => {
 const splitTopLevel = (value, separator) => {
   const parts = []
   let quote = ''
+  let depth = 0
   let token = ''
   for (let i = 0; i < value.length; i++) {
     const ch = value[i]
@@ -67,7 +73,17 @@ const splitTopLevel = (value, separator) => {
       token += ch
       continue
     }
-    if (ch === separator) {
+    if (ch === '[' || ch === '{' || ch === '(') {
+      depth++
+      token += ch
+      continue
+    }
+    if (ch === ']' || ch === '}' || ch === ')') {
+      if (depth > 0) depth--
+      token += ch
+      continue
+    }
+    if (ch === separator && depth === 0) {
       parts.push(token)
       token = ''
       continue
@@ -89,7 +105,10 @@ const parseInlineObject = (raw) => {
     const key = pair[0].trim()
     if (!key) continue
     const value = pair.slice(1).join(':').trim()
-    result[key] = value === '' ? null : unquote(value)
+    const arrayValue = parseInlineArray(value)
+    result[key] = arrayValue !== null
+      ? arrayValue
+      : (value === '' ? null : unquote(value))
   }
   return result
 }
@@ -185,14 +204,33 @@ const loadSemantics = () => {
 
   const knownSemantics = new Set()
   const aliasOwner = new Map()
+  const catalogIssues = []
+  const catalogIssueKeys = new Set()
+  const addCatalogIssue = (key, message) => {
+    if (catalogIssueKeys.has(key)) return
+    catalogIssueKeys.add(key)
+    catalogIssues.push(message)
+  }
   const addAlias = (alias, owner) => {
     const token = String(alias || '').trim().toLowerCase()
     if (!token) return
-    if (!aliasOwner.has(token)) aliasOwner.set(token, owner)
+    const currentOwner = aliasOwner.get(token)
+    if (currentOwner && currentOwner !== owner) {
+      addCatalogIssue(
+        'alias:' + token,
+        'built-in alias "' + alias + '" conflicts between "' + currentOwner + '" and "' + owner + '"'
+      )
+      return
+    }
+    aliasOwner.set(token, owner)
   }
 
   for (let i = 0; i < en.length; i++) {
     const sem = en[i]
+    if (knownSemantics.has(sem.name)) {
+      addCatalogIssue('semantic:' + sem.name, 'canonical semantic "' + sem.name + '" is duplicated')
+      continue
+    }
     knownSemantics.add(sem.name)
     addAlias(sem.name, sem.name)
     if (Array.isArray(sem.aliases)) {
@@ -205,13 +243,41 @@ const loadSemantics = () => {
   const jaKeys = Object.keys(ja)
   for (let i = 0; i < jaKeys.length; i++) {
     const semName = jaKeys[i]
-    const aliases = Array.isArray(ja[semName]) ? ja[semName] : []
+    if (!knownSemantics.has(semName)) {
+      addCatalogIssue('ja-extra:' + semName, 'Japanese catalog key "' + semName + '" has no canonical semantic')
+      continue
+    }
+    if (!Array.isArray(ja[semName])) {
+      addCatalogIssue('ja-type:' + semName, 'Japanese catalog value for "' + semName + '" must be an array')
+      continue
+    }
+    const aliases = ja[semName]
     for (let ai = 0; ai < aliases.length; ai++) {
       addAlias(aliases[ai], semName)
     }
   }
 
-  return { knownSemantics, aliasOwner }
+  for (const semName of knownSemantics) {
+    if (!Object.hasOwn(ja, semName)) {
+      addCatalogIssue('ja-missing:' + semName, 'Japanese catalog is missing canonical semantic "' + semName + '"')
+    }
+  }
+
+  const runtimeSemantics = buildSemantics(['ja'])
+  const semanticLabelRegexes = buildExactSemanticLabelRegexes(
+    runtimeSemantics,
+    buildSemanticAliasPatternLists(runtimeSemantics)
+  )
+  const resolveAliasOwner = (alias) => {
+    const token = String(alias || '').trim().toLowerCase()
+    if (!token) return ''
+    for (let i = 0; i < semanticLabelRegexes.length; i++) {
+      if (semanticLabelRegexes[i].test(alias)) return runtimeSemantics[i].name
+    }
+    return ''
+  }
+
+  return { knownSemantics, resolveAliasOwner, catalogIssues }
 }
 
 const collectLabelCounts = (content, filePath, labelCountMap) => {
@@ -231,7 +297,7 @@ const collectLabelCounts = (content, filePath, labelCountMap) => {
   }
 }
 
-const collectScCollisions = (sc, filePath, knownSemantics, aliasOwner, issues) => {
+const collectScCollisions = (sc, filePath, knownSemantics, resolveAliasOwner, issues) => {
   if (!sc || typeof sc !== 'object') return
 
   const localAliasOwner = new Map()
@@ -239,22 +305,23 @@ const collectScCollisions = (sc, filePath, knownSemantics, aliasOwner, issues) =
   for (let i = 0; i < keys.length; i++) {
     const rawKey = keys[i]
     const semName = rawKey.trim().toLowerCase()
+    if (semName === 'titlepage') continue
     if (!knownSemantics.has(semName)) {
-      issues.push(filePath + ': sc key "' + rawKey + '" is unknown')
+      issues.push({ filePath, message: 'sc key "' + rawKey + '" is unknown' })
       continue
     }
     const aliases = toAliasCandidates(sc[rawKey])
     for (let ai = 0; ai < aliases.length; ai++) {
       const alias = aliases[ai]
       const token = alias.toLowerCase()
-      const baseOwner = aliasOwner.get(token)
+      const baseOwner = resolveAliasOwner(alias)
       if (baseOwner && baseOwner !== semName) {
-        issues.push(filePath + ': sc alias "' + alias + '" for "' + semName + '" conflicts with existing "' + baseOwner + '"')
+        issues.push({ filePath, message: 'sc alias "' + alias + '" for "' + semName + '" conflicts with existing "' + baseOwner + '"' })
         continue
       }
       const localOwner = localAliasOwner.get(token)
       if (localOwner && localOwner !== semName) {
-        issues.push(filePath + ': sc alias "' + alias + '" conflicts between "' + localOwner + '" and "' + semName + '"')
+        issues.push({ filePath, message: 'sc alias "' + alias + '" conflicts between "' + localOwner + '" and "' + semName + '"' })
         continue
       }
       localAliasOwner.set(token, semName)
@@ -262,7 +329,7 @@ const collectScCollisions = (sc, filePath, knownSemantics, aliasOwner, issues) =
   }
 }
 
-const printReport = (labelCountMap, scIssues) => {
+const printReport = (labelCountMap, catalogIssues, scIssues) => {
   console.log('=== labels:audit ===')
   let hasFindings = false
 
@@ -287,11 +354,22 @@ const printReport = (labelCountMap, scIssues) => {
     console.log('\nNo repeated inline labels found.')
   }
 
+  if (catalogIssues.length > 0) {
+    hasFindings = true
+    console.log('\nBuilt-in semantic catalog issues:')
+    for (let i = 0; i < catalogIssues.length; i++) {
+      console.log('- ' + catalogIssues[i])
+    }
+  } else {
+    console.log('\nNo built-in semantic catalog issues found.')
+  }
+
   if (scIssues.length > 0) {
     hasFindings = true
     console.log('\nsc alias issues:')
     for (let i = 0; i < scIssues.length; i++) {
-      console.log('- ' + path.relative(ROOT, scIssues[i].split(':')[0]) + ':' + scIssues[i].slice(scIssues[i].indexOf(':') + 1))
+      const issue = scIssues[i]
+      console.log('- ' + path.relative(ROOT, issue.filePath) + ': ' + issue.message)
     }
   } else {
     console.log('\nNo sc alias issues found.')
@@ -302,7 +380,7 @@ const printReport = (labelCountMap, scIssues) => {
 
 const main = () => {
   const files = walkMarkdownFiles(ROOT)
-  const { knownSemantics, aliasOwner } = loadSemantics()
+  const { knownSemantics, resolveAliasOwner, catalogIssues } = loadSemantics()
   const labelCountMap = new Map()
   const scIssues = []
 
@@ -312,10 +390,10 @@ const main = () => {
     collectLabelCounts(content, filePath, labelCountMap)
     const frontmatter = extractFrontmatter(content)
     const sc = parseScFromFrontmatter(frontmatter)
-    collectScCollisions(sc, filePath, knownSemantics, aliasOwner, scIssues)
+    collectScCollisions(sc, filePath, knownSemantics, resolveAliasOwner, scIssues)
   }
 
-  const hasFindings = printReport(labelCountMap, scIssues)
+  const hasFindings = printReport(labelCountMap, catalogIssues, scIssues)
   if (STRICT && hasFindings) {
     process.exitCode = 1
   }

@@ -11,7 +11,7 @@
 > [!IMPORTANT]
 > This is important information.
 [HTML]
-<section class="sc-important" role="doc-notice">
+<section class="sc-important">
 <p><strong class="sc-important-label"><span class="sc-important-label-joint">[</span>IMPORTANT<span class="sc-important-label-joint">]</span></strong></p>
 <p>This is important information.</p>
 </section>

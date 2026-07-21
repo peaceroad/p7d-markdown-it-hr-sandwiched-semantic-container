@@ -34,6 +34,7 @@ export const buildSemantics = (languages = ['ja']) => {
       tag: entry.tag,
       attrs,
       aliases: entry.aliases ? [...entry.aliases] : [],
+      hideLabel: entry.hideLabel === true,
       className: 'sc-' + entry.name,
       labelClass: 'sc-' + entry.name + '-label',
       labelJointClass: 'sc-' + entry.name + '-label-joint',

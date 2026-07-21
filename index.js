@@ -1,14 +1,17 @@
 import { buildSemantics } from './src/semantics.js'
 import { createBracketFormat } from './src/bracket-format.js'
 import { createGitHubTypeContainer } from './src/github-type-container.js'
-import { buildSemanticAliasPatterns } from './src/semantic-alias.js'
+import {
+  SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN,
+  buildSemanticAliasPatternLists,
+  buildExactSemanticLabelRegexes,
+} from './src/semantic-alias.js'
 import { buildSemanticLeadCandidates } from './src/semantic-lead.js'
 import { createHrBlockCandidateCollector } from './src/semantic-hr-candidates.js'
 import { createStandardContainerApplier } from './src/standard-applier.js'
 import { resolveContainerRangeEnd, resolveHeadingSectionRangeEnd } from './src/container-range.js'
 import { createFrontmatterTitlepageFinder, createHeadingTitlepageMatcher, setHeadingTitlepageContainer } from './src/heading-titlepage.js'
 
-const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
 const strongMark = '[*_]{2}'
 
 const semanticsHalfJoint = '[:.]'
@@ -16,9 +19,11 @@ const semanticsFullJoint = '[　：。．]'
 const STRONG_MARK_GLOBAL_REG = /[*_]{2}/g
 const MATCH_CACHE_MAX = 256
 const SC_ENGINE_CACHE_MAX = 32
+const BASE_ALIAS_OWNER_CACHE_MAX = 256
 const CACHE_MISS = 0
 const INSTALL_SENTINEL = Symbol.for('@peaceroad/markdown-it-hr-sandwiched-semantic-container:installed')
 const CODE_STAR = 42
+const CODE_MINUS = 45
 const CODE_UNDERSCORE = 95
 const CODE_DOT = 46
 const CODE_COLON = 58
@@ -103,24 +108,51 @@ const buildSemanticNameMap = (semantics) => {
   return semanticNameByLower
 }
 
-const buildBaseAliasOwnerMap = (semantics) => {
-  const ownerMap = new Map()
+const createBaseAliasOwnerResolver = (semantics, semanticAliasPatternLists) => {
+  const canonicalOwnerMap = new Map()
   for (let i = 0; i < semantics.length; i++) {
     const sem = semantics[i]
     const semName = sem?.name
     if (!semName) continue
     const nameToken = normalizeAliasToken(semName)
-    if (nameToken && !ownerMap.has(nameToken)) {
-      ownerMap.set(nameToken, semName)
-    }
-    const aliases = Array.isArray(sem.aliases) ? sem.aliases : []
-    for (let ai = 0; ai < aliases.length; ai++) {
-      const aliasToken = normalizeAliasToken(aliases[ai])
-      if (!aliasToken || ownerMap.has(aliasToken)) continue
-      ownerMap.set(aliasToken, semName)
+    if (nameToken && !canonicalOwnerMap.has(nameToken)) {
+      canonicalOwnerMap.set(nameToken, semName)
     }
   }
-  return ownerMap
+
+  const resolvedOwnerCache = new Map()
+  let exactSemanticLabelRegexes = null
+
+  return (value) => {
+    const token = normalizeAliasToken(value)
+    if (!token) return ''
+
+    const canonicalOwner = canonicalOwnerMap.get(token)
+    if (canonicalOwner) return canonicalOwner
+    const cachedOwner = resolvedOwnerCache.get(token)
+    if (cachedOwner !== undefined) return cachedOwner
+
+    if (!exactSemanticLabelRegexes) {
+      exactSemanticLabelRegexes = buildExactSemanticLabelRegexes(
+        semantics,
+        semanticAliasPatternLists
+      )
+    }
+
+    let owner = ''
+    for (let i = 0; i < exactSemanticLabelRegexes.length; i++) {
+      if (!exactSemanticLabelRegexes[i].test(value)) continue
+      owner = semantics[i].name
+      break
+    }
+
+    if (resolvedOwnerCache.size >= BASE_ALIAS_OWNER_CACHE_MAX) {
+      const firstKey = resolvedOwnerCache.keys().next().value
+      resolvedOwnerCache.delete(firstKey)
+    }
+    resolvedOwnerCache.set(token, owner)
+    return owner
+  }
 }
 
 const parseScEntry = (rawValue, warnings, semanticName) => {
@@ -149,14 +181,13 @@ const parseScEntry = (rawValue, warnings, semanticName) => {
   return { hide: false, aliases: [] }
 }
 
-const resolveSemanticContainerSc = (rawSc, semanticNameByLower, baseAliasOwnerMap) => {
+const resolveSemanticContainerSc = (rawSc, semanticNameByLower, resolveBaseAliasOwner) => {
   if (!rawSc || typeof rawSc !== 'object' || Array.isArray(rawSc)) return null
 
   const warnings = []
   const hideSet = new Set()
   const aliasBySemantic = new Map()
-  let aliasOwnerMap = null
-  let scAliasOwner = null
+  let scAliasOwnerMap = null
   const keys = Object.keys(rawSc)
 
   for (let i = 0; i < keys.length; i++) {
@@ -176,10 +207,7 @@ const resolveSemanticContainerSc = (rawSc, semanticNameByLower, baseAliasOwnerMa
       hideSet.add(semanticName)
     }
     if (!aliases.length) continue
-    if (!aliasOwnerMap) {
-      aliasOwnerMap = new Map(baseAliasOwnerMap)
-      scAliasOwner = new Map()
-    }
+    if (!scAliasOwnerMap) scAliasOwnerMap = new Map()
     let semanticAliases = aliasBySemantic.get(semanticName)
 
     for (let ai = 0; ai < aliases.length; ai++) {
@@ -187,24 +215,25 @@ const resolveSemanticContainerSc = (rawSc, semanticNameByLower, baseAliasOwnerMa
       const aliasToken = normalizeAliasToken(alias)
       if (!aliasToken) continue
 
-      const owner = aliasOwnerMap.get(aliasToken)
-      if (owner && owner !== semanticName) {
-        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with "' + owner + '" and is ignored for "' + semanticName + '"')
-        continue
-      }
-
-      const scOwner = scAliasOwner.get(aliasToken)
+      const scOwner = scAliasOwnerMap.get(aliasToken)
       if (scOwner && scOwner !== semanticName) {
-        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with another sc entry ("' + scOwner + '") and is ignored for "' + semanticName + '"')
+        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with "' + scOwner + '" and is ignored for "' + semanticName + '"')
         continue
       }
+      if (scOwner) continue
+
+      const baseOwner = resolveBaseAliasOwner(alias)
+      if (baseOwner && baseOwner !== semanticName) {
+        warnings.push('semanticContainerSc: alias "' + alias + '" conflicts with "' + baseOwner + '" and is ignored for "' + semanticName + '"')
+        continue
+      }
+      if (baseOwner) continue
 
       if (!semanticAliases) {
         semanticAliases = new Set()
         aliasBySemantic.set(semanticName, semanticAliases)
       }
-      aliasOwnerMap.set(aliasToken, semanticName)
-      scAliasOwner.set(aliasToken, semanticName)
+      scAliasOwnerMap.set(aliasToken, semanticName)
       semanticAliases.add(alias)
     }
   }
@@ -292,9 +321,10 @@ const createRenderOptions = (md, opt, hideSet, frontmatterTitlepage) => {
 
 const getHrTypeFromMarkup = (markup) => {
   if (!markup) return ''
-  if (markup.includes('*')) return '*'
-  if (markup.includes('-')) return '-'
-  if (markup.includes('_')) return '_'
+  const code = markup.charCodeAt(0)
+  if (code === CODE_STAR) return '*'
+  if (code === CODE_MINUS) return '-'
+  if (code === CODE_UNDERSCORE) return '_'
   return ''
 }
 
@@ -489,13 +519,13 @@ const resolveRenderInputs = (state, md, mdStateRef) => {
   }
 }
 
-const buildSemanticsReg = (semantics) => semantics.map((sem) => {
-  const aliasPatterns = buildSemanticAliasPatterns(sem)
+const buildSemanticsReg = (semantics, semanticAliasPatternLists) => semantics.map((sem, sn) => {
+  const aliasPatterns = semanticAliasPatternLists[sn]
   const aliasStr = aliasPatterns.length
     ? '|' + aliasPatterns.join('|')
     : ''
   const pattern =
-    '^(' + strongMark + ')?((?:' + sem.name + aliasStr + ')' + sNumber + ')'
+    '^(' + strongMark + ')?((?:' + sem.name + aliasStr + ')' + SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN + ')'
     + '(?:'
     + '(' + semanticsHalfJoint + ') *?\\1(?: |$)'
     + '| *?\\1 *?(' + semanticsHalfJoint + ') '
@@ -503,14 +533,6 @@ const buildSemanticsReg = (semantics) => semantics.map((sem) => {
     + '| *?\\1 *?(' + semanticsFullJoint + ')'
     + ' *?)'
   return new RegExp(pattern, 'i')
-})
-
-const buildHeadingNoJointSemanticsReg = (semantics) => semantics.map((sem) => {
-  const aliasPatterns = buildSemanticAliasPatterns(sem)
-  const aliasStr = aliasPatterns.length
-    ? '|' + aliasPatterns.join('|')
-    : ''
-  return new RegExp('^((?:' + sem.name + aliasStr + ')' + sNumber + ')$', 'i')
 })
 
 const normalizeSemanticDenySet = (value) => {
@@ -702,7 +724,10 @@ const createHeadingNoJointMatcher = (semantics, headingNoJointReg, denySet, sema
     for (let ci = 0; ci < candidates.length; ci++) {
       const sn = candidates[ci]
       const sem = semantics[sn]
-      if (denySet?.has(sem.name.toLowerCase())) continue
+      // An exact jointless heading contains no body text to preserve. Matching
+      // a semantic whose label is hidden by default would therefore create an
+      // empty heading after application.
+      if (sem.hideLabel || denySet?.has(sem.name.toLowerCase())) continue
 
       const matched = content.match(headingNoJointReg[sn])
       if (!matched) continue
@@ -1425,9 +1450,11 @@ const createContainerRunner = (walkContainers, planHrCandidates, planGitHubCandi
   return true
 }
 
-const createSemanticEngine = (semantics, opt, featureHelpers, semanticLeadCandidates) => {
-  const semanticsReg = buildSemanticsReg(semantics)
-  const headingNoJointReg = opt.requireHeadingLabelJoint ? null : buildHeadingNoJointSemanticsReg(semantics)
+const createSemanticEngine = (semantics, opt, featureHelpers, semanticLeadCandidates, semanticAliasPatternLists) => {
+  const semanticsReg = buildSemanticsReg(semantics, semanticAliasPatternLists)
+  const headingNoJointReg = opt.requireHeadingLabelJoint
+    ? null
+    : buildExactSemanticLabelRegexes(semantics, semanticAliasPatternLists)
   const { checkStandardLabel: semanticLabelMatcher, findMatchedSemantic } = createLabelMatcher(
     semantics,
     semanticsReg,
@@ -1572,22 +1599,27 @@ const mditSemanticContainer = (md, option) => {
   
   const baseSemantics = buildSemantics(opt.languages)
   const baseSemanticLeadCandidates = buildSemanticLeadCandidates(baseSemantics)
+  const baseSemanticAliasPatternLists = buildSemanticAliasPatternLists(baseSemantics)
   const hrBlockCandidateCollector = createHrBlockCandidateCollector()
   const baseBracket = opt.allowBracketJoint
-    ? createBracketFormat(baseSemantics, baseSemanticLeadCandidates)
+    ? createBracketFormat(baseSemantics, baseSemanticLeadCandidates, baseSemanticAliasPatternLists)
     : null
   const baseGithub = opt.githubTypeContainer
-    ? createGitHubTypeContainer(baseSemantics, baseSemanticLeadCandidates)
+    ? createGitHubTypeContainer(baseSemantics, baseSemanticLeadCandidates, baseSemanticAliasPatternLists)
     : null
   const baseFeatureHelpers = { bracket: baseBracket, github: baseGithub }
   const { semanticContainer: baseSemanticContainer } = createSemanticEngine(
     baseSemantics,
     opt,
     baseFeatureHelpers,
-    baseSemanticLeadCandidates
+    baseSemanticLeadCandidates,
+    baseSemanticAliasPatternLists
   )
   const semanticNameByLower = buildSemanticNameMap(baseSemantics)
-  const baseAliasOwnerMap = buildBaseAliasOwnerMap(baseSemantics)
+  const resolveBaseAliasOwner = createBaseAliasOwnerResolver(
+    baseSemantics,
+    baseSemanticAliasPatternLists
+  )
   const scEngineCache = new Map()
   const mdStateRef = { meta: md?.meta, frontmatter: md?.frontmatter }
 
@@ -1601,18 +1633,20 @@ const mditSemanticContainer = (md, option) => {
 
     const semanticsWithSc = mergeSemanticsWithScAliases(baseSemantics, scConfig.aliasBySemantic)
     const semanticLeadCandidates = buildSemanticLeadCandidates(semanticsWithSc)
+    const semanticAliasPatternLists = buildSemanticAliasPatternLists(semanticsWithSc)
     const bracket = opt.allowBracketJoint
-      ? createBracketFormat(semanticsWithSc, semanticLeadCandidates)
+      ? createBracketFormat(semanticsWithSc, semanticLeadCandidates, semanticAliasPatternLists)
       : null
     const github = opt.githubTypeContainer
-      ? createGitHubTypeContainer(semanticsWithSc, semanticLeadCandidates)
+      ? createGitHubTypeContainer(semanticsWithSc, semanticLeadCandidates, semanticAliasPatternLists)
       : null
     const featureHelpers = { bracket, github }
     const { semanticContainer } = createSemanticEngine(
       semanticsWithSc,
       opt,
       featureHelpers,
-      semanticLeadCandidates
+      semanticLeadCandidates,
+      semanticAliasPatternLists
     )
 
     if (scEngineCache.size >= SC_ENGINE_CACHE_MAX) {
@@ -1660,7 +1694,7 @@ const mditSemanticContainer = (md, option) => {
     const scConfig = resolveSemanticContainerSc(
       renderInputs.rawScInput,
       semanticNameByLower,
-      baseAliasOwnerMap
+      resolveBaseAliasOwner
     )
     if (scConfig?.warnings?.length) {
       pushScWarnings(state, scConfig.warnings)

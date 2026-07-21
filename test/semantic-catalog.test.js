@@ -1,6 +1,77 @@
 import assert from 'assert'
+import { buildSemantics } from '../src/semantics.js'
 
 export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
+  pass = runDirectTest('semantic catalog locks every default tag and DPUB role', pass, () => {
+    const roleBySemantic = new Map([
+      ['abstract', 'doc-abstract'],
+      ['acknowledgments', 'doc-acknowledgments'],
+      ['afterword', 'doc-afterword'],
+      ['alert', 'doc-notice'],
+      ['appendix', 'doc-appendix'],
+      ['bibliography', 'doc-bibliography'],
+      ['caution', 'doc-notice'],
+      ['chapter-toc', 'doc-toc'],
+      ['colophon', 'doc-colophon'],
+      ['conclusion', 'doc-conclusion'],
+      ['credits', 'doc-credits'],
+      ['danger', 'doc-notice'],
+      ['dedication', 'doc-dedication'],
+      ['endnotes', 'doc-endnotes'],
+      ['epigraph', 'doc-epigraph'],
+      ['epilogue', 'doc-epilogue'],
+      ['errata', 'doc-errata'],
+      ['faq', 'doc-qna'],
+      ['foreword', 'doc-foreword'],
+      ['glossary', 'doc-glossary'],
+      ['hint', 'doc-tip'],
+      ['index', 'doc-index'],
+      ['introduction', 'doc-introduction'],
+      ['notice', 'doc-notice'],
+      ['preface', 'doc-preface'],
+      ['prologue', 'doc-prologue'],
+      ['pullquote', 'doc-pullquote'],
+      ['qna', 'doc-qna'],
+      ['tip', 'doc-tip'],
+      ['toc', 'doc-toc'],
+      ['warning', 'doc-notice'],
+    ])
+    const asideSemantics = new Set([
+      'annotation',
+      'column',
+      'hint',
+      'pullquote',
+      'related-book',
+      'related-article',
+      'related-link',
+      'related',
+      'tip',
+    ])
+    const divSemantics = new Set([
+      'appendix-titlepage',
+      'chapter-titlepage',
+      'lead',
+      'part-titlepage',
+      'question',
+    ])
+    const navSemantics = new Set(['chapter-toc', 'toc'])
+
+    for (const semantic of buildSemantics([])) {
+      const expectedTag = asideSemantics.has(semantic.name)
+        ? 'aside'
+        : (divSemantics.has(semantic.name)
+            ? 'div'
+            : (navSemantics.has(semantic.name) ? 'nav' : 'section'))
+      assert.strictEqual(semantic.tag, expectedTag, semantic.name + ' tag')
+      const expectedRole = roleBySemantic.get(semantic.name)
+      assert.deepStrictEqual(
+        semantic.attrs,
+        expectedRole ? [['role', expectedRole]] : [],
+        semantic.name + ' attrs'
+      )
+    }
+  })
+
   pass = runDirectTest('semantic catalog keeps DPUB roles close and neutral otherwise', pass, () => {
     const markdown = 'Toc. Items.\n\nTip. Helpful.\n\nErrata. Fixes.\n\nCorrections. Fixes.\n\n7月4日訂正：修正。\n\nNote. Neutral.\n\nPull quote. Repeated.\n'
     const html = md.render(markdown)
@@ -22,10 +93,69 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '<section class="sc-note">\n'
       + '<p><span class="sc-note-label">Note<span class="sc-note-label-joint">.</span></span> Neutral.</p>\n'
       + '</section>\n'
-      + '<aside class="sc-pull-quote" role="doc-pullquote">\n'
-      + '<p><span class="sc-pull-quote-label">Pull quote<span class="sc-pull-quote-label-joint">.</span></span> Repeated.</p>\n'
+      + '<aside class="sc-pullquote" role="doc-pullquote">\n'
+      + '<p><span class="sc-pullquote-label">Pull quote<span class="sc-pullquote-label-joint">.</span></span> Repeated.</p>\n'
       + '</aside>\n'
     assert.strictEqual(html, expected)
+  })
+
+  pass = runDirectTest('pullquote canonical keeps former spellings as input aliases', pass, () => {
+    const markdown = 'Pullquote. One.\n\nPull quote. Two.\n\nPull-quote. Three.\n\nプルクオート：四。\n\nプル・クォート：五。\n'
+    const html = md.render(markdown)
+    assert.strictEqual((html.match(/<aside class="sc-pullquote" role="doc-pullquote">/g) || []).length, 5)
+    assert.ok(html.includes('<span class="sc-pullquote-label">Pullquote'))
+    assert.ok(html.includes('<span class="sc-pullquote-label">Pull quote'))
+    assert.ok(html.includes('<span class="sc-pullquote-label">Pull-quote'))
+    assert.ok(html.includes('<span class="sc-pullquote-label">プルクオート'))
+    assert.ok(html.includes('<span class="sc-pullquote-label">プル・クォート'))
+    assert.strictEqual(html.includes('sc-pull-quote'), false)
+  })
+
+  pass = runDirectTest('interview stays roleless unless the author selects qna', pass, () => {
+    const markdown = 'Interview. Narrative and conversation.\n\nFAQ. Questions and answers.\n\nQ&A. Questions and answers.\n'
+    const html = md.render(markdown)
+    assert.ok(html.includes('<section class="sc-interview">'))
+    assert.strictEqual(html.includes('<section class="sc-interview" role='), false)
+    assert.ok(html.includes('<section class="sc-faq" role="doc-qna">'))
+    assert.ok(html.includes('<section class="sc-qna" role="doc-qna">'))
+  })
+
+  pass = runDirectTest('problem and question labels stay independently composable', pass, () => {
+    const expected = [
+      ['問題1', 'problem'],
+      ['演習問題2', 'problem'],
+      ['練習問題A', 'problem'],
+      ['問い1', 'question'],
+      ['設問３', 'question'],
+      ['小問', 'question'],
+      ['小問2', 'question'],
+      ['問一', 'question'],
+      ['発問', 'question'],
+      ['発問1', 'question'],
+      ['主発問', 'question'],
+      ['中心発問', 'question'],
+    ]
+    const rejected = ['問', '質問1', '主発問1', '中心発問1', '基本発問', '補助発問']
+    const markdown = [
+      ...expected.map(([label]) => `${label}：本文。`),
+      'Question 1. English body.',
+      'Problem 1. Solve directly.',
+      'Answer 1. Separate answer.',
+      ...rejected.map((label) => `${label}：本文。`),
+    ].join('\n\n')
+    const html = md.render(markdown)
+
+    for (const [label, semantic] of expected) {
+      assert.ok(html.includes(`<span class="sc-${semantic}-label">${label}`), `${label} should map to ${semantic}`)
+    }
+    assert.ok(html.includes('<span class="sc-question-label">Question 1'))
+    assert.ok(html.includes('<span class="sc-problem-label">Problem 1'))
+    assert.ok(html.includes('<span class="sc-answer-label">Answer 1'))
+    for (const label of rejected) {
+      assert.ok(html.includes(`<p>${label}：本文。</p>`), `${label} should stay ordinary text`)
+    }
+    assert.strictEqual(html.includes('aria-controls='), false)
+    assert.strictEqual(html.includes('aria-labelledby='), false)
   })
 
   pass = runDirectTest('titlepage semantics use div without default roles', pass, () => {
@@ -80,11 +210,11 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '<section class="sc-glossary" role="doc-glossary">\n'
       + '<p><span class="sc-glossary-label">Glossary of terms<span class="sc-glossary-label-joint">.</span></span> Body.</p>\n'
       + '</section>\n'
-      + '<section class="sc-assessments">\n'
-      + '<p><span class="sc-assessments-label">Quiz<span class="sc-assessments-label-joint">.</span></span> Body.</p>\n'
+      + '<section class="sc-assessment">\n'
+      + '<p><span class="sc-assessment-label">Quiz<span class="sc-assessment-label-joint">.</span></span> Body.</p>\n'
       + '</section>\n'
-      + '<section class="sc-assessments">\n'
-      + '<p><span class="sc-assessments-label">Exam<span class="sc-assessments-label-joint">.</span></span> Body.</p>\n'
+      + '<section class="sc-assessment">\n'
+      + '<p><span class="sc-assessment-label">Exam<span class="sc-assessment-label-joint">.</span></span> Body.</p>\n'
       + '</section>\n'
       + '<section class="sc-problem">\n'
       + '<p><span class="sc-problem-label">Exercise<span class="sc-problem-label-joint">.</span></span> Body.</p>\n'
@@ -218,7 +348,7 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       'sc-prerequisites',
       'sc-next-steps',
       'sc-minutes',
-      'sc-learning-objectives',
+      'sc-learning-objective',
       'sc-rubric',
       'sc-proposal',
     ]
@@ -247,8 +377,8 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     assert.ok(html.includes('<p>企画：本文。</p>'))
   })
 
-  pass = runDirectTest('Japanese broad aliases keep issue task reference and lesson boundaries', pass, () => {
-    const markdown = 'Alerts. Body.\n\nIssues. Body.\n\nTasks. Body.\n\nLearning units. Body.\n\nNext step. Body.\n\n注意喚起：本文。\n\n検討課題：本文。\n\n課題：本文。\n\n参考資料：本文。\n\n単元：本文。\n\n参考：本文。\n\n教訓：本文。\n'
+  pass = runDirectTest('Japanese specific aliases keep issue task resources and lesson boundaries', pass, () => {
+    const markdown = 'Alerts. Body.\n\nIssues. Body.\n\nTasks. Body.\n\nLearning units. Body.\n\nNext step. Body.\n\n注意喚起：本文。\n\n検討課題：本文。\n\nタスク：本文。\n\n参考資料：本文。\n\n単元：本文。\n\n参考：本文。\n\n教訓：本文。\n\n課題：本文。\n\n作業：本文。\n\n関連：本文。\n'
     const html = md.render(markdown)
     assert.ok(html.includes('<span class="sc-alert-label">Alerts'))
     assert.ok(html.includes('<span class="sc-issue-label">Issues'))
@@ -257,11 +387,14 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     assert.ok(html.includes('<span class="sc-next-steps-label">Next step'))
     assert.ok(html.includes('<span class="sc-alert-label">注意喚起'))
     assert.ok(html.includes('<span class="sc-issue-label">検討課題'))
-    assert.ok(html.includes('<span class="sc-task-label">課題'))
-    assert.ok(html.includes('<span class="sc-reference-label">参考資料'))
+    assert.ok(html.includes('<span class="sc-task-label">タスク'))
+    assert.ok(html.includes('<span class="sc-resources-label">参考資料'))
     assert.ok(html.includes('<span class="sc-lesson-label">単元'))
     assert.ok(html.includes('<p>参考：本文。</p>'))
     assert.ok(html.includes('<p>教訓：本文。</p>'))
+    assert.ok(html.includes('<p>課題：本文。</p>'))
+    assert.ok(html.includes('<p>作業：本文。</p>'))
+    assert.ok(html.includes('<p>関連：本文。</p>'))
   })
 
   pass = runDirectTest('semantic catalog canonical names and narrowed aliases stay deterministic', pass, () => {
@@ -270,7 +403,7 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
     const expected = '<section class="sc-editor-note">\n'
       + '<p><span class="sc-editor-note-label">Editor note<span class="sc-editor-note-label-joint">.</span></span> Body.</p>\n'
       + '</section>\n'
-      + '<section class="sc-important" role="doc-notice">\n'
+      + '<section class="sc-important">\n'
       + '<p><span class="sc-important-label">Important<span class="sc-important-label-joint">.</span></span> Body.</p>\n'
       + '</section>\n'
       + '<aside class="sc-related">\n'
@@ -342,7 +475,7 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '<section class="sc-editor-note">\n'
       + '<p><span class="sc-editor-note-label">編集注<span class="sc-editor-note-label-joint">：</span></span>本文。</p>\n'
       + '</section>\n'
-      + '<section class="sc-important" role="doc-notice">\n'
+      + '<section class="sc-important">\n'
       + '<p><span class="sc-important-label">重要事項<span class="sc-important-label-joint">：</span></span>本文。</p>\n'
       + '</section>\n'
       + '<section class="sc-caution" role="doc-notice">\n'
@@ -375,11 +508,11 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '<section class="sc-glossary" role="doc-glossary">\n'
       + '<p><span class="sc-glossary-label">用語一覧<span class="sc-glossary-label-joint">：</span></span>本文。</p>\n'
       + '</section>\n'
-      + '<section class="sc-assessments">\n'
-      + '<p><span class="sc-assessments-label">試験<span class="sc-assessments-label-joint">：</span></span>本文。</p>\n'
+      + '<section class="sc-assessment">\n'
+      + '<p><span class="sc-assessment-label">試験<span class="sc-assessment-label-joint">：</span></span>本文。</p>\n'
       + '</section>\n'
-      + '<section class="sc-assessments">\n'
-      + '<p><span class="sc-assessments-label">小テスト<span class="sc-assessments-label-joint">：</span></span>本文。</p>\n'
+      + '<section class="sc-assessment">\n'
+      + '<p><span class="sc-assessment-label">小テスト<span class="sc-assessment-label-joint">：</span></span>本文。</p>\n'
       + '</section>\n'
       + '<section class="sc-problem">\n'
       + '<p><span class="sc-problem-label">練習問題<span class="sc-problem-label-joint">：</span></span>本文。</p>\n'
@@ -410,6 +543,210 @@ export const runSemanticCatalogTests = (pass, runDirectTest, md) => {
       + '<p>テスト：本文。</p>\n'
       + '<p>練習：本文。</p>\n'
     assert.strictEqual(html, expected)
+  })
+
+  pass = runDirectTest('0.14 English catalog keeps book output and adds complete noun aliases', pass, () => {
+    const expected = [
+      ['Publication', 'book'],
+      ['Book', 'book'],
+      ['Book info', 'book'],
+      ['Book information', 'book'],
+      ['Magazine', 'book'],
+      ['Magazine info', 'book'],
+      ['Magazine information', 'book'],
+      ['Publication info', 'book'],
+      ['Publication information', 'book'],
+      ['Related-book', 'related-book'],
+      ['Related book', 'related-book'],
+      ['Related magazine', 'related-book'],
+      ['Related-publication', 'related-book'],
+      ['Related publication', 'related-book'],
+      ['Related publications', 'related-book'],
+      ['Evaluation', 'evaluation'],
+      ['Evaluations', 'evaluation'],
+      ['Product evaluation', 'evaluation'],
+      ['Product evaluations', 'evaluation'],
+      ['Quality evaluation', 'evaluation'],
+      ['Quality evaluations', 'evaluation'],
+      ['Performance evaluation', 'evaluation'],
+      ['Performance evaluations', 'evaluation'],
+      ["Editor's note", 'editor-note'],
+      ["Editors' note", 'editor-note'],
+      ['Editorial note', 'editor-note'],
+      ['Assessment', 'assessment'],
+      ['Assessments', 'assessment'],
+      ['Learning-objectives', 'learning-objective'],
+      ['Learning objective', 'learning-objective'],
+      ['Learning objectives', 'learning-objective'],
+      ['Point', 'point'],
+      ['Key point', 'point'],
+      ['Key points', 'point'],
+      ['Main point', 'point'],
+      ['Main points', 'point'],
+      ['Q&A', 'qna'],
+      ['Important notice', 'important'],
+      ['Important information', 'important'],
+      ['Related information', 'related'],
+      ['Related resources', 'related'],
+      ['Warnings', 'warning'],
+      ['Suggestions', 'suggestion'],
+      ['Recommendations', 'recommendation'],
+    ]
+    const rejected = [
+      'Publications',
+      'Importance',
+      'Relation',
+      'Warn',
+      'Suggest',
+      'Recommend',
+      'Recommended',
+      'QA',
+      'Objectives',
+      'EditorNote',
+      'Editors note',
+    ]
+    const markdown = [...expected.map(([label]) => `${label}. Body.`), ...rejected.map((label) => `${label}. Body.`)].join('\n\n')
+    const html = md.render(markdown)
+
+    for (const [label, semantic] of expected) {
+      if (label === 'Q&A') {
+        assert.ok(html.includes('<span class="sc-qna-label">Q&amp;A'), 'Q&A should map to qna')
+        continue
+      }
+      assert.ok(html.includes(`<span class="sc-${semantic}-label">${label}`), `${label} should map to ${semantic}`)
+    }
+    for (const label of rejected) {
+      assert.ok(html.includes(`<p>${label}. Body.</p>`), `${label} should stay ordinary text`)
+    }
+    assert.ok(html.includes('class="sc-book"'))
+    assert.strictEqual(html.includes('sc-publication'), false)
+    assert.ok(html.includes('class="sc-related-book"'))
+    assert.strictEqual(html.includes('sc-related-publication'), false)
+    assert.strictEqual(html.includes('<aside class="sc-point"'), false)
+    assert.strictEqual(html.includes('<section class="sc-point" role='), false)
+    assert.strictEqual(html.includes('<section class="sc-evaluation" role='), false)
+    assert.strictEqual(html.includes('<section class="sc-important" role='), false)
+  })
+
+  pass = runDirectTest('0.14 Japanese catalog keeps neighboring semantic boundaries explicit', pass, () => {
+    const expected = [
+      ['書籍', 'book'],
+      ['雑誌情報', 'book'],
+      ['書誌情報', 'book'],
+      ['出版物情報', 'book'],
+      ['刊行物案内', 'book'],
+      ['関連雑誌', 'related-book'],
+      ['関連刊行物', 'related-book'],
+      ['プロポーザル', 'proposal'],
+      ['提案書', 'proposal'],
+      ['企画案', 'proposal'],
+      ['企画書', 'proposal'],
+      ['提案', 'suggestion'],
+      ['サジェスト', 'suggestion'],
+      ['提言', 'recommendation'],
+      ['推奨事項', 'recommendation'],
+      ['推奨項目', 'recommendation'],
+      ['必須要件', 'requirements'],
+      ['要求事項', 'requirements'],
+      ['必要事項', 'requirements'],
+      ['必須項目', 'requirements'],
+      ['推奨環境', 'requirements'],
+      ['アセスメント', 'assessment'],
+      ['製品評価', 'evaluation'],
+      ['品質評価', 'evaluation'],
+      ['性能評価', 'evaluation'],
+      ['パフォーマンス評価', 'evaluation'],
+      ['評価基準', 'rubric'],
+      ['重要', 'important'],
+      ['重要なこと', 'important'],
+      ['重要な事柄', 'important'],
+      ['重要情報', 'important'],
+      ['重要な情報', 'important'],
+      ['重要事項', 'important'],
+      ['重要な事項', 'important'],
+      ['重要語', 'keywords'],
+      ['手がかり語', 'keywords'],
+      ['導入文', 'lead'],
+      ['前文', 'preamble'],
+      ['付録A', 'appendix'],
+      ['付属A', 'appendix'],
+      ['付属B', 'appendix'],
+      ['附属A', 'appendix'],
+      ['付属書', 'appendix'],
+      ['附属書', 'appendix'],
+      ['付属資料', 'appendix'],
+      ['附属資料', 'appendix'],
+      ['注意書', 'caution'],
+      ['注意書き', 'caution'],
+      ['通知', 'notice'],
+      ['通告', 'notice'],
+      ['ご案内', 'information'],
+      ['お知らせ', 'information'],
+      ['告知', 'information'],
+      ['情報', 'information'],
+      ['参考情報', 'information'],
+      ['参照', 'reference'],
+      ['参照先', 'reference'],
+      ['参照情報', 'reference'],
+      ['参考資料', 'resources'],
+      ['アラート', 'alert'],
+      ['注意喚起', 'alert'],
+      ['刊行に寄せて', 'foreword'],
+      ['本書の刊行に寄せて', 'foreword'],
+      ['日本語版の発刊に寄せて', 'foreword'],
+      ['計画', 'planning'],
+      ['計画案', 'planning'],
+      ['ポイント', 'point'],
+      ['要点', 'point'],
+      ['補足情報', 'supplement'],
+      ['補遺', 'supplement'],
+      ['追記', 'postscript'],
+    ]
+    const rejected = [
+      '出版物',
+      '刊行物',
+      '警報',
+      '出来事',
+      '重大',
+      '重大情報',
+      '手がかり',
+      '導入',
+      '序',
+      '序文',
+      '勧め',
+      'の刊行に寄せて',
+      '評価',
+      '評価結果',
+      '総合評価',
+      '採点',
+      '成績評価',
+      'リスク評価',
+      'セキュリティ評価',
+      '追補',
+      '関連',
+      '作業',
+      '課題',
+      '付属',
+      '附属',
+      '掲示',
+    ]
+    const markdown = [...expected.map(([label]) => `${label}：本文。`), ...rejected.map((label) => `${label}：本文。`)].join('\n\n')
+    const html = md.render(markdown)
+
+    for (const [label, semantic] of expected) {
+      if (semantic === 'lead') {
+        assert.strictEqual(
+          md.render(`${label}：本文。`),
+          `<div class="sc-lead">\n<p>本文。</p>\n</div>\n`,
+          `${label} should map to lead`
+        )
+        continue
+      }
+      assert.ok(html.includes(`<span class="sc-${semantic}-label">${label}`), `${label} should map to ${semantic}`)
+    }
+    for (const label of rejected) {
+      assert.ok(html.includes(`<p>${label}：本文。</p>`), `${label} should stay ordinary text`)
+    }
   })
 
   return pass

@@ -24,7 +24,7 @@ const resolveContainerMaps = (tokens, rs, re, hrType) => {
   }
 }
 
-const createContainerStartToken = (state, sem, displayLabel, hideLabel, fallbackAriaLabel, map) => {
+const createContainerStartToken = (state, sem, hideLabel, fallbackAriaLabel, map) => {
   const sToken = new state.Token('html_block', '', 0)
   let content = '<' + sem.tag
   content += ' class="' + sem.className + '"'
@@ -35,9 +35,7 @@ const createContainerStartToken = (state, sem, displayLabel, hideLabel, fallback
     for (let ai = 0; ai < attrs.length; ai++) {
       const attrKey = attrs[ai][0]
       const attrVal = attrs[ai][1]
-      const isAriaLabel = hasAriaLabel && attrKey === 'aria-label'
-      const value = isAriaLabel ? (hideLabel ? fallbackAriaLabel : displayLabel) : attrVal
-      content += ' ' + attrKey + '="' + escapeHtmlForAttr(state, value) + '"'
+      content += ' ' + attrKey + '="' + escapeHtmlForAttr(state, attrVal) + '"'
     }
   }
 

@@ -92,9 +92,9 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <h1>A heading.</h1>
-<section class="sc-lead" aria-label="Lead">
+<div class="sc-lead">
 <p>A lead.</p>
-</section>
+</div>
 <p>A paragraph.</p>
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
@@ -113,9 +113,9 @@ Lead. A lead.
 A paragraph.
 [HTML]
 <h1>A heading.</h1>
-<section class="sc-lead" aria-label="Lead">
+<div class="sc-lead">
 <p>A lead.</p>
-</section>
+</div>
 <p>A paragraph.</p>
 
 [Markdown]
@@ -193,7 +193,7 @@ A paragraph.
 <p>A column.</p>
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A column notice.</p>
-<section class="sc-important" role="doc-notice">
+<section class="sc-important">
 <p><span class="sc-important-label">Important<span class="sc-important-label-joint">.</span></span> A column notice important.</p>
 <p>A column notice important.</p>
 </section>
@@ -400,9 +400,9 @@ Notice. A notice.
 A paragraph.
 [HTML]
 <h1>Title</h1>
-<section class="sc-lead" aria-label="Lead">
+<div class="sc-lead">
 <p>A lead text.</p>
-</section>
+</div>
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
@@ -446,9 +446,9 @@ A paragraph.
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
 <p>A paragraph.</p>
-<section class="sc-lead" aria-label="Lead">
+<div class="sc-lead">
 <p>A lead text.</p>
-</section>
+</div>
 <section class="sc-notice" role="doc-notice">
 <p><span class="sc-notice-label">Notice<span class="sc-notice-label-joint">.</span></span> A notice.</p>
 </section>
@@ -563,15 +563,15 @@ A paragraph.
 
 ---
 
-通知：A notice.
+注意：A caution.
 
 ---
 
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-notice" role="doc-notice">
-<p><span class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></span>A notice.</p>
+<section class="sc-caution" role="doc-notice">
+<p><span class="sc-caution-label">注意<span class="sc-caution-label-joint">：</span></span>A caution.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -580,15 +580,15 @@ A paragraph.
 
 ---
 
-**通知：**A notice.
+**注意：**A caution.
 
 ---
 
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></strong>A notice.</p>
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label">注意<span class="sc-caution-label-joint">：</span></strong>A caution.</p>
 </section>
 <p>A paragraph.</p>
 
@@ -597,15 +597,15 @@ A paragraph.
 
 ---
 
-**通知**：A notice.
+**注意**：A caution.
 
 ---
 
 A paragraph.
 [HTML]
 <p>A paragraph.</p>
-<section class="sc-notice" role="doc-notice">
-<p><strong class="sc-notice-label">通知<span class="sc-notice-label-joint">：</span></strong>A notice.</p>
+<section class="sc-caution" role="doc-notice">
+<p><strong class="sc-caution-label">注意<span class="sc-caution-label-joint">：</span></strong>A caution.</p>
 </section>
 <p>A paragraph.</p>
 

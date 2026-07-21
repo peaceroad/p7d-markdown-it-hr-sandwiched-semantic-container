@@ -13,36 +13,52 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - 英語のcanonical名は常に認識されます。日本語aliasは既定で`languages`オプションから読み込まれます。
 - built-in aliasでは正規表現に近いパターンを使うことがあります。実行時の`semanticContainerSc` aliasはリテラル文字列として扱います。
 - すべてのsemanticで安定した`sc-*` classを出力します。
-- このプラグインは、`section`、`aside`、`div`としてラップするsemanticを扱います。
+- このプラグインは、`section`、`aside`、`div`、`nav`としてラップするsemanticを扱います。
 - 組み込みのtitlepage推定は、保守的な番号付き・文字付き・ローマ数字のhrサンドイッチ`h1`見出しを`chapter-titlepage`/`appendix-titlepage`/`part-titlepage`に変換します。解析済みfrontmatterでは`sc.titlepage: true`または入れ子の`sc: { titlepage: true }`を指定すると、追加オプションなしで本文側の開始`hr`なしにファイル先頭の`h1`から章扉・付録/付属扉・部扉として扱えます。
 - titlepage系の明示ラベルも直接指定用のsemantic labelとして使えますが、自然な文書ラベルというより制御マーカー寄りです。電子書籍の扉では`h1`推定または`sc.titlepage: true`を優先してください。明示ラベルは`labelControl`や`semanticContainerSc`で非表示にしない限りHTMLに残ります。非表示にしてもroleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示します。
 - `Prologue`、`Epilogue`、`Introduction`、`Conclusion`、`序章`、`終章`、`プロローグ`、`エピローグ`は、既定ではh1 titlepageとして推定しません。これらのDPUB section semanticは明示ラベルで使うか、文書全体のラップをEPUB処理ツール側で扱います。
 - figure的な例示は、`p7d-markdown-it-figure-with-p-caption`などのfigure/caption系プラグインに委譲します。
-- `role="doc-*"`はDPUB-ARIAに近い対応がある場合だけ出力します。
+- `role="doc-*"`はDPUB-ARIAに完全一致または近い対応がある場合だけ出力します。EPUBの構造語彙とDPUB-ARIA roleは別レイヤーであり、EPUB語彙にあることだけを理由にroleを付けません。
+- alias認識は表記揺れの吸収だけではなく、semanticの分類です。built-in aliasと実行時aliasはどちらも、canonical semanticのtag・class・既定属性を`role`も含めて継承します。alias単位でroleだけを外す例外は設けません。曖昧なラベルは、role付きcanonicalへ無理に追加せず、適切なroleless semanticへ割り当てるか未登録のままにします。
+- `doc-notice`は文書構造を示すroleで、superclassはlive regionの`alert`ではなく`note`です。単独でポップアップ表示、focus移動、即時読み上げを起こしません。
+- プラグインは、表示ラベル用のIDや`aria-labelledby`の関連を自動生成しません。同じDPUB landmark roleを文書内で複数使う場合は、後段のHTML/EPUB処理で一意なアクセシブル名を付けてください。`doc-endnotes`に必要な注listと参照関係はfootnote/endnote処理、`doc-bibliography`の子孫listと`doc-index`/`doc-toc`の実リンクは後段ツールの責務です。
 - `epub:type`は既定では出力しません。
+- canonical名の単数形・複数形は、対応させる外部標準語彙がある場合はその表記を優先します。それ以外は単一の概念型を表す単数形を基本とし、自然な別の数はaliasで認識します。`acknowledgments`、`endnotes`、`keywords`、`requirements`、`resources`のように、定着した集合概念または意図的な集約概念だけ複数形canonicalを維持します。見た目の統一だけを理由に、安定したcanonical名は変更しません。
+- 別のcanonical名を含む複合aliasでも、文法上の主要語だけで所属先を決めません。見出し全体の文書機能を支配するsemanticへ割り当て、曖昧な判断は各項目の注意書きに残します。
 - 日本語aliasはEPUB/DPUB語彙の規範的な訳語表ではなく、このプラグインが日本語文書の見出しとして認識する語です。
 - そのため、直訳よりも実際の技術文書、業務文書、教材で見出しとして自然に使える語を優先しています。
+- aliasは、対象文書で単独見出しとして実在し得ること、隣接semanticとの境界が安定していること、出力されるtag・role・classがその文書機能に合うことを確認して登録します。辞書上の対応だけでは追加せず、使用頻度が低くても意味が限定された見出しは、よく使われる曖昧語より安全な場合があります。
 
 ## 使い分け
 
 この節では、意味が近くて迷いやすいsemanticについて、どのラベルを選ぶとよいかを説明します。
 
 - `answer`と`solution`: `answer`は直接の回答です。`solution`は解き方や解決方法まで含められます。
-- `question`と`problem`: `question`は質問です。`problem`/`exercise`は解く対象です。
-- `bibliography`、`reference`、`resources`、`related-link`: `bibliography`は文献一覧、`reference`は参照情報、`resources`は教材・資料、`related-link`は関連リンク集です。
+- `question`と`problem`: `problem`/`exercise`は解く対象となる単位で、問題文を直接含められます。内部に`question`は必須ではありません。`question`は独立した質問・小問・発問です。同じ番号でも`answer`や`explanation`との関係は自動生成しません。
+- `interview`と`qna`: `interview`はインタビューという編集上の内容種別で、地の文や対談も含み得るためrolelessです。質問と回答の連続を明示して`doc-qna`を出す場合は`qna`を使います。
+- `notice`と`information`: 現行EPUB/DPUBの`notice`は行為・出来事から生じ得る結果をユーザーへ通知するもので、`doc-notice`を出します。日本語の`通知`・`通告`はここへ置き、`注意書`・`注意書き`は`caution`にします。`information`は一般情報・参考情報・案内をroleなしで表すため、一般的な告知見出しの`お知らせ`・`告知`もここへ置きます。単独の`掲示`は認識しません。
+- `information`、`reference`、`resources`: `information`はブロック内で役立つ事実や案内を提示する`参考情報`、`reference`は何を・どこを参照するかを示す`参照`・`参照先`・`参照情報`、`resources`は文書や資産としての`参考資料`です。正式な文献一覧は`bibliography`、関連リンク集は`related-link`です。
+- `book`、`related-book`、`colophon`: `book`は互換性を保った書籍・雑誌・刊行物の情報ブロック用canonicalで、`publication`は入力aliasです。`related-book`は関連・推薦する書籍・雑誌・刊行物を表し、`related-publication`は入力aliasです。`colophon`は現在の刊行物自身の正式な奥付です。出力は引き続き`sc-related-book`です。
+- `preamble`、`preface`、`foreword`、`introduction`、`prologue`: `preamble`は正式な前文、`preface`は著者の前書き、`foreword`は刊行に寄せた言葉、`introduction`は本文の導入、`prologue`は物語・章構造上の開始部です。
+- `afterword`と`conclusion`: `afterword`は著者または重要な寄稿者が、成立事情・意義・後日談などを述べる締めくくりです。`conclusion`は主題・論旨・物語そのものを締めくくります。`あとがき`/`後書き`は`afterword`、`おわりに`/`終わりに`と`結論`は`conclusion`です。
+- `outline`、`overview`、`abstract`、`summary`: `outline`は主要項目や構成の骨組み、`overview`は詳細に入る前の全体像、`abstract`は大きな作品を簡潔に表す要旨・抄録、`summary`は一般的な要約・振り返りです。`abstract`だけ`doc-abstract`を出します。位置や用途を見出しだけでは確定できない`概要`、`概略`、`要約`、`まとめ`はrolelessのままです。
 - `chapter-titlepage`/`appendix-titlepage`/`part-titlepage`と`chapter-toc`/`toc`: titlepage系は章・付録/付属・部の扉デザイン部分、TOC系はナビゲーション用の目次です。
-- `note`と`notice`/`alert`/`important`: `note`は中立的な注記です。`notice`と`alert`は通知・告知寄り、`important`は危険性より重要度の強調です。
+- `note`と`notice`/`alert`/`important`: `note`は中立的な注記です。`notice`と、行為・出来事の結果へ注意を促す`alert`は構造的な`doc-notice`を出しますが、live regionの`role="alert"`ではありません。`important`は危険性や結果を伴うとは限らない重要度の強調なので、既定roleを出しません。
+- `point`と`hint`/`tip`: `point`は中心的な要点・takeawayなのでrolelessの本文sectionです。`hint`と`tip`は役立つ助言として`aside`に`doc-tip`を出します。
+- 複合ラベルの所属: `important notice`/`important information`は優先度がcalloutの意図を決めるため`important`です。`related information`/`related resources`は関連性によって補助的な`aside`になるため`related`です。修飾のない`information`/`resources`は本文フローのsectionとして扱います。
 - `caution`、`warning`、`danger`: `caution`は注意点や避けるべきミス、`warning`はそれより強い警告、`danger`は最も強い危険表示です。
+- `alert`と`caution`: `alert`は危険や問題へ注意を向けさせる、危険度を固定しない呼びかけです。`caution`は具体的な注意点や慎重な行動を求める指示です。`注意喚起`は`alert`、`注意`・`注意事項`・`注意書`・`注意書き`は`caution`に割り当てます。どちらもDPUB-ARIA上は包括的な構造roleである`doc-notice`に近接対応します。
 - `requirements`、`prerequisites`、`procedure`、`limitations`: `requirements`は満たすべき条件、`prerequisites`は始める前の前提、`procedure`は手順、`limitations`は制限や制約です。
 - `agenda`と`issue`: `agenda`は会議や授業の議題一覧です。`issue`は検討・解決すべき論点や懸案です。
 - `postscript`、`errata`、`updates`: `postscript`は後から加える追記、`errata`は公開後の訂正で`doc-errata`を出します。`updates`は一般的な更新・改訂履歴で、既定のroleは出力しません。
 - `minutes`、`agenda`、`decision`: `agenda`は会議前の議題、`minutes`は会議記録、`decision`は決定事項です。
-- `planning`と`proposal`: `planning`は計画・予定・段取りです。`proposal`は検討や承認を求める提案・企画案です。
-- `learning-objectives`、`rubric`、`assessments`: `learning-objectives`は学習目標、`rubric`は評価基準、`assessments`は試験・評価セクションです。
+- `planning`、`proposal`、`suggestion`、`recommendation`: `planning`は計画・予定・段取り、`proposal`は承認・採否判断の対象となる提案書や企画書、`suggestion`は軽い提案、`recommendation`は選択や行動を勧める内容です。
+- `learning-objective`、`rubric`、`assessment`、`evaluation`、`feedback`: `learning-objective`は学習目標、`rubric`は評価基準、`assessment`は測定・試験、`evaluation`は品質・価値・成果・性能の判断、`feedback`は結果へのコメントや助言です。英語の複合evaluation aliasと日本語aliasは製品・品質・性能を明示する語に限定し、日本語の裸の`評価`やassessment・grading寄りの語は認識しません。
+- `appendix`、`supplement`、`postscript`: `appendix`は`doc-appendix`を持つ正式な付録構造、`supplement`は本文を明確にしたり補ったりするroleなしの補足・補遺、`postscript`は後から加える追記です。addendum寄りの`追補`は既定では認識しません。
 
 ## 一覧
 
-### 出版構造・前付け/後付け
+### 出版構造・前付け・後付け
 
 - `abstract`: 要旨・抄録のような、本文全体を短くまとめる部分に使います。
   - 出力: `<section class="sc-abstract" role="doc-abstract">`
@@ -56,15 +72,16 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-afterword" role="doc-afterword">`
   - 英語ラベル: `afterword`
   - 日本語ラベル: `後書き`, `あとがき`, `跋文`
-- `appendix`: 付録や付属資料に使います。
+- `appendix`: 付録、付属書・附属書、付属資料・附属資料に使います。
   - 出力: `<section class="sc-appendix" role="doc-appendix">`
   - 英語ラベル: `appendix`, `appendices`
-  - 日本語ラベル: `付録`, `付属資料`
+  - 日本語ラベル: `付録`, `付属書`, `附属書`, `付属資料`, `附属資料`, `(付録|付属|附属)[0-9０-９A-ZＡ-Ｚａ-ｚ一二三四五六七八九十百千]{1,8}`
+  - 注意: `付属書`・`附属書`は規格・条約・技術文書で独立した後付け構造を表すため認識し、資料を明示する`付属資料`・`附属資料`もここに置きます。書籍で`付録A`と同様に使われる`付属A`・`附属A`などのcompactな番号・文字付き見出しも通常の`appendix` labelとして認識します。`付属`・`附属`単独は、付属品や所属関係まで表せて文書構造を保証しないため認識しません。hrサンドイッチ`h1`の`付属A 参考データ`・`附属A 参考データ`は、より限定的な`appendix-titlepage`推定になります。
 - `appendix-titlepage`: 電子書籍などの付録扉・付属扉に使います。通常は`h1`の付録・付属見出しから検出します。
   - 出力: `<div class="sc-appendix-titlepage">`
   - 英語ラベル: `appendix-titlepage`, `appendix titlepage`, `appendix title page`
-  - 日本語ラベル: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`
-  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=""`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示してください。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
+  - 日本語ラベル: `付録扉`, `付録タイトルページ`, `付属扉`, `付属タイトルページ`, `附属扉`, `附属タイトルページ`
+  - 注意: DPUB-ARIAに近いroleがないため、既定の`role`属性は出力しません。`付録扉。`/`付属扉。`/`附属扉。`のような明示ラベルも使えますが、通常のsemantic labelとして処理されるため、`labelControl`または`semanticContainerSc`で非表示にしない限りラベル文字列はHTMLに残ります。`label=""`などで非表示にしても、roleなしの`div`には`aria-label` fallbackを付けません。titlepageをアクセシブルな名前付きグループとして扱う必要があるworkflowでは、そのworkflow側で`role="group"`などのrole付きwrapperを明示してください。電子書籍の扉では、`付録A 参考データ`/`付属A 参考データ`/`附属A 参考データ`のようなhrで挟まれた`h1`、または解析済みfrontmatterの`sc.titlepage: true` / `sc: { titlepage: true }`を優先します。
 - `author`: 著者情報に使います。
   - 出力: `<section class="sc-author">`
   - 英語ラベル: `author`
@@ -73,15 +90,17 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-bibliography" role="doc-bibliography">`
   - 英語ラベル: `bibliography`, `references`, `reference list`, `works cited`
   - 日本語ラベル: `(参考)?文献(一覧)?`, `文献表`
-  - 注意: 文献一覧・文献表はここです。単なる参考資料は`reference`や`resources`と使い分けます。
-- `book`: 書籍・雑誌・書誌情報の案内に使います。
+  - 注意: 文献一覧・文献表はここです。補助的な参考資料は`resources`、参照先や参照情報は`reference`に分けます。`doc-bibliography`には文献項目を含む子孫listが少なくとも1つ必要です。プラグインは見出しからsectionを認識しますが、list構造の生成・検証は行いません。
+- `book`: 書籍・雑誌・刊行物・書誌情報の案内に使います。
   - 出力: `<section class="sc-book">`
-  - 英語ラベル: `book`, `magazine`
-  - 日本語ラベル: `(書籍|雑誌)(情報|案内)?`, `書誌(情報)?`
+  - 英語ラベル: `book`, `book information`, `book info`, `magazine information`, `magazine info`, `magazine`, `publication`, `publication information`, `publication info`
+  - 日本語ラベル: `(書籍|雑誌)(情報|案内)?`, `書誌(情報)?`, `(出版物|刊行物)(情報|案内)`
+  - 注意: 既存の`sc-book`出力を保つため、書籍・雑誌・刊行物の情報ブロックを表すcanonical semanticとして維持します。`publication`、`magazine`と各information形式も入力ラベルとして認識します。関連・推薦刊行物は`related-book`、現在の刊行物自身の正式な奥付は`colophon`を使います。複数形`publications`は著者の業績一覧や刊行物一覧にもなるため、既定aliasにはしません。`sc-book`と`sc-publication`の二重出力は、label・joint classまで含む一般的なlegacy class契約が必要になるため追加しません。
 - `chapter-toc`: 章単位の目次に使います。
   - 出力: `<nav class="sc-chapter-toc" role="doc-toc">`
   - 英語ラベル: `chapter-toc`, `chapter toc`
   - 日本語ラベル: `章目次`
+  - 注意: `nav`に`doc-toc`を出します。章または小さなsectionを対象とする実際のリンク付きナビゲーションリストにだけ使ってください。プラグインはリンク構造を生成・検証しません。
 - `chapter-titlepage`: 電子書籍などの章扉に使います。通常は`h1`の章見出しから検出します。
   - 出力: `<div class="sc-chapter-titlepage">`
   - 英語ラベル: `chapter-titlepage`, `chapter titlepage`, `chapter title page`
@@ -105,12 +124,14 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 日本語ラベル: `献呈`
 - `editor-note`: 編注・編集注・編集者注に使います。一般の注記とは分けます。
   - 出力: `<section class="sc-editor-note">`
-  - 英語ラベル: `editor-note`, `editornote`, `editor('s)? note`, `editors note`
+  - 英語ラベル: `editor-note`, `editor note`, `editor's note`, `editors' note`, `editorial note`
   - 日本語ラベル: `編注`, `編集注`, `編集者注`
+  - 注意: 英語では`editor note`、`editor's note`、`editors' note`、`editorial note`の自然な分かち書きを認識します。空白のない`editornote`とアポストロフィのない`editors note`は認識しません。
 - `endnotes`: 後注、章末注、巻末注に使います。
   - 出力: `<section class="sc-endnotes" role="doc-endnotes">`
   - 英語ラベル: `endnotes`
   - 日本語ラベル: `後注`, `章末注`, `巻末注`
+  - 注意: `doc-endnotes`には注を含む子孫listが少なくとも1つ必要で、roleをlist自体へ付けることはできません。このプラグインは明示された見出しからsectionを認識するだけです。注の収集、backlink、list生成、構造検証はfootnote/endnoteプラグインまたは後段のEPUB処理に委譲します。
 - `epigraph`: 題辞・題句・題言に使います。
   - 出力: `<section class="sc-epigraph" role="doc-epigraph">`
   - 英語ラベル: `epigraph`
@@ -131,7 +152,8 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - `foreword`: 刊行・発行に寄せた前置きに使います。
   - 出力: `<section class="sc-foreword" role="doc-foreword">`
   - 英語ラベル: `foreword`
-  - 日本語ラベル: `((本書|日本語版)?の)?(刊行|発行|発刊)に寄せて`
+  - 日本語ラベル: `((本書|日本語版)の)?(刊行|発行|発刊)に寄せて`
+  - 注意: `刊行に寄せて`と、`本書の`/`日本語版の`を前置した形を認識します。不自然な`の刊行に寄せて`は認識しません。
 - `glossary`: 用語集・用語一覧に使います。
   - 出力: `<section class="sc-glossary" role="doc-glossary">`
   - 英語ラベル: `glossary`, `glossary of terms`
@@ -141,18 +163,21 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-index" role="doc-index">`
   - 英語ラベル: `index`
   - 日本語ラベル: `索引`
+  - 注意: `doc-index`は、索引対象へのリンクを含むナビゲーション用の索引です。プラグインは見出しからsectionを認識しますが、索引項目やリンクの生成・検証は行いません。
 - `introduction`: 序論、序説、はじめに相当の部分に使います。
   - 出力: `<section class="sc-introduction" role="doc-introduction">`
   - 英語ラベル: `introduction`
   - 日本語ラベル: `序論`, `序説`, `はじめに`, `始めに`
-- `keywords`: キーワードや手がかり語に使います。
+- `keywords`: キーワード、重要語、手がかり語に使います。
   - 出力: `<section class="sc-keywords">`
   - 英語ラベル: `keywords`
-  - 日本語ラベル: `キーワード`, `手がかり(語)?`
-- `lead`: リード文や導入文に使います。
-  - 出力: `<section class="sc-lead" aria-label="NAME">`
+  - 日本語ラベル: `キーワード`, `重要語`, `手がかり語`
+  - 注意: キーワード・重要語・手がかり語に限定します。`手がかり`単独は一般語として広いため認識しません。
+- `lead`: リード文や導入文をまとめるブロックに使います。
+  - 出力: `<div class="sc-lead">`
   - 英語ラベル: `lead`, `lede`
-  - 日本語ラベル: `リード(文)?`, `導入(文)?`
+  - 日本語ラベル: `リード(文)?`, `導入文`
+  - 注意: built-in semanticで唯一`hideLabel: true`を持ちます。lead/ledeは通常、独立して移動対象となる文書sectionではなく冒頭の導入文・導入段落なので、roleなしの`div`を使います。`lead`自体はEPUB Structural Semantics Vocabularyの語でもDPUB-ARIA roleでもなく、非表示にした制御用ラベルから名前付き`region` landmarkを作りません。standard・bracket・GitHub alert入力のいずれでも既定では制御用ラベルを本文から除去します。空でないinline label controlを指定すると既定を上書きし、置換ラベルを表示できます。`## Lead`のようにラベルしか含まないjointless headingは、非表示化によって空見出しになるため意図的に認識しません。これはcatalogでラベルを既定非表示にするsemanticすべてに適用する不変条件であり、`lead`を名前で分岐する例外ではありません。製品導入やシステム導入にもなる`導入`単独も認識しません。
 - `part-titlepage`: 電子書籍などの部扉に使います。通常は`h1`の部見出しから検出します。
   - 出力: `<div class="sc-part-titlepage">`
   - 英語ラベル: `part-titlepage`, `part titlepage`, `part title page`
@@ -162,10 +187,11 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-postscript">`
   - 英語ラベル: `postscript`
   - 日本語ラベル: `(([0-9]+年)?[0-9]+月[0-9]+日)?追記`
-- `preamble`: 序や序文に使います。
+- `preamble`: 規約、宣言、仕様などの正式な前文に使います。
   - 出力: `<section class="sc-preamble">`
   - 英語ラベル: `preamble`
-  - 日本語ラベル: `序`, `序文`
+  - 日本語ラベル: `前文`
+  - 注意: 規約・宣言・仕様などの正式な前文に使います。著者の前書きは`preface`、刊行に寄せた言葉は`foreword`、本文の導入は`introduction`、物語・章構造上の開始部は`prologue`を使います。広い`序`と`序文`は既定aliasにはしません。
 - `preface`: 前書き・まえがきに使います。
   - 出力: `<section class="sc-preface" role="doc-preface">`
   - 英語ラベル: `preface`
@@ -174,29 +200,32 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-prologue" role="doc-prologue">`
   - 英語ラベル: `prologue`
   - 日本語ラベル: `プロローグ`, `序幕`, `序章`
-- `pull-quote`: プルクオート・プルクォートに使います。
-  - 出力: `<aside class="sc-pull-quote" role="doc-pullquote">`
-  - 英語ラベル: `pull-quote`, `pull quote`
+- `pullquote`: 本文中の引用を目立つ位置や表示で取り上げるプルクオート・プルクォートに使います。
+  - 出力: `<aside class="sc-pullquote" role="doc-pullquote">`
+  - 英語ラベル: `pullquote`, `pull quote`, `pull-quote`
   - 日本語ラベル: `プル(・)?ク[オォ]ート`
+  - 注意: canonicalは現行EPUB語彙と`doc-pullquote`の綴りに合わせた`pullquote`です。`pull quote`と旧canonicalの`pull-quote`は入力aliasとして残しますが、出力classとcanonical名を使う設定は`sc-pullquote` / `pullquote`へ移行します。DPUB-ARIAでは本文と重複する装飾用プルクオートを支援技術から隠す必要がありますが、プラグインには原文と複製を判定できないため、`aria-hidden`を無条件には付けません。重複表示する場合は後段の変換で指定してください。
 - `toc`: 目次・もくじに使います。
   - 出力: `<nav class="sc-toc" role="doc-toc">`
   - 英語ラベル: `toc`, `table of contents`, `contents`
   - 日本語ラベル: `目次`, `もくじ`
+  - 注意: `nav`に`doc-toc`を出します。実際の目次ナビゲーションにだけ使ってください。プラグインは子孫リンクを生成・検証しません。
 
-### 注意書き・ヒント・サイドバー
+### 注意書き・要点・ヒント・サイドバー
 
-- `alert`: アラート、注意喚起、警報のような強い通知に使います。
+- `alert`: 危険や問題に対して注意を促す、危険度を固定しないアラート・注意喚起に使います。
   - 出力: `<section class="sc-alert" role="doc-notice">`
   - 英語ラベル: `alert`, `alerts`
-  - 日本語ラベル: `警報`, `アラート`, `注意喚起`
+  - 日本語ラベル: `アラート`, `注意喚起`
+  - 注意: 危険度を固定しないアラート・注意喚起に使います。`注意喚起`は、個別の注意事項よりも、危険や問題へ注意を向けさせる行為・公表カテゴリを表すため、`caution`ではなくここに置きます。`警報`は強い警戒レベルや警報機能そのものを示しやすいため、既定aliasにはしません。危険度が明確なら`caution`/`warning`/`danger`を使います。
 - `annotation`: 本文に添える注釈や補助的なコメントに使います。
   - 出力: `<aside class="sc-annotation">`
   - 英語ラベル: `annotation`
   - 日本語ラベル: `注釈`
-- `caution`: 注意、注意事項、使用上の注意などに使います。
+- `caution`: 注意、注意事項、注意書・注意書き、使用上の注意などに使います。
   - 出力: `<section class="sc-caution" role="doc-notice">`
   - 英語ラベル: `caution`, `cautions`
-  - 日本語ラベル: `注意`, `注意事項`, `ご注意`, `注意点`, `使用上の注意`, `留意事項`
+  - 日本語ラベル: `注意`, `注意事項`, `ご注意`, `注意点`, `注意書`, `注意書き`, `使用上の注意`, `留意事項`
   - 注意: 避けるべきミスや注意点に使います。より強い危険性がある場合は`warning`または`danger`を使います。
 - `column`: コラムやサイド記事に使います。
   - 出力: `<aside class="sc-column">`
@@ -211,14 +240,16 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<aside class="sc-hint" role="doc-tip">`
   - 英語ラベル: `hint`
   - 日本語ラベル: `ヒント`
-- `important`: 重要情報や重要事項に使います。
-  - 出力: `<section class="sc-important" role="doc-notice">`
-  - 英語ラベル: `important`, `importance`
-  - 日本語ラベル: `(重要|重大)(情報|なこと)?`, `重要事項`
-- `information`: 案内、参考情報、情報ブロックに使います。
+- `important`: 重要、重要情報、重要事項、重要なこと・事柄に使います。
+  - 出力: `<section class="sc-important">`
+  - 英語ラベル: `important`, `important notice`, `important information`
+  - 日本語ラベル: `重要(なこと|な事柄|な情報|な事項|情報|事項)?`
+  - 注意: 危険度ではなく重要度を示します。`重要`、`重要情報`、`重要事項`、`重要なこと`などは認識しますが、警告に近い`重大`は既定aliasにはしません。重要度だけでは`doc-notice`が示す行為・出来事の結果への注意とはいえないため、既定roleは出力しません。
+- `information`: 案内・ご案内、お知らせ・告知、参考情報、情報ブロックに使います。
   - 出力: `<section class="sc-information">`
   - 英語ラベル: `information`, `info`
-  - 日本語ラベル: `案内`, `(参考)?情報`, `インフォメーション`
+  - 日本語ラベル: `案内`, `ご案内`, `お知らせ`, `告知`, `(参考)?情報`, `インフォメーション`
+  - 注意: 一般情報、参考情報、案内・ご案内、お知らせ・告知に使います。`お知らせ`・`告知`は、結果指向の`doc-notice`を断定しない一般的な告知見出しとして、rolelessの`information`に置きます。`ご案内`も`案内`の自然な見出し表現です。`参考情報`は、判断や理解の助けになる情報をブロック内で提示する見出しで、参照先・照合先を示す`参照情報`は`reference`です。手順・イベント・更新履歴・ナビゲーションと明確に分かる場合は、より具体的なsemanticを使います。単独の`掲示`は表示行為や掲示物・掲示板まで指せるため認識しません。
 - `memo`: メモに使います。
   - 出力: `<section class="sc-memo">`
   - 英語ラベル: `memo`
@@ -228,36 +259,43 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 英語ラベル: `note`
   - 日本語ラベル: `ノート`, `注`, `註`, `注記`, `備考`
   - 注意: 中立的な注です。本文の流れに含まれる注も多いため、補足的な`aside`ではなくsection相当の文書ブロックとして扱います。警告・注意・重要事項は`warning`/`caution`/`important`を使います。
-- `notice`: 通知、通告、告知、掲示、お知らせに使います。
+- `notice`: 行為・出来事から生じ得る結果を読者へ知らせる通知・通告に使います。
   - 出力: `<section class="sc-notice" role="doc-notice">`
   - 英語ラベル: `notice`
-  - 日本語ラベル: `通知`, `通告`, `告知`, `掲示`, `(お)?(し|知)らせ`
+  - 日本語ラベル: `通知`, `通告`
+  - 注意: 行為・出来事から生じ得る結果をユーザーへ通知する、現行EPUB/DPUBの限定的な`notice`です。仕様自身がwarning・caution・dangerを例に挙げています。文書構造を示す`doc-notice`のsuperclassは`alert`ではなく`note`で、このroleだけでポップアップ表示、focus移動、即時読み上げは起こりません。日本語では直接的な`通知`と、より正式な`通告`を、英語の`Notice`と同様に著者がこのsemanticを選ぶ自然な見出しとして認識します。内容は結果を知らせる定義に合う必要があります。より広いannouncementの`お知らせ`・`告知`はrolelessの`information`、`掲示`は未登録です。`注意書`・`注意書き`は`notice`の訳語にはせず、具体的に注意を求める`caution`へ置きます。
 - `point`: ポイントや要点に使います。
-  - 出力: `<aside class="sc-point" role="doc-tip">`
-  - 英語ラベル: `point`
+  - 出力: `<section class="sc-point">`
+  - 英語ラベル: `point`, `key point`, `key points`, `main point`, `main points`
   - 日本語ラベル: `ポイント`, `要点`
+  - 注意: 英語の`point`には論旨・要点・主眼という意味があるため、`要点`はここで維持します。中心的なtakeawayなのでrolelessの`section`とし、助言を示す`hint`/`tip`の`doc-tip` asideとは分けます。
 - `tip`: コツ、秘訣、助言、アドバイス、豆知識に使います。
   - 出力: `<aside class="sc-tip" role="doc-tip">`
   - 英語ラベル: `tip`, `tips`
   - 日本語ラベル: `コツ`, `秘訣`, `助言`, `アドバイス`, `豆知識`
 - `warning`: 注意より強く、危険ほど最上位ではない警告に使います。
   - 出力: `<section class="sc-warning" role="doc-notice">`
-  - 英語ラベル: `warning`, `warn`, `warnings`
+  - 英語ラベル: `warning`, `warnings`
   - 日本語ラベル: `警告`, `警告事項`
   - 注意: 注意より強い警告に使います。最上位の危険表示だけ`danger`を使います。
 
-### 学習・Q&A・評価
+### 学習・Q&A・アセスメント・評価
 
 - `answer`: 質問に対する回答や答えに使います。
   - 出力: `<section class="sc-answer">`
   - 英語ラベル: `answer`, `answers`
   - 日本語ラベル: `回答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `答え([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`
   - 注意: `solution`の`解答`/`解法`とは分けます。`answer`は回答・答え寄りです。
-- `assessments`: 評価、採点、試験、小テスト、確認テストに使います。
-  - 出力: `<section class="sc-assessments">`
-  - 英語ラベル: `assessments`, `assessment`, `quiz`, `quizzes`, `exam`, `exams`
-  - 日本語ラベル: `評価`, `採点`, `試験`, `小テスト`, `確認テスト`
-  - 注意: `テスト`単独は技術文書で広すぎるため認識しません。`小テスト`や`確認テスト`を使います。
+- `assessment`: アセスメント、試験、小テスト、確認テストに使います。
+  - 出力: `<section class="sc-assessment">`
+  - 英語ラベル: `assessment`, `assessments`, `quiz`, `quizzes`, `exam`, `exams`
+  - 日本語ラベル: `アセスメント`, `試験`, `小テスト`, `確認テスト`
+  - 注意: アセスメント、試験、確認テストなど、測定・診断・確認を主目的とする部分に使います。`テスト`単独は技術文書で広すぎるため認識しません。`採点`単独は点数・評定を付ける行為なので、assessmentそのものとは分けて認識しません。canonicalは現行EPUB語彙の単数形`assessment`に合わせ、複数形`assessments`は英語aliasとして認識します。
+- `evaluation`: 製品評価、品質評価、性能評価、パフォーマンス評価に使います。
+  - 出力: `<section class="sc-evaluation">`
+  - 英語ラベル: `evaluation`, `evaluations`, `product evaluation`, `product evaluations`, `quality evaluation`, `quality evaluations`, `performance evaluation`, `performance evaluations`
+  - 日本語ラベル: `製品評価`, `品質評価`, `性能評価`, `パフォーマンス評価`
+  - 注意: 品質・価値・成果・性能などを判断する部分です。英語ではproduct/quality/performance evaluationの自然な単数形・複数形、日本語では`製品評価`、`品質評価`、`性能評価`、`パフォーマンス評価`に限定して認識します。裸の`評価`、`評価結果`、`総合評価`はassessment・grading・judgmentの境界をまたぐため認識しません。測定・診断寄りの`リスク評価`や、grading寄りの`成績評価`も認識しません。`評価基準`は`rubric`です。
 - `explanation`: 解説に使います。問題・解答・例の後に置く説明にも向きます。
   - 出力: `<section class="sc-explanation">`
   - 英語ラベル: `explanation`, `explanations`
@@ -272,32 +310,35 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 英語ラベル: `feedback`
   - 日本語ラベル: `フィードバック`
 - `interview`: インタビュー形式の内容に使います。
-  - 出力: `<section class="sc-interview" role="doc-qna">`
+  - 出力: `<section class="sc-interview">`
   - 英語ラベル: `interview`
   - 日本語ラベル: `インタビュー`
-- `learning-objectives`: 学習目標や到達目標を示す部分に使います。
-  - 出力: `<section class="sc-learning-objectives">`
-  - 英語ラベル: `learning-objectives`, `learning objectives`, `objectives`
+  - 注意: インタビューは、地の文、人物紹介、対談的な構成も含み得るため、既定では`doc-qna`を出しません。質問と回答の連続であることを明示する場合は`qna`を使います。
+- `learning-objective`: 学習目標や到達目標を示す部分に使います。
+  - 出力: `<section class="sc-learning-objective">`
+  - 英語ラベル: `learning-objective`, `learning-objectives`, `learning objective`, `learning objectives`
   - 日本語ラベル: `学習目標`, `到達目標`
+  - 注意: canonicalは現行EPUB語彙の単数形`learning-objective`に合わせます。旧canonicalの`learning-objectives`は互換aliasとして残し、自然な空白区切りの単数形・複数形も英語aliasとして認識します。業務目標やプロジェクト目標にもなる`objectives`単独は認識しません。EPUB側に対応するDPUB-ARIA roleがないため、既定roleは出力しません。
 - `lesson`: レッスンや単元に使います。
   - 出力: `<section class="sc-lesson">`
   - 英語ラベル: `lesson`, `lessons`, `learning unit`, `learning units`
   - 日本語ラベル: `レッスン`, `単元`
   - 注意: `教訓`は学習単元よりも強い意味になりやすいため既定aliasにはしません。
-- `problem`: 問題、演習問題、練習問題に使います。
+- `problem`: 解く対象となる問題、演習問題、練習問題の単位に使います。
   - 出力: `<section class="sc-problem">`
   - 英語ラベル: `problem`, `exercise`, `exercises`, `practice problem`, `practice problems`
-  - 日本語ラベル: `問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `演習問題`, `練習問題`
-  - 注意: `練習問題`/`演習問題`は認識しますが、`練習`単独は広すぎるため認識しません。
+  - 日本語ラベル: `問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `演習問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `練習問題([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`
+  - 注意: 解く対象となる問題・演習の単位です。問題文や解答指示を直接含められ、内部に`question`を置く必要はありません。`question`、`hint`、`answer`、`explanation`は独立したブロックとして離れた位置にも置けますが、同じ番号から対応関係を自動生成することはありません。`問題1`、`演習問題2`、`練習問題A`のような連番を認識し、`練習`単独は広すぎるため認識しません。裸の`問題`は一般的な問題・演習見出しとして維持し、技術文書で問題報告を表す場合は`問題点`または`既知の問題`を使います。
 - `qna`: Q&A、質疑応答、一問一答に使います。
   - 出力: `<section class="sc-qna" role="doc-qna">`
-  - 英語ラベル: `qna`, `Q&A`, `QA`, `Q and A`, `Questions and answers`
+  - 英語ラベル: `qna`, `Q&A`, `Q and A`, `Questions and answers`
   - 日本語ラベル: `Ｑ＆Ａ`, `質疑応答`, `一問一答`, `(問(題)?|質問)と(回答|答え)`
-- `question`: 質問、問い、設問、問1のような個別の問いに使います。
+  - 注意: `QA`単独は技術文書でquality assuranceを指すことが多いため認識しません。質問と回答の連続には`Q&A`、`Q and A`、`Questions and answers`を使い、独立した単位には`question`と`answer`を使います。
+- `question`: 質問、問い、設問、小問、発問のような個別の問いに使います。
   - 出力: `<div class="sc-question">`
   - 英語ラベル: `question`
-  - 日本語ラベル: `質問`, `問い([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `設問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `問[0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3}`
-  - 注意: `problem`/`問題`とは分けます。質問・問い・設問はここです。
+  - 日本語ラベル: `質問`, `問い([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `設問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `小問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `問[0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3}`, `発問([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `主発問`, `中心発問`
+  - 注意: 独立した問いや、問題内で個別にラベル付けされた設問・小問・発問に使います。`問い1`、`設問３`、`小問2`、`問一`、`発問1`、`主発問`、`中心発問`を認識します。裸の`問`、空白なしの`質問1`、連番付き`主発問1`/`中心発問1`、`基本発問`/`補助発問`などは、短すぎるか先回りしすぎるため認識しません。空白を置く`質問 1`は共通の英数字接尾辞として認識します。
 - `rubric`: 評価基準・採点基準を示す部分に使います。
   - 出力: `<section class="sc-rubric">`
   - 英語ラベル: `rubric`, `grading rubric`
@@ -308,7 +349,7 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 日本語ラベル: `解答([0-9０-９A-ZＡ-Ｚ一二三四五六七八九十]{1,3})?`, `解答例`, `解決(方法)?`, `解法`
   - 注意: 解答や解法に使います。回答・答えは`answer`と分けます。
 
-### 技術・業務フロードキュメント
+### 技術・業務ドキュメント
 
 - `check`: チェック、確認事項、チェックリストに使います。
   - 出力: `<section class="sc-check">`
@@ -343,21 +384,21 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 英語ラベル: `procedure`, `procedures`, `steps`, `instructions`
   - 日本語ラベル: `手順`, `操作手順`, `作業手順`
   - 注意: `requirements`/`要件`や`resources`/`資料`とは分け、実際の手順に使います。
-- `requirements`: 要件、必要条件、動作要件、システム要件に使います。
+- `requirements`: 要件、要求事項、必要条件、必須項目、動作要件、システム要件に使います。
   - 出力: `<section class="sc-requirements">`
   - 英語ラベル: `requirements`, `requirement`, `system requirements`, `hardware requirements`, `software requirements`
-  - 日本語ラベル: `要件`, `必要条件`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
-  - 注意: 要件や条件に使います。動作環境・推奨環境もここです。手順は`procedure`、制約は`limitations`に分けます。
-- `resources`: 資料や教材に使います。
+  - 日本語ラベル: `要件`, `必要条件`, `必須要件`, `要求事項`, `必要事項`, `必須項目`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
+  - 注意: 要件、要求事項、必要条件、必須項目など、満たすべき条件に使います。動作環境・推奨環境も、一般的な推奨ではなくシステムの稼働条件なのでここです。手順は`procedure`、制約は`limitations`に分けます。
+- `resources`: 資料、教材、参考資料に使います。
   - 出力: `<section class="sc-resources">`
   - 英語ラベル: `resources`, `resource`, `materials`
-  - 日本語ラベル: `資料`, `教材`
-  - 注意: 資料・教材に使います。正式な参考文献は`bibliography`、リンク集は`related-link`です。
-- `task`: 課題、作業、タスク、宿題、アクションアイテムに使います。
+  - 日本語ラベル: `資料`, `教材`, `参考資料`
+  - 注意: 資料・教材・参考資料のような補助資産に使います。参照先や参照情報は`reference`、正式な参考文献は`bibliography`、リンク集は`related-link`です。
+- `task`: タスク、宿題、アクションアイテムに使います。
   - 出力: `<section class="sc-task">`
   - 英語ラベル: `task`, `tasks`, `assignment`, `assignments`, `homework`, `action item`, `action items`
-  - 日本語ラベル: `課題`, `作業`, `タスク`, `宿題`, `アクションアイテム`
-  - 注意: `課題`は広い語ですが、学校のassignmentとして重要なため維持します。論点・懸案は`issue`を使います。
+  - 日本語ラベル: `タスク`, `宿題`, `アクションアイテム`
+  - 注意: タスク・宿題・アクションアイテムのように、割り当てられた作業が明確な見出しに限定します。裸の`課題`はassignmentとissue、裸の`作業`はtaskとprocedureの境界をまたぐため認識しません。
 - `troubleshooting`: トラブルシューティングや困ったときの案内に使います。
   - 出力: `<section class="sc-troubleshooting">`
   - 英語ラベル: `troubleshooting`
@@ -377,7 +418,8 @@ English version: [semantic-catalog.md](semantic-catalog.md).
 - `event`: イベント、行事、催し物などの情報に使います。
   - 出力: `<section class="sc-event">`
   - 英語ラベル: `event`
-  - 日本語ラベル: `イベント(情報|案内)?`, `行事(情報|案内)?`, `催し物(情報|案内)?`, `出来事`
+  - 日本語ラベル: `イベント(情報|案内)?`, `行事(情報|案内)?`, `催し物(情報|案内)?`
+  - 注意: イベント・行事・催し物の情報に使います。一般的な文章見出しとして広すぎる`出来事`は既定aliasにはしません。
 - `minutes`: 議事録など、会議の記録を示す部分に使います。
   - 出力: `<section class="sc-minutes">`
   - 英語ラベル: `minutes`, `meeting minutes`
@@ -394,37 +436,41 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-overview">`
   - 英語ラベル: `overview`
   - 日本語ラベル: `概要`, `概観`, `大要`, `あらまし`
+  - 注意: `概要`は正式なabstractの見出しにもなり得ますが、rolelessの`overview`として維持します。出版物の要旨として`doc-abstract`を出す場合は`要旨`または`抄録`を使います。
 - `planning`: 計画、計画案、プランなど、実行する予定や段取りに使います。
   - 出力: `<section class="sc-planning">`
   - 英語ラベル: `planning`, `plan`
   - 日本語ラベル: `計画`, `計画案`, `プラン`
-  - 注意: 承認を求める企画案・提案書は`proposal`を使います。
+  - 注意: `計画`、`計画案`、`プラン`のような予定・段取りに使います。承認や採否判断を求めることを明示した企画案・提案書・企画書は`proposal`、軽い提案は`suggestion`を使います。
 - `profile`: プロフィールや人物紹介に使います。
   - 出力: `<section class="sc-profile">`
   - 英語ラベル: `profile`
   - 日本語ラベル: `プロフィール`, `人物紹介`
-- `proposal`: 検討・承認・採用を求める提案やプロポーザルに使います。
+- `proposal`: 検討・承認・採否判断の対象となる提案書、企画案、企画書、プロポーザルに使います。
   - 出力: `<section class="sc-proposal">`
   - 英語ラベル: `proposal`, `project proposal`
-  - 日本語ラベル: `プロポーザル`, `提言`, `企画案`
-  - 注意: `企画案`はproposalとして認識しますが、裸の`企画`はplanningとの境界が曖昧なため未登録です。
-- `recommendation`: おすすめ、推薦、推奨、勧めに使います。
+  - 日本語ラベル: `プロポーザル`, `提案書`, `企画案`, `企画書`
+  - 注意: 承認・採否判断の対象となる書類寄りの案です。`提案書`、`企画案`、`企画書`、`プロポーザル`を認識します。裸の`提案`は`suggestion`、`提言`は`recommendation`に分け、裸の`企画`はplanningとの境界が曖昧なため認識しません。
+- `recommendation`: おすすめ、提言、推薦、推奨、推奨事項に使います。
   - 出力: `<section class="sc-recommendation">`
-  - 英語ラベル: `recommendation`, `recommend`, `recommended`
-  - 日本語ラベル: `勧告`, `勧め`, `おすすめ`, `お勧め`, `推薦`, `推奨`, `リコメンド`
-- `reference`: 参照、参考資料、参照先に使います。
+  - 英語ラベル: `recommendation`, `recommendations`
+  - 日本語ラベル: `勧告`, `提言`, `おすすめ`, `お勧め`, `推薦`, `推奨`, `推奨事項`, `推奨項目`, `リコメンド`
+  - 注意: 採否対象の企画書ではなく、選択や行動を勧める内容に使います。`提言`、`推奨事項`、`推奨項目`を含みます。`推奨環境`はシステム条件なので`requirements`です。見出しとして不自然な`勧め`は認識しません。
+- `reference`: 参照、参照先、参照情報、リファレンスに使います。
   - 出力: `<section class="sc-reference">`
   - 英語ラベル: `reference`
-  - 日本語ラベル: `[レリ]ファレンス`, `参照`, `参考資料`, `参照先`
-  - 注意: `参考`単独は広いため既定aliasにはしません。参考資料として明示する場合は`参考資料`を使います。
-- `related`: 関連、関連情報、関連資料に使います。
+  - 日本語ラベル: `[レリ]ファレンス`, `参照`, `参照先`, `参照情報`
+  - 注意: 参照先、参照情報、リファレンスのように、何を・どこを参照するかを示すブロックに使います。`参照情報`は参照・照合のための手掛かり、`参考情報`は本文中で提示する判断・理解の助けとして`information`に分けます。`参考`単独は広いため認識せず、補助資料としての`参考資料`は`resources`です。
+- `related`: 関連情報、関連資料に使います。
   - 出力: `<aside class="sc-related">`
-  - 英語ラベル: `related`, `relation`
-  - 日本語ラベル: `関連`, `関連情報`, `関連資料`
-- `related-book`: 関連本・関連書籍・関連雑誌に使います。
+  - 英語ラベル: `related`, `related information`, `related resources`
+  - 日本語ラベル: `関連情報`, `関連資料`
+  - 注意: 関連情報・関連資料のような広い関連内容に使います。日本語の`関連`単独は対象が分からず、`related-book` / `related-article` / `related-link`との境界も不安定なため認識しません。英語では名詞句の`related information` / `related resources`を認識し、抽象名詞`relation`は認識しません。
+- `related-book`: 関連本・関連書籍・関連雑誌・関連刊行物に使います。
   - 出力: `<aside class="sc-related-book">`
-  - 英語ラベル: `related-book`, `related book`, `related books`, `related magazine`, `related magazines`
-  - 日本語ラベル: `関連(した)?(本|書籍|雑誌)`
+  - 英語ラベル: `related-book`, `related book`, `related books`, `related magazine`, `related magazines`, `related-publication`, `related publication`, `related publications`
+  - 日本語ラベル: `関連(した)?(本|書籍|雑誌|出版物|刊行物)`
+  - 注意: 互換性のためcanonical semanticとして維持しつつ、関連する書籍・雑誌・刊行物を扱います。`related-publication`と自然なpublication形式は入力aliasで、出力classとcanonical名を使う設定は引き続き`sc-related-book` / `related-book`です。
 - `related-article`: 関連記事に使います。
   - 出力: `<aside class="sc-related-article">`
   - 英語ラベル: `related-article`, `related article`, `related articles`
@@ -438,14 +484,17 @@ English version: [semantic-catalog.md](semantic-catalog.md).
   - 出力: `<section class="sc-supplement">`
   - 英語ラベル: `supplement`, `supplements`
   - 日本語ラベル: `補足(情報)?`, `補遺`
-- `suggestion`: 提案やサジェストに使います。
+  - 注意: 本文を明確にしたり補ったりする補足情報・補遺に使います。正式な後付け構造で`doc-appendix`を持つ`appendix`/`付録`とは分けます。`補遺`は使用頻度が低くても文書用語として意味が限定されているため維持します。印刷後の追加・修訂を指す`追補`はaddendum寄りなので認識せず、後から書き足す`追記`は`postscript`に分けます。
+- `suggestion`: 正式な承認を必須としない提案やサジェストに使います。
   - 出力: `<section class="sc-suggestion">`
-  - 英語ラベル: `suggestion`, `suggest`
+  - 英語ラベル: `suggestion`, `suggestions`
   - 日本語ラベル: `提案`, `サジェスト`
+  - 注意: 正式な承認を必須としない軽い提案に使います。裸の`提案`と`サジェスト`はここ、`提案書`は`proposal`です。
 - `summary`: 要約、まとめ、あらすじに使います。
   - 出力: `<section class="sc-summary">`
   - 英語ラベル: `summary`
   - 日本語ラベル: `要約`, `まとめ`, `あらすじ`
+  - 注意: `まとめ`は文末の締めにも使われますが、rolelessの`summary`として維持します。より強い結論の意味で`doc-conclusion`を出す場合は`結論`または`おわりに`を使います。
 - `topic`: トピックや話題に使います。
   - 出力: `<section class="sc-topic">`
   - 英語ラベル: `topic`

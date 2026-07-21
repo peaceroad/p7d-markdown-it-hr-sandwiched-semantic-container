@@ -438,6 +438,7 @@ pass = runDirectTest('titlepage inference wraps English and Japanese appendix h1
   const englishHtml = md.render('---\n\n# Appendix A. Reference Data\n\n---\n')
   const japaneseHtml = md.render('---\n\n# 付録A 参考データ\n\n---\n')
   const japaneseAttachedHtml = md.render('---\n\n# 付属A 参考データ\n\n---\n')
+  const japaneseHistoricAttachedHtml = md.render('---\n\n# 附属A 参考データ\n\n---\n')
   assert.strictEqual(
     englishHtml,
     '<div class="sc-appendix-titlepage">\n'
@@ -454,6 +455,12 @@ pass = runDirectTest('titlepage inference wraps English and Japanese appendix h1
     japaneseAttachedHtml,
     '<div class="sc-appendix-titlepage">\n'
       + '<h1><span class="sc-appendix-titlepage-label">付属</span><span class="sc-appendix-titlepage-number">A</span> <span class="sc-appendix-titlepage-title">参考データ</span></h1>\n'
+      + '</div>\n'
+  )
+  assert.strictEqual(
+    japaneseHistoricAttachedHtml,
+    '<div class="sc-appendix-titlepage">\n'
+      + '<h1><span class="sc-appendix-titlepage-label">附属</span><span class="sc-appendix-titlepage-number">A</span> <span class="sc-appendix-titlepage-title">参考データ</span></h1>\n'
       + '</div>\n'
   )
 })
@@ -518,17 +525,17 @@ pass = runDirectTest('frontmatter sc-titlepage is not a supported titlepage cont
 })
 
 pass = runDirectTest('frontmatter sc.titlepage does not warn as unknown semantic', pass, () => {
-  const env = { frontmatter: { sc: { titlepage: true, notice: 'お知らせ' } } }
-  md.render('# Chapter 1. A Title\n\n---\n\nお知らせ：本文。\n\n---\n', env)
+  const env = { frontmatter: { sc: { titlepage: true, notice: '特別通知' } } }
+  md.render('# Chapter 1. A Title\n\n---\n\n特別通知：本文。\n\n---\n', env)
   assert.strictEqual(Array.isArray(env.semanticContainerWarnings), false)
 })
 
 pass = runDirectTest('sc alias standard', pass, () => {
-  const env = { semanticContainerSc: { notice: 'お知らせ' } }
-  const markdown = '---\n\nお知らせ：本文。\n\n---\n'
+  const env = { semanticContainerSc: { notice: '特別通知' } }
+  const markdown = '---\n\n特別通知：本文。\n\n---\n'
   const html = md.render(markdown, env)
   const expected = '<section class="sc-notice" role="doc-notice">\n'
-    + '<p><span class="sc-notice-label">お知らせ<span class="sc-notice-label-joint">：</span></span>本文。</p>\n'
+    + '<p><span class="sc-notice-label">特別通知<span class="sc-notice-label-joint">：</span></span>本文。</p>\n'
     + '</section>\n'
   assert.strictEqual(html, expected)
   assert.strictEqual(Array.isArray(env.semanticContainerWarnings), false)
@@ -551,6 +558,40 @@ pass = runDirectTest('hidden labels do not add aria-label fallback to roleless d
     + '<p></p>\n'
     + '</div>\n'
   assert.strictEqual(html, expected)
+})
+
+pass = runDirectTest('lead default label hiding is explicit and consistent across input flows', pass, () => {
+  const semantics = buildSemantics([])
+  assert.deepStrictEqual(
+    semantics.filter((semantic) => semantic.hideLabel).map((semantic) => semantic.name),
+    ['lead']
+  )
+
+  const expectedStandard = '<div class="sc-lead">\n'
+    + '<p>Intro.</p>\n'
+    + '</div>\n'
+  assert.strictEqual(md.render('Lead. Intro.'), expectedStandard)
+  assert.strictEqual(mdBracketFormat.render('[Lead] Intro.'), expectedStandard)
+  assert.strictEqual(
+    mdGitHubAlerts.render('> [!LEAD]\n> Intro.\n'),
+    '<div class="sc-lead">\n<p>Intro.</p>\n</div>\n'
+  )
+})
+
+pass = runDirectTest('non-empty labelControl overrides the lead hidden-label default', pass, () => {
+  const expectedStandard = '<div class="sc-lead">\n'
+    + '<p><span class="sc-lead-label">Opening<span class="sc-lead-label-joint">.</span></span> Intro.</p>\n'
+    + '</div>\n'
+  const expectedBracket = '<div class="sc-lead">\n'
+    + '<p><span class="sc-lead-label"><span class="sc-lead-label-joint">[</span>Opening<span class="sc-lead-label-joint">]</span></span> Intro.</p>\n'
+    + '</div>\n'
+  const expectedGitHub = '<div class="sc-lead">\n'
+    + '<p><strong class="sc-lead-label">Opening</strong></p>\n'
+    + '<p>Intro.</p>\n'
+    + '</div>\n'
+  assert.strictEqual(mdLabelControl.render('Lead. Intro. {label="Opening"}'), expectedStandard)
+  assert.strictEqual(mdLabelControlBracket.render('[Lead] Intro. {label="Opening"}'), expectedBracket)
+  assert.strictEqual(mdLabelControlGitHub.render('> [!LEAD]\n> Intro. {label="Opening"}\n'), expectedGitHub)
 })
 
 pass = runDirectTest('inline label overrides sc hide', pass, () => {
@@ -656,21 +697,21 @@ pass = runDirectTest('runtime sc alias with regex syntax characters does not thr
 })
 
 pass = runDirectTest('sc alias bracket', pass, () => {
-  const env = { semanticContainerSc: { notice: 'お知らせ' } }
-  const markdown = '---\n\n[お知らせ] 本文。\n\n---\n'
+  const env = { semanticContainerSc: { notice: '特別通知' } }
+  const markdown = '---\n\n[特別通知] 本文。\n\n---\n'
   const html = mdBracketFormat.render(markdown, env)
   const expected = '<section class="sc-notice" role="doc-notice">\n'
-    + '<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>お知らせ<span class="sc-notice-label-joint">]</span></span> 本文。</p>\n'
+    + '<p><span class="sc-notice-label"><span class="sc-notice-label-joint">[</span>特別通知<span class="sc-notice-label-joint">]</span></span> 本文。</p>\n'
     + '</section>\n'
   assert.strictEqual(html, expected)
 })
 
 pass = runDirectTest('sc alias github', pass, () => {
-  const env = { semanticContainerSc: { notice: 'お知らせ' } }
-  const markdown = '> [!お知らせ]\n> 本文。\n'
+  const env = { semanticContainerSc: { notice: '特別通知' } }
+  const markdown = '> [!特別通知]\n> 本文。\n'
   const html = mdGitHubAlerts.render(markdown, env)
   const expected = '<section class="sc-notice" role="doc-notice">\n'
-    + '<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>お知らせ<span class="sc-notice-label-joint">]</span></strong></p>\n'
+    + '<p><strong class="sc-notice-label"><span class="sc-notice-label-joint">[</span>特別通知<span class="sc-notice-label-joint">]</span></strong></p>\n'
     + '<p>本文。</p>\n'
     + '</section>\n'
   assert.strictEqual(html, expected)
@@ -708,14 +749,73 @@ pass = runDirectTest('sc alias conflict warning', pass, () => {
   assert.strictEqual(env.semanticContainerWarnings.length > 0, true)
 })
 
+pass = runDirectTest('generic announcement aliases stay roleless when SC tries to rebind them', pass, () => {
+  const env = { semanticContainerSc: { notice: 'お知らせ' } }
+  const html = md.render('お知らせ：本文。', env)
+  const expected = '<section class="sc-information">\n'
+    + '<p><span class="sc-information-label">お知らせ<span class="sc-information-label-joint">：</span></span>本文。</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+  assert.deepStrictEqual(env.semanticContainerWarnings, [
+    'semanticContainerSc: alias "お知らせ" conflicts with "information" and is ignored for "notice"',
+  ])
+})
+
+pass = runDirectTest('sc aliases share one same-render conflict owner map', pass, () => {
+  const env = { semanticContainerSc: { note: 'Special', warning: 'Special' } }
+  const html = md.render('Special. Body.', env)
+  const expected = '<section class="sc-note">\n'
+    + '<p><span class="sc-note-label">Special<span class="sc-note-label-joint">.</span></span> Body.</p>\n'
+    + '</section>\n'
+  assert.strictEqual(html, expected)
+  assert.deepStrictEqual(env.semanticContainerWarnings, [
+    'semanticContainerSc: alias "Special" conflicts with "note" and is ignored for "warning"',
+  ])
+})
+
+pass = runDirectTest('sc aliases cannot override regex-capable built-in labels', pass, () => {
+  const env = {
+    semanticContainerSc: {
+      note: ['重要情報', '問題1', '関連刊行物'],
+      important: '重要事項',
+    },
+  }
+  const html = md.render('重要情報. A.\n\n問題1. B.\n\n関連刊行物. C.\n\n重要事項. D.', env)
+  assert.ok(html.includes('class="sc-important"'))
+  assert.ok(html.includes('class="sc-problem"'))
+  assert.ok(html.includes('class="sc-related-book"'))
+  assert.strictEqual(html.includes('class="sc-note"'), false)
+  assert.deepStrictEqual(env.semanticContainerWarnings, [
+    'semanticContainerSc: alias "重要情報" conflicts with "important" and is ignored for "note"',
+    'semanticContainerSc: alias "問題1" conflicts with "problem" and is ignored for "note"',
+    'semanticContainerSc: alias "関連刊行物" conflicts with "related-book" and is ignored for "note"',
+  ])
+})
+
+pass = runDirectTest('pullquote canonical SC key replaces former pull-quote key', pass, () => {
+  const env = {
+    semanticContainerSc: {
+      pullquote: 'Featured quote',
+      'pull-quote': 'Legacy custom quote',
+    },
+  }
+  const html = md.render('Featured quote. Body.\n\nLegacy custom quote. Body.\n', env)
+  assert.ok(html.includes('<aside class="sc-pullquote" role="doc-pullquote">'))
+  assert.ok(html.includes('<span class="sc-pullquote-label">Featured quote'))
+  assert.ok(html.includes('<p>Legacy custom quote. Body.</p>'))
+  assert.deepStrictEqual(env.semanticContainerWarnings, [
+    'semanticContainerSc: unknown semantic "pull-quote" is ignored',
+  ])
+})
+
 pass = runDirectTest('semanticContainerWarnings reset on env reuse', pass, () => {
   const env = { semanticContainerSc: { note: 'Notice' } }
   md.render('---\n\nNotice. Body.\n\n---\n', env)
   assert.strictEqual(Array.isArray(env.semanticContainerWarnings), true)
   assert.strictEqual(env.semanticContainerWarnings.length > 0, true)
 
-  env.semanticContainerSc = { notice: 'お知らせ' }
-  md.render('---\n\nお知らせ：本文。\n\n---\n', env)
+  env.semanticContainerSc = { notice: '特別通知' }
+  md.render('---\n\n特別通知：本文。\n\n---\n', env)
   assert.strictEqual(Array.isArray(env.semanticContainerWarnings), true)
   assert.strictEqual(env.semanticContainerWarnings.length, 0)
 })
@@ -973,6 +1073,9 @@ pass = runDirectTest('hr-sandwiched headings can match semantic labels without j
 
   const partialHtml = md.render('---\n\n## 動作環境について\n\n本文\n\n---\n')
   assert.strictEqual(partialHtml, '<hr>\n<h2>動作環境について</h2>\n<p>本文</p>\n<hr>\n')
+
+  const hiddenLabelHtml = md.render('---\n\n## Lead\n\nBody\n\n---\n')
+  assert.strictEqual(hiddenLabelHtml, '<hr>\n<h2>Lead</h2>\n<p>Body</p>\n<hr>\n')
 })
 
 pass = runDirectTest('requireHeadingLabelJoint and deny semantics keep jointless heading matching opt-out paths', pass, () => {
@@ -1068,7 +1171,7 @@ pass = runDirectTest('invalid truthy boolean options fall back to disabled behav
 
 pass = runDirectTest('invalid languages fall back to the default Japanese locale', pass, () => {
   const mdInvalidLanguages = mdit().use(mditSemanticContainer, { languages: { locale: 'ja' } })
-  assert.strictEqual(mdInvalidLanguages.render('通知：本文。\n').includes('<section class="sc-notice"'), true)
+  assert.strictEqual(mdInvalidLanguages.render('注意：本文。\n').includes('<section class="sc-caution"'), true)
 })
 
 pass = runDirectTest('semantic builds do not share mutable attribute arrays', pass, () => {

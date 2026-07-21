@@ -64,4 +64,4 @@ const resolveHeadingSectionRangeEnd = (tokens, startIndex) => {
   return tokens.length
 }
 
-export { resolveContainerRangeEnd, resolveHeadingSectionRangeEnd }
+export { parseHeadingRank, resolveContainerRangeEnd, resolveHeadingSectionRangeEnd }

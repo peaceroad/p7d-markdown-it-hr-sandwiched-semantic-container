@@ -1,4 +1,5 @@
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
+import { parseHeadingRank } from './container-range.js'
 import { createTextToken } from './label-token-builder.js'
 
 const EN_TITLEPAGE_RE = /^(Chapter|Part|Appendix)(\s+)([0-9]{1,3}|[A-Za-z]{1,3}|[IVXLCDMivxlcdm]{1,8})([.:：．])?(?:(\s+)(.+))?$/i
@@ -8,7 +9,7 @@ const JA_UNICODE_ROMAN_NUMBER = '[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫⅬⅭⅮ�
 const JA_NUMBER = '(?:' + JA_DECIMAL_OR_KANJI_NUMBER + '|' + JA_ASCII_ROMAN_NUMBER + '|' + JA_UNICODE_ROMAN_NUMBER + ')'
 const JA_SUFFIX_NUMBER = '[0-9０-９A-Za-zＡ-Ｚａ-ｚ一二三四五六七八九十百千]{1,8}'
 const JA_TITLEPAGE_RE = new RegExp('^(第)?(' + JA_NUMBER + ')(章|部)(?:([.:：．、。])([ 　]*)(.*)|([ 　]+)(.*))?$')
-const JA_APPENDIX_TITLEPAGE_RE = new RegExp('^(付録|付属)(' + JA_SUFFIX_NUMBER + ')(?:([.:：．、。])([ 　]*)(.*)|([ 　]+)(.*))?$')
+const JA_APPENDIX_TITLEPAGE_RE = new RegExp('^(付録|付属|附属)(' + JA_SUFFIX_NUMBER + ')(?:([.:：．、。])([ 　]*)(.*)|([ 　]+)(.*))?$')
 
 const CODE_UPPER_A = 65
 const CODE_UPPER_C = 67
@@ -22,7 +23,12 @@ const CODE_FULLWIDTH_DIGIT_0 = 65296
 const CODE_FULLWIDTH_DIGIT_9 = 65305
 const CODE_JA_PREFIX = 31532
 const CODE_JA_APPENDIX = 20184
+const CODE_JA_HISTORIC_APPENDIX = 38468
 const JA_NUMERAL_LEADS = '一二三四五六七八九十百千'
+
+const isJapaneseAppendixLeadCode = (code) => (
+  code === CODE_JA_APPENDIX || code === CODE_JA_HISTORIC_APPENDIX
+)
 
 const isAsciiRomanLeadCode = (code) => code === 73
   || code === 86
@@ -95,7 +101,7 @@ const canMatchEnglish = (code) => {
 
 const canMatchJapanese = (code, firstChar) => {
   return code === CODE_JA_PREFIX
-    || code === CODE_JA_APPENDIX
+    || isJapaneseAppendixLeadCode(code)
     || isAsciiRomanLeadCode(code)
     || isUnicodeRomanLeadCode(code)
     || (code >= CODE_DIGIT_0 && code <= CODE_DIGIT_9)
@@ -198,7 +204,7 @@ const createHeadingTitlepageMatcher = (semantics) => {
     const leadCode = content.charCodeAt(0)
     const result = (canMatchEnglish(leadCode) ? buildEnglishParts(content) : null)
       || (canMatchJapanese(leadCode, content[0])
-        ? (leadCode === CODE_JA_APPENDIX
+        ? (isJapaneseAppendixLeadCode(leadCode)
           ? buildJapaneseAppendixParts(content)
           : buildJapaneseParts(content))
         : null)
@@ -215,13 +221,6 @@ const createHeadingTitlepageMatcher = (semantics) => {
       titlepageParts: result.parts,
     }
   }
-}
-
-const parseHeadingRank = (token) => {
-  const tag = token?.tag
-  if (!tag || tag.length !== 2 || tag.charCodeAt(0) !== 104) return 0
-  const rank = tag.charCodeAt(1) - 48
-  return rank >= 1 && rank <= 6 ? rank : 0
 }
 
 const resolveFrontmatterTitlepageRangeEnd = (tokens, startIndex) => {
@@ -296,7 +295,6 @@ const setHeadingTitlepageContainer = (semantics) => (state, hrType, sc, sci) => 
   const sToken = createContainerStartToken(
     state,
     sem,
-    '',
     false,
     '',
     startMap

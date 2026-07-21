@@ -130,19 +130,17 @@ const createStandardContainerApplier = (semantics) => (state, hrType, sc, sci, o
   const nt = tokens[rs + 1]
   const ntChildren = nt.children
   const startToken = tokens[rs]
-  const defaultHideLabel = !!optLocal.scHideSet?.has(sem.name)
+  const defaultHideLabel = sem.hideLabel || !!optLocal.scHideSet?.has(sem.name)
   const labelControl = optLocal.labelControl
     ? resolveLabelControl(startToken, nt, undefined, !!optLocal.labelControlInlineFallback)
     : null
   const hideLabel = labelControl ? !!labelControl.hide : defaultHideLabel
   const labelText = labelControl && !labelControl.hide ? labelControl.value : sc.actualName
   const labelJoint = hideLabel ? '' : sc.actualNameJoint
-  const hasSemanticAriaLabel = !!sem.hasAriaLabel
 
   const sToken = createContainerStartToken(
     state,
     sem,
-    labelText,
     hideLabel,
     sc.actualName,
     startMap
@@ -160,7 +158,7 @@ const createStandardContainerApplier = (semantics) => (state, hrType, sc, sci, o
     tokens.splice(re + 1, 0, eToken)
   }
 
-  if(hideLabel || hasSemanticAriaLabel) {
+  if(hideLabel) {
     nt.content = removeLiteralPrefix(nt.content, sc.actualCont)
     nt.content = removeLiteralPrefix(nt.content, sc.actualContNoStrong)
     if (sc.hasLastJoint) {

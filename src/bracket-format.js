@@ -1,14 +1,20 @@
 import { buildSemanticLeadCandidates } from './semantic-lead.js'
-import { buildSemanticAliasPatterns } from './semantic-alias.js'
+import {
+  SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN,
+  buildSemanticAliasPatternLists,
+} from './semantic-alias.js'
 import { resolveLabelControl } from './label-control.js'
 import { resolveContainerMaps, createContainerStartToken, createContainerEndToken } from './container-token.js'
 import { resolveContainerRangeEnd } from './container-range.js'
 import { resolveAutoJointLabelStyle } from './label-style.js'
 import { createTextToken, createWrappedLabelTokens, createBracketWrappedLabelTokens } from './label-token-builder.js'
 
-const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLeadCandidates(semantics)) => {
+const createBracketFormat = (
+  semantics,
+  semanticLeadCandidates = buildSemanticLeadCandidates(semantics),
+  semanticAliasPatternLists = buildSemanticAliasPatternLists(semantics)
+) => {
   const strongMark = '[*_]{2}'
-  const sNumber = '(?:[ 　](?:[0-9]{1,6}|[A-Z]{1,2})(?:[.-](?:[0-9]{1,6}|[A-Z]{1,2})){0,6})?'
   const MATCH_CACHE_MAX = 128
   const CACHE_MISS = 0
   const CODE_STAR = 42
@@ -75,17 +81,18 @@ const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLe
       sc.closeBracket
     )
     children.splice(0, 0, ...labelTokens)
+    const bodyStartIndex = labelTokens.length
 
-    if (sc.openBracket !== '[') return 9
+    if (sc.openBracket !== '[') return bodyStartIndex
 
     if (spaceMode === 'force') {
       const spaceAfterLabel = createTextToken(state, ' ')
-      children.splice(9, 0, spaceAfterLabel)
-      return 10
+      children.splice(bodyStartIndex, 0, spaceAfterLabel)
+      return bodyStartIndex + 1
     }
 
-    ensureLeadingSpaceAfterLabel(children, 9)
-    return 9
+    ensureLeadingSpaceAfterLabel(children, bodyStartIndex)
+    return bodyStartIndex
   }
   const resolvePlainLabelStyle = (labelText, bracketLabelJointMode) => {
     return resolveAutoJointLabelStyle(labelText, bracketLabelJointMode === BRACKET_LABEL_JOINT_AUTO)
@@ -188,13 +195,13 @@ const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLe
   }
 
   // Bracket format regex patterns
-  const semanticsBracketReg = semantics.map((sem) => {
-    const aliasPatterns = buildSemanticAliasPatterns(sem)
+  const semanticsBracketReg = semantics.map((sem, sn) => {
+    const aliasPatterns = semanticAliasPatternLists[sn]
     const aliasStr = aliasPatterns.length
       ? '|' + aliasPatterns.join('|')
       : ''
     // Match [Semantics] (half-width, space required) or ［Semantics］ (full-width, space optional)
-    const bkPattern = '^(?:(' + strongMark + ')?([\\[])((?:' + sem.name + aliasStr + ')' + sNumber + ')([\\]])\\1?( +)|(' + strongMark + ')?([［])((?:' + sem.name + aliasStr + ')' + sNumber + ')([］])\\6?( *))'
+    const bkPattern = '^(?:(' + strongMark + ')?([\\[])((?:' + sem.name + aliasStr + ')' + SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN + ')([\\]])\\1?( +)|(' + strongMark + ')?([［])((?:' + sem.name + aliasStr + ')' + SEMANTIC_LABEL_NUMBER_SUFFIX_PATTERN + ')([］])\\6?( *))'
     return new RegExp(bkPattern, 'i')
   })
   const parseBracketMatchedSemantic = (sn, actualMatch) => {
@@ -314,7 +321,7 @@ const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLe
     const nt = tokens[rs+1]
     const ntChildren = nt.children
     const startToken = tokens[rs]
-    const defaultHideLabel = !!opt?.scHideSet?.has(sem.name)
+    const defaultHideLabel = sem.hideLabel || !!opt?.scHideSet?.has(sem.name)
     const labelControl = opt?.labelControl
       ? resolveLabelControl(startToken, nt, undefined, !!opt?.labelControlInlineFallback)
       : null
@@ -328,7 +335,6 @@ const createBracketFormat = (semantics, semanticLeadCandidates = buildSemanticLe
     const sToken = createContainerStartToken(
       state,
       sem,
-      labelText,
       hideLabel,
       sc.actualName,
       startMap
