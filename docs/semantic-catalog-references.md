@@ -354,11 +354,12 @@ Built-in label-presentation notes:
   DPUB output contract. Projects that intentionally use one of these headings
   for consequence-oriented notices can opt in with a literal
   `semanticContainerSc` alias.
-- `information` recognizes `案内`, `ご案内`, `お知らせ`, `告知`, `情報`,
-  `参考情報`, and `インフォメーション`. The announcement labels are broad,
-  but the canonical is roleless and accurately avoids a `doc-notice` claim;
-  use a more specific semantic when the heading identifies an event, update,
-  procedure, or navigation function.
+- `information` recognizes `お知らせ`, `告知`, `情報`, `参考情報`, and
+  `インフォメーション`. The announcement labels are broad, but the canonical
+  is roleless and accurately avoids a `doc-notice` claim. Bare `案内` and
+  `ご案内` remain unregistered because they can identify information,
+  procedures, events, products, facilities, or navigation; projects can add a
+  local literal alias when one function is established by convention.
 - `参考情報` and `参照情報` can overlap in ordinary prose, but the built-in
   heading boundary follows their dominant document function. `参考情報` presents
   useful facts or guidance for understanding or judgment and maps to
@@ -410,8 +411,8 @@ Built-in label-presentation notes:
     `suggestion`; `提言` -> `recommendation`.
   - `参考情報` -> `information`; `参照` / `参照先` / `参照情報` ->
     `reference`; `参考資料` -> `resources`.
-  - `案内` / `ご案内` -> `information`; the honorific form is an independently
-    natural heading, not the result of a general automatic `ご` prefix rule.
+  - Bare `案内` / `ご案内` remain unregistered; use a more specific built-in
+    label or a project-local alias when the intended function is stable.
   - `推奨事項` -> `recommendation`; `推奨環境` -> `requirements`.
   - `前文` -> `preamble`; authorial `前書き` -> `preface`; main-text
     `はじめに` -> `introduction`.
@@ -441,20 +442,21 @@ Remaining low-risk, deliberately pragmatic boundaries:
   but it can overlap a prose `overview`. Both outputs are roleless `section`
   containers; projects that require a stricter distinction should prefer
   `アウトライン` for structure and `概要` for an overview.
-- `案内` remains under roleless `information` as a pragmatic document heading,
-  although authors should choose a more specific procedure, event, or
-  navigation label when that function is clear.
+- Bare `案内` / `ご案内` remain unregistered because even a roleless
+  `information` section would fix a class and tag for headings that can instead
+  introduce procedures, events, products, facilities, or navigation.
 - Bare `問題` remains under roleless `problem` for common problem and exercise
   headings; `問題点` and `既知の問題` provide the bounded `issue` forms.
 - `まとめ` remains under roleless `summary`; authors can use `結論` or
   `おわりに` when the stronger `doc-conclusion` meaning is intended.
 - `概要` remains under roleless `overview`; authors can use `要旨` or `抄録`
   when the publication-specific `doc-abstract` meaning is intended.
-- Bare `評価`, `評価結果`, and `総合評価` remain unregistered because they can
-  cross assessment, grading, and judgment boundaries. `製品評価`, `品質評価`,
-  `性能評価`, and `パフォーマンス評価` are the built-in judgment-oriented
-  `evaluation` aliases. Assessment-like `リスク評価` and grading-like
-  `成績評価` also remain unregistered; `評価基準` maps to `rubric`.
+- `評価`, `評価結果`, and `総合評価` map to roleless `evaluation`. They are
+  natural standalone headings, and the output does not assert an assessment or
+  grading role. More specific judgment-oriented aliases are `製品評価`,
+  `品質評価`, `性能評価`, and `パフォーマンス評価`. Assessment-like
+  `リスク評価` and grading-like `成績評価` remain unregistered, while
+  `評価基準` maps to `rubric`.
 - English `product evaluation(s)`, `quality evaluation(s)`, and `performance
   evaluation(s)` map to `evaluation`. They are natural judgment-oriented
   headings and do not weaken the boundary with measurement-oriented
@@ -471,8 +473,8 @@ Remaining low-risk, deliberately pragmatic boundaries:
 ## Alias ownership when a phrase names multiple concepts
 
 A multiword label can contain another canonical name without belonging to that
-head noun automatically. Choose the semantic that dominates the phrase's
-document function, not merely the first or last word.
+head noun automatically. Choose the canonical whose observable output best
+matches the whole heading, not merely the first or last word.
 
 Review these dimensions in order:
 
@@ -504,8 +506,8 @@ Current decisions:
 - `system requirements` -> `requirements`: `system` scopes the subject but does
   not change the requirement function.
 - `publication information` -> `book`: the phrase names information about a
-  publication rather than a generic information block; `book` remains the
-  compatibility-stable canonical name for that broader concept.
+  publication rather than a generic information block; `book` is the catalog's
+  canonical name for that broader concept and emits `sc-book`.
 
 Record decisions of this kind in generated catalog notes and direct positive
 and negative tests. This makes later reconsideration possible without relying

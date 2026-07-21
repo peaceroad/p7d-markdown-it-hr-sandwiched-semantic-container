@@ -12,7 +12,8 @@
     "semantics/",
     "src/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test": "node test/test.js",

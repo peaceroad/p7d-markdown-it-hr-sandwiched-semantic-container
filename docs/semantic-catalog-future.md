@@ -6,136 +6,14 @@ canonical semantic only when it is useful as a standalone document label across
 multiple document types, and do not emit a default `role` unless DPUB-ARIA has a
 close match.
 
-## Catalog refinements promoted in 0.14.0
+Released changes and migration guidance belong in
+[`CHANGELOG.md`](../CHANGELOG.md). Current catalog behavior and decision
+boundaries are documented in the generated English and Japanese catalogs. This
+file is limited to unresolved boundaries and possible future additions.
 
-Version 0.14.0 deliberately tightens the catalog around natural document
-labels. Canonical semantics remain conceptual API names; aliases may be
-multiword phrases when that is the natural or safer heading form.
-Canonical grammatical number follows an intentionally corresponding external
-vocabulary when one exists; otherwise singular conceptual names are preferred,
-while lexicalized or deliberately aggregate concepts may remain plural.
+## Boundaries under observation
 
-- `book` remains the compatibility-stable canonical while its documented scope
-  broadens to book, magazine, and publication-information blocks.
-  - `book`, `book info`, `book information`, `magazine`, `magazine info`,
-    `magazine information`, `publication`, `publication info`, and
-    `publication information` are recognized English labels.
-  - Output remains `sc-book`; canonical-name configuration remains `book`.
-  - Dual `sc-book` / `sc-publication` output was intentionally not added.
-    Supporting both correctly would also require legacy aliases for label and
-    joint classes and would turn a one-semantic migration into a general
-    long-lived output contract.
-  - Bare plural `publications` stays unregistered because it often denotes an
-    author's works, a bibliography-like list, or a publication archive rather
-    than one publication-information block.
-  - Canonical `related-book` remains unchanged for compatibility, while its
-    recognized headings cover books, magazines, and other publications.
-    `related-publication` remains an input alias, while output and
-    canonical-name configuration use `sc-related-book` / `related-book`.
-  - Use `related-book` for related or suggested publications and
-    `colophon` for the current work's formal imprint.
-- English aliases now favor complete noun labels:
-  - `important notice` and `important information` replace abstract
-    `importance`.
-  - `related information` and `related resources` replace abstract `relation`.
-  - `warnings`, `suggestions`, and `recommendations` remain alongside their
-    canonical singular nouns; verb or adjective labels such as `warn`,
-    `suggest`, `recommend`, and `recommended` were removed.
-  - `editor-note` recognizes natural spaced forms such as `editor's note` and
-    `editorial note`; unspaced `editornote` and apostrophe-less `editors note`
-    were removed.
-- Japanese planning terms have an explicit decision boundary:
-  - `提案書`, `企画案`, `企画書`, and `プロポーザル` map to formal
-    `proposal`.
-  - Bare `提案` and `サジェスト` map to lighter `suggestion`.
-  - `提言` maps to `recommendation`; bare `企画` remains unregistered.
-- Broad Japanese labels were narrowed:
-  - `出来事`, `警報`, `重大`, bare `手がかり`, bare `導入`, bare `関連`,
-    bare `作業`, bare `課題`, `序`, `序文`, `採点`, and `勧め` are no
-    longer recognized by those former mappings.
-  - `前文` now maps precisely to `preamble`; `アセスメント` maps to
-    `assessment`.
-  - `参考資料` maps to supporting `resources`, while `参照先`, `参照情報`,
-    and `リファレンス` map to `reference`.
-  - `付属書` / `附属書`, `付属資料` / `附属資料`, and compact numbered or
-    lettered book labels such as `付録A`, `付属A`, and `附属A` map to
-    `appendix`. Bare `付属` / `附属` remains unregistered because it can
-    describe accessories or affiliation instead of appended document structure.
-  - `ご案内` joins `案内` under roleless `information` as a natural honorific
-    heading; this does not enable a general automatic `ご` prefix.
-- Requirements and recommendations gained specific natural headings:
-  - `必須要件`, `要求事項`, `必要事項`, and `必須項目` map to
-    `requirements`.
-  - `推奨事項` and `推奨項目` map to `recommendation`, while `推奨環境`
-    remains `requirements` because it describes an operating environment.
-- `evaluation` was added as a roleless canonical semantic with English
-  `evaluation` / `evaluations`, `product evaluation(s)`, `quality
-  evaluation(s)`, and `performance evaluation(s)` labels. Japanese aliases are
-  limited to `製品評価`, `品質評価`, `性能評価`, and `パフォーマンス評価`. Bare `評価`,
-  `評価結果`, and `総合評価` cross assessment, grading, and judgment boundaries,
-  so they remain unregistered together with assessment-like `リスク評価` and
-  grading-like `成績評価`; `評価基準` stays under `rubric`.
-- `important` is now roleless. It still recognizes priority-oriented labels,
-  including `important notice` and `important information`, but importance by
-  itself does not imply the consequences described by DPUB-ARIA `doc-notice`.
-  `notice`, `alert`, `caution`, `warning`, and `danger` retain that structural
-  role. It is not the live-region `role="alert"` and does not by itself cause a
-  pop-up or immediate announcement.
-  - A follow-up reading of the normative `doc-notice` definition corrected the
-    Japanese boundary. The role explicitly *notifies* users of consequences
-    that might arise from an action or event, and gives warnings, cautions, and
-    dangers as examples. `通知` and the more formal `通告` therefore remain
-    direct natural author-selected headings, just as English `Notice` is.
-  - `注意書` and `注意書き` are closer to a concrete caution and map to
-    `caution`. Generic announcement labels `お知らせ` and `告知` map to
-    roleless `information`: this recognizes their practical heading function
-    without asserting the consequence-oriented `doc-notice` contract. Bare
-    `掲示` remains unregistered because it also denotes posting or a noticeboard.
-  - Adding a separate `announcement` semantic remains rejected because it
-    would create a difficult boundary without a distinct output contract.
-- Alias additions are output-contract decisions, not only vocabulary changes.
-  Every built-in and runtime alias inherits the canonical tag, classes, and
-  default attributes, including `role`. The catalog therefore avoids per-alias
-  role suppression: a broad label stays unregistered or maps to a roleless
-  semantic when it cannot safely assert the role-bearing canonical.
-- Canonical `assessments` was renamed to singular `assessment`, and canonical
-  `learning-objectives` was renamed to singular `learning-objective`, following
-  the current EPUB Structural Semantics Vocabulary terms.
-  - Output now uses `sc-assessment` and `sc-learning-objective`; this is a
-    breaking output-contract change.
-  - The former hyphenated canonical `learning-objectives` remains a compatibility
-    alias. Natural spaced singular/plural headings also remain recognized, but
-    bare `objectives` stays unregistered because project and business objectives
-    are not necessarily learning objectives.
-- `lead` now records its exceptional presentation explicitly with
-  `hideLabel: true`. It remains the only built-in semantic whose marker is
-  hidden by default, and standard, bracket, and GitHub alert inputs now share
-  that behavior. It uses a roleless `div`: ordinary publishing usage treats a
-  lead/lede as opening prose rather than a separately navigable document
-  section, and `lead` is not an EPUB or DPUB-ARIA vocabulary term. Hiding its
-  control marker therefore does not create a named `region` landmark. Exact
-  jointless headings skip hidden-by-default semantics so a marker-only
-  `## Lead` does not become an empty heading. The matcher applies that rule to
-  every hidden-by-default semantic rather than branching on the canonical name.
-- `point` now means a central point or takeaway, recognizes `key point(s)` and
-  `main point(s)`, and emits a roleless main-flow `section`. Japanese `要点`
-  stays here. Helpful advice remains under `hint` / `tip` with `doc-tip`.
-- `補遺` remains a `supplement` alias. Japanese documentation terminology
-  distinguishes it from `付録` (`appendix`) and `追補` (addenda), so rarity alone
-  is not a reason to remove this precise heading. `追補` remains unregistered
-  until a useful addendum semantic and real heading examples justify it;
-  `追記` remains under `postscript`.
-- Bare `QA` was removed from `qna` because it commonly means quality assurance
-  in technical documents. The Japanese `foreword` pattern was also tightened
-  so malformed bare `の刊行に寄せて` no longer matches.
-
-These choices are recorded here so omitted broad labels can be reconsidered
-with concrete documents and collision tests instead of being restored merely
-for morphological completeness.
-
-## Deliberate residual boundaries
-
-The latest EPUB/DPUB review found no further role assignment that needs an
+The current EPUB/DPUB review found no further role assignment that needs an
 immediate catalog change, but several natural Japanese headings remain
 genre-dependent:
 
@@ -152,9 +30,15 @@ genre-dependent:
 - `概略` remains an `outline` alias but can overlap a prose `overview`. The two
   wrappers are both roleless `section` elements, reducing accessibility risk;
   use `アウトライン` versus `概要` when a project needs a stable distinction.
-- `案内` remains a pragmatic roleless `information` alias, although it can
-  introduce procedures, events, or navigation. Prefer a more specific label
-  when that document function is known.
+- Bare `案内`/`ご案内` remains unregistered because it can introduce
+  information, procedures, events, products, facilities, or navigation. A
+  project can add it through `semanticContainerSc` when its local document
+  convention gives it one stable function.
+- `評価`, `評価結果`, and `総合評価` are recognized as the roleless
+  `evaluation` semantic because they are natural standalone headings and do not
+  assert an assessment or grading role. Assessment-like `リスク評価` and
+  grading-like `成績評価` remain unregistered where their boundaries are less
+  stable.
 - Bare `問題` remains under the roleless `problem` for common problem and
   exercise headings. Use `問題点` or `既知の問題` for issue-reporting sections.
 - `まとめ` remains under the roleless `summary`, although it can function as a
@@ -168,85 +52,10 @@ genre-dependent:
   also occur at the start or middle of a work, so the catalog does not infer
   `doc-conclusion` from that label.
 
-These are kept because they are established standalone headings and their
-current mappings are explainable. Reassign or remove them only with corpus
-evidence and neighboring-semantic regression tests.
-
-## Catalog candidates promoted in 0.13.0
-
-These started as review candidates and were promoted to canonical semantics
-because they are common headings in technical documents, office documents, or
-school materials:
-
-- `requirements`
-  - English labels: `Requirements`, `System requirements`, `Hardware requirements`, `Software requirements`
-  - Japanese labels: `要件`, `必要条件`, `動作要件`, `システム要件`, `動作環境`, `推奨環境`
-  - Default role: none
-- `procedure`
-  - English labels: `Procedure`, `Steps`, `Instructions`
-  - Japanese labels: `手順`, `操作手順`, `作業手順`
-  - Default role: none
-- `resources`
-  - English labels: `Resources`, `Materials`
-  - Japanese labels: `資料`, `教材`
-  - Default role: none
-- `explanation`
-  - English labels: `Explanation`
-  - Japanese labels: `解説`
-  - Default role: none
-- `limitations`
-  - English labels: `Limitations`, `Constraints`, `Restrictions`
-  - Japanese labels: `制限事項`, `制約`, `制約事項`
-  - Default role: none
-- `decision`
-  - English labels: `Decision`, `Decisions`
-  - Japanese labels: `決定事項`, `決定内容`
-  - Default role: none
-- `glossary`
-  - English labels: `Glossary`, `Glossary of terms`
-  - Japanese labels: `用語集`, `用語一覧`
-  - Default role: `doc-glossary`
-- `troubleshooting`
-  - English labels: `Troubleshooting`
-  - Japanese labels: `トラブルシューティング`, `困ったときは`
-  - Default role: none
-- `updates`
-  - English labels: `Updates`, `Revision history`, `Change history`
-  - Japanese labels: `更新`, `更新履歴`, `改訂履歴`, date-prefixed `更新`
-  - Default role: none
-- `prerequisites`
-  - English labels: `Prerequisites`, `Prerequisite`
-  - Japanese labels: `前提条件`, `事前準備`
-  - Default role: none
-- `next-steps`
-  - English labels: `Next steps`
-  - Japanese labels: `次のステップ`, `今後の対応`, `今後の予定`
-  - Default role: none
-- `minutes`
-  - English labels: `Minutes`, `Meeting minutes`
-  - Japanese labels: `議事録`
-  - Default role: none
-- `learning-objective`
-  - English labels: `Learning objective`, `Learning objectives`
-  - Japanese labels: `学習目標`, `到達目標`
-  - Default role: none
-- `rubric`
-  - English labels: `Rubric`, `Grading rubric`
-  - Japanese labels: `評価基準`, `採点基準`, `ルーブリック`
-  - Default role: none
-
-Entries with no default role above intentionally do not emit invented `doc-*`
-roles.
-The `proposal` semantic also gained the narrow Japanese alias `企画案`; bare
-`企画` remains a future candidate because it can mean planning more broadly.
-
-The previous broad `example` semantic is intentionally not part of the 0.13.0
-built-in catalog. DPUB-ARIA 1.1 treats `doc-example` as figure-like, and
-examples often overlap with captioned code, terminal, image, or table figures.
-Use `p7d-markdown-it-figure-with-p-caption` with `roleDocExample: true` for
-figure-specific `role="doc-example"` output. If a project still wants
-paragraph-level `Example.` recognition, map it to a suitable existing semantic
-locally with `semanticContainerSc`.
+These decisions remain documented because the recognized labels are established
+standalone headings and the omitted labels still lack a stable boundary. Widen,
+reassign, or remove them only with corpus evidence and neighboring-semantic
+regression tests.
 
 ## Strong future candidates
 
@@ -259,15 +68,14 @@ locally with `semanticContainerSc`.
     positives if promoted.
 - Additional `troubleshooting` aliases
   - Japanese candidate: `問題解決`
-  - Notes: `troubleshooting` was promoted in 0.13.0 without this broad form.
-    Keep it under observation because it can overlap with `solution` and
+  - Notes: Keep it under observation because it can overlap with `solution` and
     general problem-solving sections.
 
 ### Office documents
 
 - `proposal` aliases
   - Japanese candidates: `企画`
-  - Notes: `企画案` is now recognized as `proposal`. Bare `企画` still needs
+  - Notes: `企画案` is recognized as `proposal`. Bare `企画` still needs
     boundary checks against `planning` (`計画`, `計画案`).
 
 ### School and training materials
