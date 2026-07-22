@@ -27,6 +27,11 @@ commit `53e6c53` (`fix(core): preserve nested semantic container ranges`).
 - Removed the default `doc-notice` role from `important` and the default
   `doc-qna` role from `interview`; both remain recognized through their
   `sc-*` classes.
+- Bare Japanese `案内` and `ご案内` no longer map to the roleless
+  `information` semantic. More specific forms such as `書籍案内` and
+  `イベント案内` remain recognized by their corresponding semantics. Use a
+  more specific built-in label or a project-local `semanticContainerSc` alias
+  when the intended document function is known.
 - Removed, narrowed, or reassigned aliases whose grammar or semantic boundary
   was too broad. Existing Markdown that used one of these labels may produce a
   different canonical container or remain unconverted.
@@ -135,9 +140,11 @@ but they do not restore former generated classes or former canonical
 - Regenerated the English and Japanese semantic catalogs and updated README and
   architecture contracts.
 - Streamlined README around installation, syntax, output contracts, and
-  configuration; moved per-semantic guidance to the generated catalogs and
-  removed the obsolete README label-list helper.
-- Added `CHANGELOG.md` to the published package file list.
+  configuration; added a concise set of representative built-in labels, moved
+  per-semantic guidance to the generated catalogs, and removed the obsolete
+  README label-list helper.
+- Added `CHANGELOG.md` and the generated English and Japanese semantic catalogs
+  to the published package file list.
 
 ### Migration notes
 

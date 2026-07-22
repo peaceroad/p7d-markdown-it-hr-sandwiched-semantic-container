@@ -11,6 +11,8 @@
     "index.js",
     "semantics/",
     "src/",
+    "docs/semantic-catalog.md",
+    "docs/semantic-catalog_ja.md",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
